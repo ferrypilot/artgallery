@@ -9,6 +9,7 @@ Supabase 도 API 키도 없이, 폴더 하나로 전시를 엽니다.
 전시/
 ├─ exhibition.html          ← 전시장
 ├─ theme.css                ← 글꼴·색 (없으면 화면이 풀립니다)
+├─ school-bg.jpg            ← 로비 바탕 그림 (없으면 로비만 허옇게 뜹니다)
 ├─ exhibition.json          ← 작품 목록
 └─ works/                   ← 손으로 만들 때. npm run backup 은 students/ 를 씁니다
    ├─ seoyeon-01.mp4

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Art Gallery",
+  title: "서울온라인학교의 Art Gallery",
   description: "학생이 만든 짧은 영상을 거는 가상 전시장",
 };
 

@@ -19,3 +19,8 @@ backup/
 docs/recovery-codes.txt
 *recovery-code*
 *.secret
+
+# 배경 그림 원본(9MB). 배포에 쓰는 것은 public/school-bg.jpg 로 줄인 것이고,
+# 원본은 저장소에 넣지 않습니다 — 한 번 들어가면 이력에서 지워지지 않습니다.
+# 다시 만들 일이 있으면 구글 드라이브에서 가져오세요.
+docs/온라인학교배경.png

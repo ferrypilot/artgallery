@@ -15,3 +15,28 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 a{ color:inherit }
+
+/* 안내 화면의 바탕 그림.
+
+   학교 사진을 옅게 깔되, 글자를 읽는 데 방해가 되면 안 됩니다. 그래서
+   두 겹으로 둡니다 — 아래는 사진, 위는 종이색 장막. 사진만 흐리게 하면
+   밝은 하늘과 어두운 나무의 대비가 그대로 남아, 그 위에 놓인 글자가
+   자리에 따라 읽히거나 안 읽히게 됩니다.
+
+   position:fixed 라 화면을 굴려도 사진은 제자리에 머뭅니다. 내용은
+   .page 가 z-index 로 그 위에 올라섭니다. */
+.bg-photo{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:url('/school-bg.jpg') center/cover no-repeat;
+  opacity:.42;
+}
+/* 종이색 장막 — 사진 위, 글자 아래. 위쪽은 진하게 덮어 제목이 앉을
+   자리를 비우고, 아래로 갈수록 옅어져 사진이 드러납니다. */
+.bg-photo::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg,
+    rgba(250,247,241,.78) 0%,
+    rgba(250,247,241,.62) 45%,
+    rgba(250,247,241,.44) 100%);
+}
+.page{ position:relative; z-index:1 }

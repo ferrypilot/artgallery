@@ -447,6 +447,8 @@ writeFileSync(join(OUT, "exhibition.html"), html, "utf8");
 // 이 파일 안의 구글 폰트 @import 는 인터넷이 없으면 조용히 실패하고,
 // 그때는 맑은 고딕으로 떨어집니다. 화면은 그대로 읽힙니다.
 copyFileSync(join(ROOT, "public", "theme.css"), join(OUT, "theme.css"));
+// 로비 바탕 그림. 빠뜨리면 오프라인 전시의 로비만 허옇게 뜹니다.
+copyFileSync(join(ROOT, "public", "school-bg.jpg"), join(OUT, "school-bg.jpg"));
 
 /* ---------- 마무리 ---------- */
 console.log("");

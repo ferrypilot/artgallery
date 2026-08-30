@@ -37,9 +37,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="page">
-      <div className="t-eyebrow">Generative Video Exhibition · 2026</div>
-      <h1 className="t-h1" style={{ margin: "10px 0 0" }}>Art Gallery</h1>
+    <>
+      <div className="bg-photo" aria-hidden="true" />
+      <main className="page">
+      <div className="t-eyebrow copy">Copyright © 2026 Kang SongWeol</div>
+      <h1 className="t-h1" style={{ margin: "10px 0 0" }}>서울온라인학교의 Art Gallery</h1>
 
       <div className={"notice" + (health?.ok === false ? " warn" : "")}
            style={{ marginTop: 24 }}>
@@ -53,7 +55,8 @@ export default function Home() {
         <Door href="/studio-ai.html" title="생성 스튜디오"
               note="이미지와 프롬프트로 짧은 영상을 만듭니다 · Grok Imagine" />
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 

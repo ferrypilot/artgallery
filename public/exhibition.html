@@ -1,6 +1,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>Art Gallery</title>
+<title>서울온라인학교의 Art Gallery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -32,6 +32,9 @@
     display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
   .lobbyTop h1{font-size:clamp(26px,4vw,40px);font-weight:300;letter-spacing:.05em;line-height:1.3}
   .lobbyTop .eyebrow{font-size:10px;letter-spacing:.34em;color:#6e6b65;text-transform:uppercase;margin-bottom:14px}
+  /* 저작권 표시는 장식이 아니라 읽는 줄입니다. 대문자로 바꾸면 이름이
+     KANG SONGWEOL 이 되고, 넓은 자간은 글자를 흩뜨립니다. */
+  .lobbyTop .eyebrow.copy{text-transform:none;letter-spacing:.01em}
   .whoWrap{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
   .idChip{font-size:9.5px;letter-spacing:.14em;color:#8a8780;border:1px solid #26262e;padding:8px 11px}
   .idChip.admin{color:#d8b48a;border-color:#4a3e30}
@@ -444,6 +447,28 @@
      전부 #lobby 아래로만 씁니다 — 전시장 안은 건드리지 않습니다.
      ════════════════════════════════════════════════════════ */
   #lobby{background:var(--paper)}
+
+  /* 로비 바탕 그림.
+
+     전시실 안에는 깔지 않습니다 — 거기는 어두운 방이고 벽이 곧 배경입니다.
+     #lobby 에만 두어 문을 열고 들어가면 사진이 사라집니다.
+
+     사진 위에 종이색 장막을 한 겹 더 깝니다. 사진만 옅게 하면 밝은 하늘과
+     어두운 나무의 대비가 남아, 그 위의 카드 글자가 자리에 따라 읽히거나
+     안 읽히게 됩니다. 위쪽을 더 덮어 제목이 앉을 자리를 비웁니다.
+
+     position:fixed 라 로비를 굴려도 사진은 제자리에 머뭅니다. 그 위에
+     올라서야 하는 것들은 아래에서 z-index 를 올립니다. */
+  #lobby::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:url('school-bg.jpg') center/cover no-repeat;opacity:.42}
+  #lobby::after{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:linear-gradient(180deg,
+      rgba(250,247,241,.80) 0%,
+      rgba(250,247,241,.64) 45%,
+      rgba(250,247,241,.46) 100%)}
+  #lobby .lobbyTop,#lobby .grid,#lobby .lobbyNote{position:relative;z-index:1}
   #lobby .lobbyTop{align-items:center;padding-top:56px}
 
   /* ── 머리말 버튼 ───────────────────────────────────────
@@ -709,8 +734,8 @@
   <div id="lobby">
     <div class="lobbyTop">
       <div>
-        <div class="eyebrow">Generative Video Exhibition · 2026</div>
-        <h1 class="serif">Art Gallery</h1>
+        <div class="eyebrow copy">Copyright © 2026 Kang SongWeol</div>
+        <h1 class="serif">서울온라인학교의 Art Gallery</h1>
       </div>
       <!-- 아이콘은 그림이 아니라 표지판입니다. 글자보다 먼저 읽히라고
            둔 것이라 장식을 빼고 선 하나 굵기로만 그렸습니다.

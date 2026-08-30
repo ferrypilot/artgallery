@@ -125,7 +125,8 @@ export default function Login() {
 
   return (
     <main className="page">
-      <div className="t-eyebrow">Generative Video Exhibition · 2026</div>
+      <div className="bg-photo" aria-hidden="true" />
+      <div className="t-eyebrow copy">Copyright © 2026 Kang SongWeol</div>
       <h1 className="t-h1" style={{ margin: "10px 0 0" }}>{me ? "내 계정" : "로그인"}</h1>
 
       {!SUPABASE_READY ? (

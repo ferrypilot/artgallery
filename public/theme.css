@@ -70,6 +70,9 @@
   font-size:11px; font-weight:700; letter-spacing:.16em;
   color:#9a9184; text-transform:uppercase;
 }
+/* 윗줄에 저작권 표시가 올 때. 대문자로 바꾸면 사람 이름이 KANG SONGWEOL
+   이 되고, 넓은 자간은 읽는 줄이 아니라 장식용 값입니다. */
+.t-eyebrow.copy{ text-transform:none; letter-spacing:.01em; font-weight:400 }
 /* 굵기는 700 까지만 씁니다. 나눔고딕에 800 이 있긴 하지만 실제로 실리지
    않는 환경이 있어 브라우저가 흉내 낸 굵기가 나옵니다. 그러면 획이
    뭉개져서, "로그인" 처럼 ㅗ·ㅡ·ㄴ 의 가로획이 같은 높이에 놓이는 말은
