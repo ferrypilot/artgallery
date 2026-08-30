@@ -124,8 +124,11 @@ export default function Login() {
   }
 
   return (
-    <main className="page">
+    <>
+      {/* 바탕 그림은 .page 바깥에 둡니다. 안에 두면 .page 가 만든 층 안에서
+          내용 위로 올라와, 카드와 단추가 사진에 덮여 허옇게 보입니다. */}
       <div className="bg-photo" aria-hidden="true" />
+      <main className="page">
       <div className="t-eyebrow copy">Copyright © 2026 Kang SongWeol</div>
       <h1 className="t-h1" style={{ margin: "10px 0 0" }}>{me ? "내 계정" : "로그인"}</h1>
 
@@ -271,7 +274,8 @@ export default function Login() {
         <a href="/" className="t-help" style={{ textDecoration: "none" }}>← 안내 화면</a>
         <a href="/exhibition.html" className="t-help" style={{ textDecoration: "none" }}>전시장 둘러보기</a>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 
