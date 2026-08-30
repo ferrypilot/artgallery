@@ -2149,7 +2149,7 @@ function renderGrid(){
   nb.className="card new"; nb.tabIndex=0;
   nb.innerHTML='<div class="plus">+</div><div class="cap">전시장 만들기</div>'+
     (signedIn()?"":'<div class="sub">로그인이 필요합니다</div>');
-  const newFn=()=>{ if(!signedIn()){pendingAfterLogin="new";openLogin();return;} openNewGallery(); };
+  const newFn=()=>{ if(!signedIn()){pendingAfterLogin="new";openLogin("new");return;} openNewGallery(); };
   nb.addEventListener("click",newFn);
   nb.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")newFn();});
   grid.appendChild(nb);
@@ -2270,12 +2270,52 @@ let pendingAfterLogin=null;
 function loginHref(){
   return "/login?next="+encodeURIComponent(location.pathname+location.search+location.hash);
 }
-function openLogin(){
+/* 로그인 창을 열 때 무엇 때문에 열렸는지 적어둡니다. 같은 창을 전시장
+   만들기와 생성 스튜디오가 함께 쓰는데, "왜 로그인해야 하는지"가 다릅니다.
+   그냥 "로그인이 필요합니다" 만 띄우면 학생은 눌렀던 것이 고장난 줄 압니다. */
+let loginNext=null;
+const LOGIN_ASK={
+  studio:{
+    head:"로그인이 필요합니다",
+    note:"생성 스튜디오는 만든 영상이 누구 것인지 알아야 해서 로그인한 뒤에 "+
+         "쓸 수 있습니다. 관람은 로그인 없이도 됩니다.<br><br>"+
+         "선생님이 알려준 주소와 비밀번호로 들어오세요. 로그인이 끝나면 "+
+         "스튜디오로 바로 갑니다.",
+    go:"로그인하고 스튜디오로",
+  },
+  "new":{
+    head:"이메일로 로그인",
+    note:"쓰시는 이메일 주소로 접속 링크를 보냅니다. 지메일, 네이버 등 어떤 "+
+         "주소든 됩니다. 비밀번호는 만들지 않습니다. 로그인 화면으로 옮겨간 "+
+         "뒤, 끝나면 이 전시장으로 돌아옵니다.",
+    go:"로그인 화면으로",
+  },
+};
+function openLogin(why){
   if(!SERVER){ alert("이 전시는 서버 없이 열려 있어 로그인을 쓰지 않습니다."); return; }
+  const a=LOGIN_ASK[why]||LOGIN_ASK["new"];
+  loginNext=(why==="studio")?"/studio-ai.html":null;
+  document.getElementById("lgHead").textContent=a.head;
+  document.getElementById("lgNote").innerHTML=a.note;
+  document.getElementById("lgGo").textContent=a.go;
   openModal("lgm");
 }
-document.getElementById("lgGo").addEventListener("click",()=>{ location.href=loginHref(); });
-document.getElementById("lgCancel").addEventListener("click",()=>{pendingAfterLogin=null;closeModal("lgm");});
+document.getElementById("lgGo").addEventListener("click",()=>{
+  location.href=loginNext
+    ? "/login?next="+encodeURIComponent(loginNext)
+    : loginHref();
+});
+document.getElementById("lgCancel").addEventListener("click",()=>{
+  pendingAfterLogin=null; loginNext=null; closeModal("lgm");});
+
+/* 생성 스튜디오는 로그인해야 쓸 수 있습니다.
+
+   예전에는 그냥 새 탭이 열리고, 그쪽 화면이 뜬 뒤에야 구석에 "로그인이
+   필요합니다" 가 나왔습니다. 학생 눈에는 빈 화면이 열린 것으로 보입니다.
+   누르는 자리에서 먼저 알려주고, 로그인이 끝나면 스튜디오로 보냅니다. */
+document.getElementById("btnStudio").addEventListener("click",e=>{
+  if(SERVER&&!signedIn()){ e.preventDefault(); openLogin("studio"); }
+});
 
 document.getElementById("btnAuth").addEventListener("click",async()=>{
   if(signedIn()){
@@ -2285,9 +2325,9 @@ document.getElementById("btnAuth").addEventListener("click",async()=>{
     drawNameTag(session.name);
     if(current) refreshRoomPermissions();
     renderGrid();
-  } else openLogin();
+  } else openLogin("new");
 });
-document.getElementById("panelLoginBtn").addEventListener("click",openLogin);
+document.getElementById("panelLoginBtn").addEventListener("click",()=>openLogin("new"));
 
 /* 서버에 지금 누구인지 물어봅니다. 쿠키가 실려 나가므로 별도 토큰이 없습니다. */
 async function loadSession(){
@@ -2310,7 +2350,7 @@ let ngTheme="night";
 document.querySelectorAll("[data-ngtheme]").forEach(b=>
   b.addEventListener("click",()=>{ngTheme=b.dataset.ngtheme;selectIn("ngtheme",ngTheme);}));
 function openNewGallery(){
-  if(!signedIn()){pendingAfterLogin="new";openLogin();return;}
+  if(!signedIn()){pendingAfterLogin="new";openLogin("new");return;}
   document.getElementById("ngOwner").textContent=
     "소유자는 "+session.email+" 이 됩니다. 이 계정으로만 편집하고 삭제할 수 있습니다.";
   ngName.value=session.name||""; ngTitle.value=""; ngErr.textContent="";

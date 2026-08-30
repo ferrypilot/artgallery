@@ -52,8 +52,18 @@ export default function Home() {
       <div style={{ display: "grid", gap: 12, marginTop: 26 }}>
         <Door href="/exhibition.html" title="전시장"
               note="로비에서 학생 전시장을 고르고 문을 열어 들어갑니다" />
-        <Door href="/studio-ai.html" title="생성 스튜디오"
-              note="이미지와 프롬프트로 짧은 영상을 만듭니다 · Grok Imagine" />
+        {/* 생성 스튜디오는 로그인해야 씁니다. 예전에는 그냥 열리고, 그 화면이
+            뜬 뒤에야 구석에 "로그인이 필요합니다" 가 나왔습니다 — 학생 눈에는
+            빈 화면이 열린 것으로 보입니다. 여기서 먼저 알려주고, 누르면
+            로그인을 거쳐 스튜디오로 갑니다. 관람(전시장)은 그대로 열어둡니다. */}
+        {health?.needsLogin ? (
+          <Door href={"/login?next=" + encodeURIComponent("/studio-ai.html")}
+                title="생성 스튜디오 · 로그인이 필요합니다"
+                note="만든 영상이 누구 것인지 알아야 해서 로그인한 뒤에 쓸 수 있습니다 · 눌러서 로그인" />
+        ) : (
+          <Door href="/studio-ai.html" title="생성 스튜디오"
+                note="이미지와 프롬프트로 짧은 영상을 만듭니다 · Grok Imagine" />
+        )}
       </div>
       </main>
     </>
