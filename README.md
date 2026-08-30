@@ -102,11 +102,17 @@ React 로 포팅할 때 쓸 `Gallery.jsx`(R3F 버전)는 `docs/` 에 있습니�
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-XAI_API_KEY=xai-...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase 대시보드의 anon public 키>
+XAI_API_KEY=<xAI 콘솔의 API 키>
 XAI_TEXT_MODEL=grok-4.20-0309-non-reasoning
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=
 ```
+
+마지막 줄의 값은 비워 두었습니다. `npm run push` 의 비밀값 검사가 그
+변수 이름 뒤에 뭐라도 붙어 있으면 실제 키로 보고 멈추기 때문입니다 —
+문서의 자리표시자까지 걸리지만, 검사를 느슨하게 푸는 것보다 낫습니다.
+`env.local.example` 도 같은 이유로 비워 두었습니다. 값은 Supabase
+대시보드 → Settings → API 의 `service_role` 에서 복사해 넣으세요.
 
 `XAI_API_KEY` 에 `NEXT_PUBLIC_` 을 붙이면 브라우저 번들에 들어갑니다.
 절대 붙이지 마세요. `SUPABASE_SERVICE_ROLE_KEY` 도 마찬가지입니다 —
