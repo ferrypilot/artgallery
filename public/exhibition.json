@@ -1,0 +1,57 @@
+{
+  "_읽어보세요": "exhibition.html 과 같은 폴더에 두세요. 영상은 works/ 폴더에 넣습니다. 아래는 예시입니다 — works/ 가 비어 있으면 액자가 깨져 보입니다.",
+
+  "ownerEmail": "joonall@naver.com",
+  "adminEmails": ["joonall@naver.com"],
+
+  "galleries": [
+    {
+      "handle": "seoyeon",
+      "name": "김서연",
+      "title": "느린 아침",
+      "theme": "night",
+      "works": [
+        {
+          "slot": 0,
+          "src": "works/seoyeon-01.mp4",
+          "title": "창가",
+          "note": "바람에 흔들리는 잎",
+          "scale": 1.2
+        },
+        {
+          "slot": 1,
+          "src": "works/seoyeon-02.mp4",
+          "title": "정오",
+          "note": "빈 방에 드는 빛"
+        },
+        {
+          "slot": 3,
+          "src": "works/seoyeon-03.jpg",
+          "title": "원본 사진",
+          "note": "영상의 첫 프레임이 된 사진"
+        }
+      ]
+    },
+    {
+      "handle": "doyoon",
+      "name": "박도윤",
+      "title": "물결의 기억",
+      "theme": "deep",
+      "works": [
+        {
+          "slot": 0,
+          "src": "works/doyoon-01.mp4",
+          "title": "호수",
+          "note": "카메라가 천천히 밀려 들어간다"
+        }
+      ]
+    },
+    {
+      "handle": "haneul",
+      "name": "이하늘",
+      "title": "정오의 방",
+      "theme": "white",
+      "works": []
+    }
+  ]
+}

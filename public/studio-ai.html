@@ -1,0 +1,1454 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>생성 스튜디오 · Art Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!-- 사이트 표준(글꼴·색·모서리). 값은 public/theme.css 한 곳에만 있습니다. -->
+<link rel="stylesheet" href="theme.css" />
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0c}
+  body{font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e8e6e1;display:flex}
+  .serif{font-family:'Noto Serif KR',serif}
+  button{font-family:inherit;cursor:pointer}
+
+  /* 좌: 입력 */
+  main{width:400px;flex-shrink:0;border-right:1px solid #1c1c23;padding:26px 24px;
+    overflow-y:auto;display:flex;flex-direction:column}
+  .eyebrow{font-size:9.5px;letter-spacing:.32em;color:#6e6b65;text-transform:uppercase}
+  h1{font-size:24px;font-weight:300;letter-spacing:.06em;margin-top:11px}
+  .fl{font-size:9px;letter-spacing:.26em;color:#6e6b65;text-transform:uppercase;margin:22px 0 9px}
+  .fl .val{float:right;color:#8a8780;letter-spacing:.1em;text-transform:none}
+
+  #drop{border:1px dashed #2c2c36;background:rgba(255,255,255,.015);padding:28px 18px;
+    text-align:center;transition:.2s}
+  #drop:hover,#drop.over{border-color:#8a8780;background:rgba(255,255,255,.04)}
+  #drop .big{font-size:12px;color:#c8c4bb;letter-spacing:.1em}
+  #drop .small{font-size:10px;color:#5c5a55;margin-top:9px;letter-spacing:.06em;line-height:1.8}
+  #srcPrev{width:100%;border:1px solid #26262e;display:none;object-fit:contain;background:#0d0d10}
+  #srcPrev.on{display:block}
+  #srcMeta{font-size:10px;color:#6e6b65;margin-top:9px;letter-spacing:.06em;
+    display:flex;justify-content:space-between;gap:10px}
+
+  textarea{width:100%;padding:11px 12px;border:1px solid #26262e;background:rgba(255,255,255,.03);
+    color:#e8e6e1;font-family:'Noto Serif KR',serif;font-size:13px;line-height:1.75;resize:none}
+  textarea:focus{outline:none;border-color:#8a8780}
+  textarea::placeholder{color:#4e4c48;font-family:'IBM Plex Mono',monospace;font-size:11px}
+
+  .sub{width:100%;padding:10px;background:transparent;color:#8a8780;border:1px solid #26262e;
+    font-size:10.5px;letter-spacing:.14em;margin-top:9px;transition:.2s}
+  .sub:hover{border-color:#8a8780;color:#e8e6e1}
+  .sub[disabled]{opacity:.35;cursor:not-allowed}
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .opt{padding:9px 4px;border:1px solid #26262e;background:transparent;color:#8a8780;
+    font-size:10.5px;letter-spacing:.06em;transition:.2s}
+  .opt:hover{border-color:#4a4a54;color:#c8c4bb}
+  .opt.sel{border-color:#8a8780;color:#e8e6e1;background:rgba(255,255,255,.05)}
+  input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:20px}
+  input[type=range]::-webkit-slider-runnable-track{height:1px;background:#3a3a44}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;
+    background:#c8c4bb;margin-top:-4px;border-radius:50%}
+  input[type=range]::-moz-range-track{height:1px;background:#3a3a44}
+  input[type=range]::-moz-range-thumb{width:9px;height:9px;background:#c8c4bb;border:none;border-radius:50%}
+
+  .est{margin-top:20px;border:1px solid #1c1c23;padding:14px 15px;font-size:10.5px;
+    color:#8a8780;letter-spacing:.06em;line-height:2}
+  .est b{color:#e8e6e1;font-weight:400}
+  .est .warn{color:#c99a8e}
+
+  .act{width:100%;padding:14px;background:transparent;color:#e8e6e1;border:1px solid #3a3a42;
+    font-size:11.5px;letter-spacing:.2em;transition:.25s;margin-top:16px}
+  .act:hover{border-color:#8a8780;background:rgba(255,255,255,.05)}
+  .act[disabled]{opacity:.32;cursor:not-allowed}
+  .act[disabled]:hover{border-color:#3a3a42;background:transparent}
+  .tip{font-size:10px;color:#5c5a55;letter-spacing:.04em;line-height:1.85;margin-top:10px}
+
+  /* 우: 작업 목록 */
+  aside{flex:1;min-width:0;padding:26px 26px;overflow-y:auto}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:16px}
+  .quota{font-size:10px;letter-spacing:.14em;color:#8a8780;border:1px solid #26262e;padding:8px 12px}
+  .demoTag{font-size:9px;letter-spacing:.2em;color:#a08040;border:1px solid #4a3e30;
+    background:rgba(216,180,138,.06);padding:8px 11px}
+  .demoTag a{color:inherit;text-decoration:underline}
+  /* 로그인만 안 한 상태 — 고장이 아니라 할 일이 있다는 뜻이라 강조합니다 */
+  .demoTag.needLogin{letter-spacing:.06em;color:#c8c4bb;border-color:#3a3a44;
+    background:rgba(200,196,187,.06)}
+
+  .jobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:18px}
+  .job{border:1px solid #1c1c23;background:#0d0d10;overflow:hidden}
+  .job .media{width:100%;aspect-ratio:16/9;background:#0a0a0c;display:block;object-fit:cover}
+  .job .pending{width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
+    background:#0a0a0c;position:relative;overflow:hidden}
+  .job .pending img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.16}
+  .job .pending span{position:relative;font-size:10px;letter-spacing:.2em;color:#8a8780}
+  .sweep{position:absolute;left:0;right:0;height:1px;background:rgba(200,196,187,.5);
+    animation:sw 2.4s linear infinite}
+  @keyframes sw{0%{top:0;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:100%;opacity:0}}
+  .job .body{padding:14px 15px 16px}
+  .job .jt{font-family:'Noto Serif KR',serif;font-size:13px;line-height:1.65;color:#c8c4bb}
+  .job .js{font-size:9.5px;letter-spacing:.12em;color:#5c5a55;margin-top:10px;
+    display:flex;justify-content:space-between;gap:10px}
+  .job .js .err{color:#c08a80}
+  .job .acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+  .job .acts button{padding:8px;border:1px solid #26262e;background:transparent;color:#8a8780;
+    font-size:9.5px;letter-spacing:.12em}
+  .job .acts button:hover{border-color:#8a8780;color:#e8e6e1}
+
+  /* 전시장에 걸기 — 카드 안에서 펼쳐집니다 */
+  .job .acts .hang{grid-column:1/-1;display:grid;gap:6px}
+  .job .hang input,.job .hang select{width:100%;padding:8px 9px;font-family:inherit;
+    font-size:11px;border:1px solid #26262e;background:transparent;color:#c8c4bb}
+  .job .hang .hRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .job .hangMsg{grid-column:1/-1;font-size:9.5px;letter-spacing:.1em;
+    color:#5c5a55;line-height:1.8}
+  .job .hangMsg.err{color:#c08a80}
+  .job .hangMsg a{color:#8a8780}
+  .job .acts .hungLink{padding:8px;border:1px solid #26262e;color:#8a8780;
+    font-size:9.5px;letter-spacing:.12em;text-align:center;text-decoration:none}
+  .job .acts .hungLink:hover{border-color:#8a8780;color:#e8e6e1}
+
+  .empty{border:1px dashed #1c1c23;padding:60px 24px;text-align:center;color:#5c5a55;
+    font-size:11px;letter-spacing:.1em;line-height:2}
+
+  /* ============ 밝은 톤 ============
+     전시장은 어둡게 두고, 작업 화면만 밝게 씁니다.
+     오래 들여다보며 손대는 화면이라 밝은 쪽이 눈이 덜 피로합니다. */
+  html,body{background:#f4f4f5}
+  body{color:#141417}
+  main{background:#fff;border-right-color:#e2e2e6}
+  aside{background:#f4f4f5}
+  .eyebrow{color:#8e8e95}
+  .fl{color:#8e8e95}
+  .fl .val{color:#6b6b72}
+  .tip{color:#8e8e95}
+
+  #drop{border-color:#cfcfd5;background:rgba(20,20,23,.012)}
+  #drop:hover,#drop.over{border-color:#8e8e95;background:rgba(20,20,23,.035)}
+  #drop .big{color:#3a3a40}
+  #drop .small{color:#97979d}
+  #srcPrev{border-color:#e2e2e6;background:#f0f0f1}
+  #srcMeta{color:#6b6b72}
+
+  textarea{border-color:#dcdce0;background:#fafafb;color:#141417}
+  textarea:focus{border-color:#8e8e95}
+  textarea::placeholder{color:#b4b4ba}
+
+  .opt{border-color:#dcdce0;color:#6b6b72}
+  .opt:hover{border-color:#b4b4ba;color:#141417}
+  .opt.sel{border-color:#55555c;color:#141417;background:rgba(20,20,23,.05)}
+
+  input[type=range]::-webkit-slider-runnable-track{background:#cfcfd5}
+  input[type=range]::-webkit-slider-thumb{background:#55555c}
+  input[type=range]::-moz-range-track{background:#cfcfd5}
+  input[type=range]::-moz-range-thumb{background:#55555c}
+
+  .est{border-color:#e2e2e6;background:#fafafb;color:#6b6b72}
+  .est b{color:#141417}
+  .est .warn{color:#9a4b3d}
+
+  .act{border-color:#c9c9cf;color:#141417}
+  .act:hover{border-color:#55555c;background:rgba(20,20,23,.04)}
+  .sub{border-color:#dcdce0;color:#6b6b72}
+  .sub:hover{border-color:#8e8e95;color:#141417}
+
+  .quota{color:#6b6b72;border-color:#dcdce0;background:#fff}
+  .demoTag{color:#8a6330;border-color:#e2d1b0;background:#fdf8ef}
+
+  .job{border-color:#e2e2e6;background:#fff}
+  .job:hover{box-shadow:0 6px 22px rgba(20,20,23,.07)}
+  .job .media{background:#eaeaec}
+  .job .pending{background:#f0f0f1}
+  .job .pending img{opacity:.32}
+  .job .pending span{color:#6b6b72}
+  .sweep{background:rgba(20,20,23,.35)}
+  .job .jt{color:#3a3a40}
+  .job .js{color:#97979d}
+  .job .js .err{color:#a8524a}
+  .job .acts button{border-color:#dcdce0;color:#6b6b72}
+  .job .acts button:hover{border-color:#8e8e95;color:#141417}
+
+  .empty{border-color:#dcdce0;color:#97979d}
+
+  /* ============ 프롬프트 영역 ============ */
+  main{width:clamp(400px,36vw,560px)}
+  textarea{resize:vertical}
+  #prompt{min-height:104px;font-size:14px;line-height:1.85}
+  /* 영문 프롬프트는 기계가 읽는 문장이라 고정폭으로 구분합니다 */
+  #finalPrompt{min-height:230px;font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:13px;line-height:1.95;letter-spacing:.01em}
+
+  /* ============ 가독성 정리 ============
+     9~10px + 넓은 자간은 장식이지 글이 아닙니다. 실제로 읽는 글자는
+     12px 이상, 회색은 한 단계씩 진하게. 색은 세 단계만 씁니다.
+       #16181d 본문 · #4c515b 보조 · #737a85 약함 */
+  body{font-size:13px;color:#16181d}
+  h1{font-size:27px;color:#16181d;letter-spacing:.02em}
+  .eyebrow{font-size:10.5px;letter-spacing:.18em;color:#737a85}
+  .fl{font-size:11.5px;letter-spacing:.08em;color:#4c515b;margin:24px 0 10px;text-transform:none}
+  .fl .val{font-size:11.5px;letter-spacing:.01em;color:#737a85}
+  .tip{font-size:12px;line-height:1.75;color:#6b7280;letter-spacing:0}
+  .tip b{color:#16181d;font-weight:500}
+
+  textarea{border-color:#d3d6dc;color:#16181d}
+  textarea:focus{border-color:#16181d;box-shadow:0 0 0 3px rgba(22,24,29,.07)}
+  textarea::placeholder{font-size:12px;letter-spacing:0;color:#a3a9b4;font-family:inherit}
+
+  /* 선택된 항목은 채워서 확실히 구분합니다 */
+  .opt{font-size:12px;letter-spacing:.01em;padding:10px 6px;border-color:#d3d6dc;color:#4c515b}
+  .opt:hover{border-color:#8b929d;color:#16181d;background:#f6f7f8}
+  .opt.sel{background:#16181d;border-color:#16181d;color:#fff}
+
+  /* 주 동작 하나만 채웁니다 */
+  .act{background:#16181d;border-color:#16181d;color:#fff;
+    font-size:13px;letter-spacing:.06em;padding:15px;font-weight:500}
+  .act:hover{background:#000;border-color:#000}
+  .act[disabled]{background:#e6e8eb;border-color:#e6e8eb;color:#a3a9b4;opacity:1}
+  .act[disabled]:hover{background:#e6e8eb;border-color:#e6e8eb}
+  .sub{font-size:12px;letter-spacing:.01em;padding:12px;border-color:#d3d6dc;color:#16181d}
+  .sub:hover{border-color:#16181d;background:#f6f7f8;color:#16181d}
+  .sub[disabled]{color:#a3a9b4;border-color:#e6e8eb;opacity:1}
+  button:focus-visible,textarea:focus-visible{outline:2px solid #16181d;outline-offset:2px}
+
+  #drop{border-color:#c3c8d0}
+  #drop .big{font-size:13px;letter-spacing:.01em;color:#16181d}
+  #drop .small{font-size:11.5px;letter-spacing:0;color:#737a85;line-height:1.75}
+  #srcMeta{font-size:11.5px;letter-spacing:0;color:#4c515b}
+
+  .est{font-size:12.5px;letter-spacing:0;line-height:1.85;color:#4c515b;
+    border-color:#d3d6dc;background:#f6f7f8;padding:15px 16px}
+  .est b{color:#16181d;font-weight:600}
+  .est .warn{color:#a03a28;font-weight:500}
+
+  .quota{font-size:12px;letter-spacing:.01em;color:#16181d;border-color:#d3d6dc;padding:9px 13px}
+  .demoTag{font-size:11.5px;letter-spacing:.03em;color:#8a5a18;
+    border-color:#e3cfa6;background:#fdf6e8;padding:9px 12px}
+  .demoTag.needLogin{letter-spacing:.01em;color:#16181d;
+    border-color:#d3d6dc;background:#f6f7f8}
+
+  .job{border-color:#d3d6dc}
+  .job .jt{font-size:13.5px;line-height:1.7;color:#16181d}
+  .job .js{font-size:11.5px;letter-spacing:.01em;color:#737a85;margin-top:11px}
+  .job .js .err{color:#a03a28}
+  .job .pending span{font-size:12px;letter-spacing:.06em;color:#4c515b}
+  .job .acts button{font-size:11.5px;letter-spacing:.01em;padding:10px;
+    border-color:#d3d6dc;color:#16181d}
+  .job .acts button:hover{border-color:#16181d;background:#f6f7f8}
+  .job .acts button:last-child{background:#16181d;border-color:#16181d;color:#fff}
+  .job .acts button:last-child:hover{background:#000}
+  .job .hang input,.job .hang select{font-size:12.5px;padding:9px 10px;
+    border-color:#d3d6dc;background:#fff;color:#16181d}
+  .job .hangMsg{font-size:11.5px;letter-spacing:0;color:#737a85}
+  .job .hangMsg.err{color:#a03a28}
+  .job .acts .hungLink{font-size:11.5px;letter-spacing:.01em;padding:10px;
+    border-color:#d3d6dc;color:#16181d}
+  .empty{font-size:12.5px;letter-spacing:0;color:#737a85;line-height:1.9;border-color:#d3d6dc}
+
+  /* ============ 관리자 설정 ============ */
+  #adminBox{border:1px solid #d3d6dc;background:#fff;padding:22px 24px 24px;margin-bottom:24px}
+  .adminHead{display:flex;justify-content:space-between;align-items:baseline;
+    gap:14px;padding-bottom:16px;border-bottom:1px solid #e6e8eb}
+  .adminHead h2{font-size:18px;font-weight:400;letter-spacing:.02em;color:#16181d}
+  .adminHead span{font-size:11.5px;letter-spacing:.01em;color:#8a5a18}
+  .adminGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    gap:8px 26px;margin-bottom:6px}
+
+  /* 학생 승인 목록 */
+  .stu{border:1px solid #e6e8eb;padding:11px 13px;margin-top:8px;background:#fff}
+  .stu.wait{border-color:#e3cfa6;background:#fdf6e8}
+  .stu .who{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .stu .who b{font-size:13px;font-weight:500;color:#16181d;word-break:break-all}
+  .stu .who span{font-size:11.5px;color:#737a85;white-space:nowrap}
+  .stu.wait .who span{color:#8a5a18}
+  .stu .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .stu .acts button{padding:7px 11px;font-size:11.5px;font-family:inherit;
+    border:1px solid #d3d6dc;background:#fff;color:#16181d;cursor:pointer}
+  .stu .acts button:hover{border-color:#16181d;background:#f6f7f8}
+  .stu .acts button[disabled]{opacity:.5;cursor:default}
+  .stu .msg{font-size:11.5px;line-height:1.7;margin-top:8px;word-break:break-all}
+  .stu .msg:empty{display:none}
+  .stu .msg.err{color:#a03a28}
+  /* 비밀번호를 그대로 읽어 불러줄 수 있게, 눈에 띄고 또렷하게 */
+  .stu .msg.pw{font-family:'IBM Plex Mono',monospace;font-size:14px;color:#16181d;
+    background:#eef7ee;border:1px solid #cfe3cf;padding:9px 11px;user-select:all}
+
+  #stuNew{width:100%;padding:10px 12px;border:1px solid #d3d6dc;background:#fafafb;
+    color:#16181d;font-family:'IBM Plex Mono',monospace;font-size:13px;
+    line-height:1.7;resize:vertical;margin-top:8px}
+  #stuNew:focus{outline:none;border-color:#16181d}
+
+  /* 만든 계정 표 — 이 화면에만 있는 정보라 눈에 띄어야 합니다 */
+  .newAcc{border:1px solid #cfe3cf;background:#f4faf4;padding:13px 14px;margin-top:12px}
+  .newAcc .head{font-size:12px;line-height:1.8;color:#2c5c34}
+  .newAcc table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+  .newAcc th{text-align:left;font-weight:500;font-size:11.5px;color:#4c515b;
+    border-bottom:1px solid #cfe3cf;padding:6px 8px}
+  .newAcc td{padding:6px 8px;border-bottom:1px solid #e2efe2;
+    font-family:'IBM Plex Mono',monospace;user-select:all;word-break:break-all}
+  .newAcc .acts{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+  .newAcc .acts button{padding:7px 11px;font-size:11.5px;font-family:inherit;
+    border:1px solid #cfe3cf;background:#fff;color:#2c5c34;cursor:pointer}
+  .newAcc .acts button:hover{border-color:#2c5c34}
+  #adminBox .fl{margin-top:18px}
+  input[type=number],input[type=email]{width:100%;padding:10px 12px;border:1px solid #d3d6dc;
+    background:#fafafb;color:#16181d;font-family:'IBM Plex Mono',monospace;font-size:13px}
+  input[type=number]:focus,input[type=email]:focus{outline:none;border-color:#16181d}
+  .exRow{display:grid;grid-template-columns:1fr 84px 68px;gap:6px}
+  #exList{margin-top:9px}
+  .exItem{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:8px 0;border-bottom:1px solid #eef0f2;font-size:12px;color:#4c515b}
+  .exItem b{color:#16181d;font-weight:500}
+  .exItem button{border:none;background:none;color:#a03a28;font-size:11.5px;padding:2px 4px}
+  #setStatus{min-height:16px}
+  .topLink{border:none;background:none;color:#4c515b;font-size:11.5px;
+    text-decoration:underline;text-underline-offset:3px;padding:4px}
+  .topLink:hover{color:#16181d}
+
+  /* 전시장으로 돌아가는 길.
+     전시장 쪽 로비의 "이미지를 영상으로" 와 짝입니다 — 두 화면이 서로를
+     가리켜야 학생이 길을 잃지 않습니다. 저쪽이 진한 버튼이라 이쪽도
+     같은 무게로 뒀습니다. 새 창이 아니라 이 창에서 넘어갑니다(→).
+     전시장을 여러 창에 띄워봐야 학생만 헷갈립니다. */
+  .goEx{border:1px solid #16181d;background:#16181d;color:#fff;
+    font-size:12px;letter-spacing:.01em;padding:9px 13px;text-decoration:none;
+    white-space:nowrap;transition:background .15s,border-color .15s}
+  .goEx:hover{background:#000;border-color:#000}
+
+  /* 홈(안내 화면)은 전시장보다 덜 쓰는 길이라 외곽선만 줍니다.
+     둘 다 진하면 어느 쪽이 주된 길인지 알 수 없습니다. */
+  .goHome{border:1px solid #d3d6dc;background:#fff;color:#16181d;
+    font-size:12px;letter-spacing:.01em;padding:9px 13px;text-decoration:none;
+    white-space:nowrap;transition:border-color .15s,background .15s}
+  .goHome:hover{border-color:#8e8e95;background:#f6f7f8}
+
+  /* 관리자 설정 여닫기.
+     예전에는 관리자로 로그인하면 설정 화면이 늘 펼쳐진 채였습니다.
+     학생 명단까지 붙어 있어 길고, 정작 자주 보는 만든 영상 목록이
+     저 아래로 밀렸습니다. 평소에는 접어두고 필요할 때만 폅니다.
+     열려 있는 동안은 눌린 모양으로 둡니다 — 화면이 길어서 위로
+     올라오면 무엇이 열려 있는지 잊습니다. */
+  .adminBtn{border:1px solid #d3d6dc;background:#fff;color:#16181d;
+    font-size:12px;letter-spacing:.01em;padding:9px 13px;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:7px;
+    transition:background .15s,border-color .15s,color .15s}
+  .adminBtn:hover{border-color:#8e8e95}
+  .adminBtn.on{background:#16181d;border-color:#16181d;color:#fff}
+  .adminBtn .caret{font-size:9px;opacity:.65}
+  /* 패널 안쪽 닫기. 머리말 버튼은 스크롤에 밀려 사라지므로 여기에도 둡니다. */
+  .adminClose{border:none;background:none;color:#737a85;font-size:11.5px;
+    text-decoration:underline;text-underline-offset:3px;padding:4px}
+  .adminClose:hover{color:#16181d}
+
+  /* 잠긴 선택지 */
+  .opt.locked{color:#a3a9b4;border-color:#e6e8eb;background:#f6f7f8;cursor:not-allowed}
+  .opt.locked:hover{border-color:#e6e8eb;color:#a3a9b4;background:#f6f7f8}
+
+  /* ════════════════════════════════════════════════════════
+     사이트 표준 적용
+     ------------------------------------------------------------
+     값은 public/theme.css 한 곳에 있습니다. 여기서는 그 값을 이 화면의
+     기존 클래스에 끼워 맞추기만 합니다.
+
+     이 화면도 통째로 IBM Plex Mono 였습니다. 한글 자소가 없는 폰트라
+     한글이 시스템 폰트로 떨어지면서 모노 자간만 남아 글자가 흩어져
+     보였습니다. 글꼴을 바꾸고, 모노에 맞춰 잡아둔 자간을 0 으로
+     되돌립니다. 자간을 남기는 곳은 두 군데뿐입니다 —
+     라틴 대문자 라벨(.eyebrow)과, 한 글자씩 읽어야 하는 값(비밀번호).
+     ════════════════════════════════════════════════════════ */
+  html,body{background:var(--paper)}
+  body,.serif{font-family:var(--font);letter-spacing:0;
+    -webkit-font-smoothing:antialiased}
+  main{background:var(--card);border-right-color:var(--hair)}
+  aside{background:var(--paper)}
+
+  h1,h2,.serif{font-weight:700;letter-spacing:-.012em;color:var(--ink)}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.16em;color:#9a9184}
+  .fl{font-weight:700;letter-spacing:0;color:var(--muted)}
+  .fl .val{font-weight:400;letter-spacing:0;color:var(--faint)}
+  .tip,.small{letter-spacing:0;color:var(--faint)}
+  .tip b{font-family:var(--font);color:var(--muted);font-weight:700}
+
+  /* 누르는 것들 — 둥글기 두 가지만 씁니다(theme.css) */
+  .opt,.act,.sub,.topLink,.adminBtn,.goHome,.goEx{
+    font-family:var(--font);letter-spacing:0}
+  .opt,.act,.sub{border-radius:var(--r);font-weight:700}
+  .opt{padding:10px 8px}
+  .act{font-size:14px;padding:13px 14px}
+  .opt.sel{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  input,textarea,select{font-family:var(--font);letter-spacing:0;
+    border-radius:var(--r);border-color:var(--line)}
+  input:focus,textarea:focus{border-color:var(--ink);
+    box-shadow:0 0 0 3px rgba(22,24,29,.07)}
+
+  #drop{border-radius:var(--r-card);border-color:var(--line)}
+  .quota,.demoTag{border-radius:var(--r);letter-spacing:0;border-color:var(--line)}
+  .job{border-radius:var(--r-card);border-color:var(--hair);
+    box-shadow:var(--shadow-1);overflow:hidden}
+  .job .jt{letter-spacing:0}
+  .job .js{letter-spacing:0}
+  .empty{border-radius:var(--r-card);border-color:var(--line);letter-spacing:0}
+  #adminBox{border-radius:var(--r-card);border-color:var(--hair);
+    box-shadow:var(--shadow-1)}
+  .stu{letter-spacing:0}
+
+  /* 안내 글자는 사람이 읽는 말입니다. 값이 모노인 칸에서도 안내는
+     본문 글꼴로 둡니다 — #finalPrompt 의 영문 프롬프트는 기계에 보내는
+     값이라 모노를 남기지만, "위 버튼을 누르거나…" 는 그렇지 않습니다. */
+  input::placeholder,textarea::placeholder{
+    font-family:var(--font);font-size:12.5px;letter-spacing:0;color:#b4ada1}
+
+  /* ── 영상 카드 ─────────────────────────────────────────
+     잘라내지 않습니다.
+     세로로 긴 그림을 넣으면 세로 영상이 나오는데, 카드가 16:9 로 고정돼
+     있고 object-fit:cover 였습니다. 그래서 위아래가 잘려 인물의 얼굴이
+     화면 밖으로 나갔습니다. 학생이 만든 것을 학생이 온전히 못 보는 건
+     이 화면의 존재 이유에 어긋납니다.
+
+     원래 비율 그대로 두되, 한 편이 화면을 통째로 먹지 않게 높이만
+     묶습니다. 넘칠 때만 contain 이 작동해 좌우에 여백이 생깁니다. */
+  .job .media{aspect-ratio:auto;height:auto;max-height:min(62vh,560px);
+    object-fit:contain;background:#f2ede4}
+
+  /* 만드는 중에 깔리는 원본도 같은 이유로 통째로 보여줍니다.
+     띄워놓은 그림이 곧 완성될 영상과 같은 모양이라 화면이 덜 튑니다. */
+  .job .pending{aspect-ratio:auto;display:block;min-height:132px;background:#f2ede4}
+  .job .pending img{position:static;width:100%;height:auto;
+    max-height:min(62vh,560px);object-fit:contain;opacity:.3;display:block}
+  .job .pending span{position:absolute;left:0;right:0;top:50%;
+    transform:translateY(-50%);text-align:center}
+
+  /* 카드 높이가 제각각이라 격자로는 빈 자리가 크게 남습니다.
+     가로 줄이 아니라 세로 단으로 채웁니다 — 짧은 카드 밑에 다음 카드가
+     바로 올라붙습니다. 읽는 순서는 위에서 아래로, 최신이 왼쪽 위입니다. */
+  .jobs{display:block;columns:270px 3;column-gap:18px}
+  .job{break-inside:avoid;margin:0 0 18px}
+
+  /* 전체/내 것 전환. 목록 바로 위에 둡니다 — 지금 무엇을 보고 있는지가
+     목록과 떨어져 있으면, 남의 영상을 자기 것으로 착각합니다. */
+  .scopeBar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .scopeBar .opt{padding:8px 14px;font-size:12.5px;flex:none}
+  .scopeNote{font-size:12px;color:var(--faint);margin-left:4px}
+
+  /* 만든 사람. 전체 보기에서만 붙습니다. */
+  .by{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;
+    font-weight:700;color:#5f5646;background:#f2eee6;border:1px solid var(--line);
+    border-radius:999px;padding:3px 9px;margin-bottom:7px}
+
+  /* 한 글자씩 불러줘야 하는 값. 여기만 모노를 남깁니다 —
+     0 과 O, 1 과 l 이 구별돼야 학생이 받아 적습니다. */
+  .msg.pw{font-family:var(--font-mono);letter-spacing:.06em;font-size:13px}
+</style>
+
+<main>
+  <div class="eyebrow">Generative Studio</div>
+  <h1 class="serif">이미지를 영상으로</h1>
+
+  <div class="fl">원본 이미지</div>
+  <div id="drop">
+    <div class="big">이미지를 끌어다 놓거나 클릭</div>
+    <div class="small">JPG · PNG · WEBP<br>첫 프레임이 됩니다</div>
+  </div>
+  <img id="srcPrev" alt="" />
+  <div id="srcMeta"></div>
+
+  <div class="fl">어떻게 움직일까요</div>
+  <textarea id="prompt" rows="3" maxlength="400"
+    placeholder="예: 바람에 잎이 흔들리고 카메라가 천천히 밀려 들어간다"></textarea>
+  <div class="tip">보이는 것을 다시 쓰지 말고 <b>무엇이 움직이는지</b>만 적으세요.</div>
+  <button class="sub" id="refineBtn">Grok에 보낼 프롬프트 만들기</button>
+
+  <div class="fl">Grok에 보낼 프롬프트 <span class="val" id="pLen">0자</span></div>
+  <textarea id="finalPrompt" rows="6" maxlength="900"
+    placeholder="위 버튼을 누르거나, 직접 영문으로 적으세요"></textarea>
+  <div class="tip">실제로 전송되는 문장입니다. 마음에 안 들면 그대로 고치세요.</div>
+
+  <div class="fl">모델</div>
+  <div class="row">
+    <button class="opt sel" data-model="grok-imagine-video">Imagine Video</button>
+    <button class="opt" data-model="grok-imagine-video-1.5">Imagine Video 1.5</button>
+  </div>
+  <div class="tip" id="modelTip"></div>
+
+  <div class="fl">화질</div>
+  <div class="row3" id="resRow"></div>
+
+  <div class="fl">비율</div>
+  <div class="row4" id="arRow"></div>
+  <div class="tip">원본 따라감을 고르면 올린 이미지의 비율을 그대로 씁니다.
+    한 장짜리 이미지→영상에서는 이쪽이 가장 안전합니다.</div>
+
+  <div class="fl">길이 <span class="val" id="durVal">5초</span></div>
+  <input type="range" id="dur" min="1" max="5" step="1" value="5" />
+  <div class="tip" id="durTip">한 번에 1~5초까지.</div>
+
+  <div class="est" id="est"></div>
+  <button class="act" id="genBtn" disabled>생성 요청</button>
+  <div class="tip">요청 후 결과가 나오기까지 보통 1~3분 걸립니다.
+    창을 닫아도 서버에서 계속 진행됩니다.</div>
+
+  <input type="file" id="fileInput" accept="image/*" style="display:none" />
+</main>
+
+<aside>
+  <div class="topbar">
+    <div class="quota" id="quota">남은 생성 —</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <!-- 로그인한 사람만 보입니다. 초기화받은 비밀번호(123456)는 누구나
+           아는 값이라, 바꾸는 길이 눈에 보여야 실제로 바꿉니다. -->
+      <a class="goHome" id="pwLink" href="/login" style="display:none">비밀번호</a>
+      <a class="goHome" href="/">홈</a>
+      <a class="goEx" href="exhibition.html">전시장으로 가기 →</a>
+      <button class="adminBtn" id="adminToggle" style="display:none" aria-expanded="false"
+              aria-controls="adminBox"><span>관리자 설정</span><span class="caret">▾</span></button>
+      <button class="topLink" id="adminPeek" style="display:none">관리자로 보기</button>
+      <div class="demoTag" id="demoTag" style="display:none">데모 모드 · 서버 미연결</div>
+    </div>
+  </div>
+
+  <section id="adminBox" style="display:none">
+    <div class="adminHead">
+      <h2 class="serif">관리자 설정</h2>
+      <span id="adminWho"></span>
+      <button class="adminClose" id="adminHide">닫기</button>
+    </div>
+
+    <!-- 한도·화질·모델·길이 = 예산. 관리자만 봅니다. -->
+    <div id="settingsOnly">
+    <div class="adminGrid">
+      <div>
+        <div class="fl">학생 1인당 총 한도</div>
+        <input type="number" id="setQuota" min="1" max="500" step="1" value="30" />
+        <div class="tip">이미 만든 개수는 차감되지 않습니다. 한도를 낮추면
+          이미 넘긴 학생은 더 만들 수 없습니다.</div>
+      </div>
+      <div>
+        <div class="fl">학생 최대 길이 (초)</div>
+        <input type="number" id="setMaxDur" min="1" max="15" step="1" value="5" />
+        <div class="tip">비용이 초당으로 붙습니다. 길이가 사실상 예산 손잡이입니다.
+          관리자 본인은 15초까지 씁니다.</div>
+      </div>
+      <div>
+        <div class="fl">학생에게 허용할 화질</div>
+        <div class="row3" id="setRes"></div>
+        <div class="tip">잠근 화질은 학생 화면에 자물쇠로 표시됩니다.
+          관리자 본인은 제한 없이 씁니다.</div>
+      </div>
+      <div>
+        <div class="fl">학생에게 허용할 모델</div>
+        <div class="row" id="setModels"></div>
+      </div>
+      <div>
+        <div class="fl">학생별 예외 한도</div>
+        <div class="exRow">
+          <input type="email" id="exEmail" placeholder="student@school.kr" />
+          <input type="number" id="exQuota" min="0" max="500" value="50" />
+          <button class="sub" id="exAdd" style="margin:0">추가</button>
+        </div>
+        <div id="exList"></div>
+      </div>
+    </div>
+
+    <button class="act" id="setSave">설정 저장</button>
+    <div class="tip" id="setStatus"></div>
+    </div>
+
+    <!-- 학생 계정. 선생님과 관리자 둘 다 봅니다. -->
+    <div class="fl" style="margin-top:26px">학생 계정 <span class="val" id="stuCount"></span></div>
+    <div class="tip">주소를 줄바꿈이나 쉼표로 구분해 넣으세요.
+      <b>@</b> 없이 아이디만 적으면 <span id="stuDomain">@class.local</span> 이 붙습니다 —
+      메일을 보내지 않으므로 실제 주소가 아니어도 됩니다.</div>
+    <textarea id="stuNew" rows="3" placeholder="seoyeon@school.kr, doyoon, haneul"></textarea>
+    <button class="sub" id="stuAdd" style="margin-top:8px">계정 만들기</button>
+    <div id="stuNewOut"></div>
+    <div id="stuList"></div>
+  </section>
+
+  <!-- 선생님·관리자만 보입니다. 학생 화면은 그대로입니다. -->
+  <div class="scopeBar" id="scopeBar" style="display:none">
+    <button class="opt sel" data-scope="mine">내 영상</button>
+    <button class="opt" data-scope="all">전체 학생</button>
+    <span class="scopeNote" id="scopeNote"></span>
+  </div>
+  <div class="jobs" id="jobs"></div>
+  <div class="empty" id="empty">아직 만든 영상이 없습니다.<br>왼쪽에서 이미지를 올리고 생성을 요청하세요.</div>
+</aside>
+
+<script>
+/* ============================================================
+   생성 스튜디오 — Grok Imagine 이미지→영상
+   ------------------------------------------------------------
+   API 키는 절대 이 파일에 두지 않습니다. 브라우저는 우리 서버의
+   /api/imagine 만 호출하고, 서버가 xAI 를 대신 호출합니다.
+
+     POST /api/imagine        → { id }
+     GET  /api/imagine/:id    → { status, videoUrl, error }
+
+   서버 구현은 app/api/imagine/route.ts 를 보세요.
+   서버가 없으면 아래 데모 모드로 화면 흐름만 확인됩니다.
+   ============================================================ */
+
+const API="/api/imagine";
+let DEMO=false;                      // 서버 응답이 없으면 자동으로 켜집니다
+
+/* 서버가 내려주는 값. 학생은 읽기만 하고, 바꾸는 것은 관리자뿐입니다.
+   화면의 잠금은 안내이고, 실제 차단은 서버에서 합니다. */
+const S={
+  quota:10,                          // 1인당 총 한도
+  used:0,                            // 지금까지 만든 개수
+  resolutions:["480p"],              // 학생에게 열어둔 화질
+  models:["grok-imagine-video"],     // 학생에게 열어둔 모델
+  maxDuration:5,                     // 학생에게 열어둔 최대 길이(초)
+  isTeacher:false,                   // 학생 계정만 관리하는 선생님
+  hardMaxDuration:15,                // xAI 가 한 번에 만들 수 있는 상한
+  approved:true,                     // 서버가 알려줍니다. 미승인이면 안내를 띄웁니다
+  isAdmin:false,
+  overrides:[],                      // [{email, quota}]
+};
+
+/* xAI 문서 기준 지원 범위 (2026-08)
+   · 길이 1~15초
+   · 비율 1:1 16:9 9:16 4:3 3:4 3:2 2:3, 생략하면 원본 이미지 비율
+   · 화질 480p / 720p, 1080p 는 1.5 의 이미지→영상에서만
+   · 소리는 기본으로 함께 생성됩니다 */
+const MODELS={
+  "grok-imagine-video":{
+    res:["480p","720p"],
+    rate:{"480p":0.05,"720p":0.07},
+    tip:"저렴하고 빠릅니다. 여러 번 돌려보며 방향을 찾는 초안 단계에 적합합니다.",
+  },
+  "grok-imagine-video-1.5":{
+    res:["480p","720p","1080p"],
+    rate:{"480p":0.08,"720p":0.08,"1080p":0.08},
+    tip:"이미지를 더 잘 살리고 1080p까지 나옵니다. 최종본용. "+
+        "1080p 단가는 xAI 요금표에서 한 번 확인하세요.",
+  },
+};
+const ARS=[["auto","원본"],["1:1","1:1"],["16:9","16:9"],["9:16","9:16"],
+           ["4:3","4:3"],["3:4","3:4"],["3:2","3:2"],["2:3","2:3"]];
+const IMAGE_IN=0.002;
+
+let srcFile=null, model="grok-imagine-video", res="480p", ar="auto";
+const jobs=[];
+
+/* ---------- 프롬프트 ---------- */
+const promptEl=document.getElementById("prompt");
+const finalEl=document.getElementById("finalPrompt");
+const refineBtn=document.getElementById("refineBtn");
+const pLen=document.getElementById("pLen");
+
+finalEl.addEventListener("input",()=>{
+  pLen.textContent=finalEl.value.length+"자"; refresh();
+});
+promptEl.addEventListener("input",()=>{
+  refineBtn.disabled=!promptEl.value.trim();
+});
+refineBtn.disabled=true;
+
+refineBtn.addEventListener("click",async()=>{
+  const ko=promptEl.value.trim(); if(!ko) return;
+  refineBtn.disabled=true; refineBtn.textContent="만드는 중…";
+  try{
+    const r=await fetch(API+"/prompt",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ko, duration:parseInt(durEl.value,10)}),
+    });
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json();
+    finalEl.value=d.prompt;
+  }catch(e){
+    // 서버가 없으면 원문을 그대로 씁니다
+    DEMO=true;
+    document.getElementById("demoTag").style.display="";
+    finalEl.value=ko;
+  }
+  pLen.textContent=finalEl.value.length+"자";
+  refineBtn.disabled=false; refineBtn.textContent="Grok에 보낼 프롬프트 만들기";
+  refresh();
+});
+
+/* ---------- 입력 ---------- */
+const dropEl=document.getElementById("drop"),fileInput=document.getElementById("fileInput");
+const srcPrev=document.getElementById("srcPrev"),srcMeta=document.getElementById("srcMeta");
+dropEl.addEventListener("click",()=>fileInput.click());
+srcPrev.addEventListener("click",()=>fileInput.click());
+fileInput.addEventListener("change",e=>accept(e.target.files[0]));
+["dragenter","dragover"].forEach(ev=>dropEl.addEventListener(ev,e=>{
+  e.preventDefault();dropEl.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>dropEl.addEventListener(ev,e=>{
+  e.preventDefault();dropEl.classList.remove("over");}));
+dropEl.addEventListener("drop",e=>{e.preventDefault();accept(e.dataTransfer.files[0]);});
+
+function accept(f){
+  if(!f||!f.type.startsWith("image/")) return;
+  srcFile=f;
+  srcPrev.src=URL.createObjectURL(f);
+  srcPrev.classList.add("on");
+  dropEl.style.display="none";
+  const img=new Image();
+  img.onload=()=>{
+    srcMeta.innerHTML="<span>"+f.name.slice(0,24)+"</span><span>"+
+      img.naturalWidth+"×"+img.naturalHeight+" · "+(f.size/1048576).toFixed(1)+"MB</span>";
+  };
+  img.src=srcPrev.src;
+  refresh();
+}
+
+function sel(attr,v){
+  document.querySelectorAll("[data-"+attr+"]").forEach(b=>
+    b.classList.toggle("sel",b.dataset[attr]===v));
+}
+function allowedRes(){
+  const all=MODELS[model].res;
+  return S.isAdmin?all:all.filter(r=>S.resolutions.includes(r));
+}
+function buildRes(){
+  const row=document.getElementById("resRow"); row.innerHTML="";
+  const ok=allowedRes();
+  if(!ok.includes(res)) res=ok[0]||MODELS[model].res[0];
+  MODELS[model].res.forEach(r=>{
+    const locked=!ok.includes(r);
+    const b=document.createElement("button");
+    b.className="opt"+(r===res&&!locked?" sel":"")+(locked?" locked":"");
+    b.dataset.res=r; b.textContent=locked?r+" 🔒":r;
+    if(locked) b.title="관리자만 열 수 있습니다";
+    else b.addEventListener("click",()=>{res=r;buildRes();refresh();});
+    row.appendChild(b);
+  });
+}
+function buildModels(){
+  document.querySelectorAll("[data-model]").forEach(b=>{
+    const locked=!S.isAdmin&&!S.models.includes(b.dataset.model);
+    b.classList.toggle("locked",locked);
+    b.classList.toggle("sel",b.dataset.model===model&&!locked);
+    if(locked) b.title="관리자만 열 수 있습니다";
+  });
+}
+function buildAr(){
+  const row=document.getElementById("arRow"); row.innerHTML="";
+  ARS.forEach(([v,label])=>{
+    const b=document.createElement("button");
+    b.className="opt"+(v===ar?" sel":""); b.dataset.ar=v; b.textContent=label;
+    b.addEventListener("click",()=>{ar=v;sel("ar",ar);});
+    row.appendChild(b);
+  });
+}
+document.querySelectorAll("[data-model]").forEach(b=>b.addEventListener("click",()=>{
+  if(b.classList.contains("locked")) return;
+  model=b.dataset.model; buildModels();
+  document.getElementById("modelTip").textContent=MODELS[model].tip;
+  buildRes(); refresh();
+}));
+document.getElementById("modelTip").textContent=MODELS[model].tip;
+buildModels(); buildRes(); buildAr();
+const durEl=document.getElementById("dur");
+durEl.addEventListener("input",()=>{
+  document.getElementById("durVal").textContent=durEl.value+"초"; refresh();});
+
+/* 길이 상한을 화면에 반영합니다. 관리자는 xAI 상한(15초)까지 풉니다.
+   이건 안내일 뿐이고, 실제 차단은 POST /api/imagine 이 403 으로 합니다. */
+function buildDur(){
+  const cap=S.isAdmin?S.hardMaxDuration:S.maxDuration;
+  durEl.max=String(cap);
+  if(parseInt(durEl.value,10)>cap) durEl.value=String(cap);
+  document.getElementById("durVal").textContent=durEl.value+"초";
+  document.getElementById("durTip").innerHTML=
+    S.isAdmin
+      ? "한 번에 1~"+cap+"초까지. 학생에게는 "+S.maxDuration+"초까지 열려 있습니다."
+      : "한 번에 1~"+cap+"초까지. 더 길게 만들려면 선생님께 요청하세요.";
+}
+
+function refresh(){
+  const d=parseInt(durEl.value,10);
+  const cost=MODELS[model].rate[res]*d+IMAGE_IN;
+  const left=S.quota-S.used;
+  document.getElementById("est").innerHTML=
+    "예상 비용 <b>$"+cost.toFixed(2)+"</b> · "+d+"초 "+res+"<br>"+
+    "소리가 함께 생성됩니다 · 다시 돌리면 그만큼 더 듭니다."+
+    (left<=3?"<br><span class='warn'>남은 횟수가 "+Math.max(0,left)+"회입니다</span>":"");
+  document.getElementById("quota").textContent=
+    "남은 생성 "+Math.max(0,left)+" / "+S.quota+"개";
+  document.getElementById("genBtn").disabled=
+    !srcFile||!finalEl.value.trim()||left<=0;
+}
+refresh();
+
+/* ---------- 지난 영상 불러오기 ----------
+   목록은 그동안 이 페이지의 메모리에만 있었습니다. 새로고침하면 비었고,
+   학생은 어제 만든 영상을 다시 볼 방법이 없었습니다. 파일은 Storage 에,
+   기록은 generations 에 멀쩡히 있었는데도 그랬습니다.
+
+   화면을 열 때 한 번 불러옵니다. 아직 만드는 중인 것이 있으면 폴링도
+   이어서 겁니다 — 창을 닫았다 다시 열어도 진행이 이어집니다. */
+let scope="mine";
+
+async function loadHistory(){
+  if(DEMO) return;
+  // 선생님·관리자에게만 전환 스위치를 보입니다.
+  document.getElementById("scopeBar").style.display=
+    (S.isAdmin||S.isTeacher)?"":"none";
+  try{
+    const r=await fetch(API+(scope==="all"?"?scope=all":""),{cache:"no-store"});
+    if(!r.ok) return;
+    const d=await r.json();
+    jobs.length=0;                      // 전환할 때마다 새로 채웁니다
+    (d.jobs||[]).forEach(j=>{
+      jobs.push({
+        id:j.id, status:j.status,
+        prompt:j.prompt||j.ko||"(프롬프트 없음)", ko:j.ko||"",
+        model:j.model, res:j.res, ar:null, duration:j.duration,
+        src:null, videoUrl:j.videoUrl, error:j.error,
+        cost:j.cost||0, hung:j.hung, at:fmtDate(j.at),
+        mine:j.mine!==false, by:j.by||null,
+      });
+    });
+    renderJobs();
+    const n=jobs.length;
+    document.getElementById("scopeNote").textContent=
+      scope==="all" ? n+"편 · 만든 사람이 함께 표시됩니다"
+                    : (n?n+"편":"");
+    // 만들다 만 것은 계속 지켜봅니다. 남의 것은 폴링하지 않습니다 —
+    // 그 사람 화면이 알아서 봅니다.
+    jobs.filter(j=>j.mine&&(j.status==="running"||j.status==="queued")).forEach(poll);
+  }catch(e){ /* 목록을 못 불러와도 새로 만드는 데는 지장이 없습니다 */ }
+}
+
+document.querySelectorAll("[data-scope]").forEach(b=>b.addEventListener("click",()=>{
+  scope=b.dataset.scope; selectIn2("scope",scope); loadHistory();
+}));
+/** 이 화면에는 selectIn 이 없어서 같은 일을 하는 작은 함수를 둡니다. */
+function selectIn2(attr,val){
+  document.querySelectorAll("[data-"+attr+"]").forEach(b=>
+    b.classList.toggle("sel",b.dataset[attr]===val));
+}
+/** 2026-08-29T06:24:33Z → 8/29 15:24 (보는 사람의 시간대로) */
+function fmtDate(iso){
+  if(!iso) return "";
+  const d=new Date(iso); if(isNaN(d)) return "";
+  return (d.getMonth()+1)+"/"+d.getDate()+" "+
+    String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+
+/* ---------- 오류를 있는 그대로 ----------
+   라우트들은 {error, detail} 로 답하기로 되어 있습니다. detail 에는
+   xAI 가 돌려준 원문이 들어옵니다 — 생성이 왜 실패했는지는 대개 거기에만
+   적혀 있어서, 이것을 버리면 선생님도 원인을 볼 방법이 없습니다. */
+async function serverError(r){
+  let d=null; try{ d=await r.json(); }catch(e){}
+  const base=(d&&d.error)||("서버 오류 "+r.status);
+  const detail=(d&&d.detail)?" · "+String(d.detail).slice(0,180):"";
+  return base+detail;
+}
+/* 세션이 끊긴 것은 고장이 아니라 할 일이 있다는 뜻입니다. 로그인 길을
+   같이 내줍니다. 화면을 처음 열 때(loadSettings)와 같은 표시를 씁니다. */
+function showNeedLogin(){
+  const tag=document.getElementById("demoTag");
+  tag.style.display=""; tag.classList.add("needLogin");
+  tag.innerHTML='로그인이 필요합니다 · '+
+    '<a href="/login?next=%2Fstudio-ai.html">로그인하기</a>';
+}
+
+/* ---------- 생성 요청 ---------- */
+document.getElementById("genBtn").addEventListener("click",async()=>{
+  if(!srcFile) return;
+  const d=parseInt(durEl.value,10);
+  const job={
+    id:"tmp-"+Date.now(), status:"uploading",
+    prompt:finalEl.value.trim(), ko:promptEl.value.trim(),
+    model, res, ar, duration:d,
+    src:srcPrev.src, videoUrl:null, error:null,
+    cost:MODELS[model].rate[res]*d+IMAGE_IN,
+  };
+  jobs.unshift(job); S.used++; refresh(); renderJobs();
+
+  const fd=new FormData();
+  fd.append("image",srcFile);
+  fd.append("prompt",job.prompt);
+  fd.append("prompt_ko",job.ko);
+  fd.append("model",job.model);
+  fd.append("resolution",job.res);
+  fd.append("aspect_ratio",job.ar);
+  fd.append("duration",String(job.duration));
+
+  try{
+    const r=await fetch(API,{method:"POST",body:fd});
+
+    /* 서버가 거절한 것과 서버가 없는 것은 다릅니다.
+       예전에는 둘 다 아래 catch 로 떨어져 "데모 모드" 한 마디로 뭉뚱그렸고,
+       그래서 로그인이 안 된 것도, 한도를 다 쓴 것도, 계정이 중지된 것도,
+       xAI 가 거절한 것도 학생에게는 전부 똑같이 보였습니다.
+       서버가 이유를 적어 보냈으면 그 말을 그대로 씁니다. */
+    if(!r.ok){
+      job.status="failed";
+      job.error=await serverError(r);
+      if(r.status===401) showNeedLogin();
+      // 만들지 못했으니 쓴 것으로 세지 않습니다. 서버는 generations 행을
+      // 세므로 애초에 한 줄도 안 늘었습니다 — 화면만 되돌리면 맞습니다.
+      S.used=Math.max(0,S.used-1);
+      refresh(); renderJobs();
+      return;
+    }
+
+    const data=await r.json();
+    job.id=data.id; job.status="running"; renderJobs();
+    poll(job);
+  }catch(e){
+    // fetch 자체가 실패했습니다 = 서버가 아예 없습니다(정적 파일로 연 경우).
+    // 이때만 화면 흐름을 재현합니다.
+    DEMO=true;
+    document.getElementById("demoTag").style.display="";
+    job.status="running"; renderJobs();
+    setTimeout(()=>{
+      job.status="demo";
+      job.error="데모 모드 — 실제 생성 결과가 아닙니다";
+      renderJobs();
+    },4200+Math.random()*2500);
+  }
+});
+
+async function poll(job){
+  let misses=0;                       // 연달아 못 물어본 횟수
+  const tick=async()=>{
+    try{
+      const r=await fetch(API+"/"+job.id);
+      // 401(세션 만료)·404 도 여기로 옵니다. 예전에는 r.ok 를 보지 않아
+      // 상태가 undefined 가 되고 화면에 "undefined" 가 찍혔습니다.
+      if(!r.ok){
+        job.status="failed"; job.error=await serverError(r);
+        if(r.status===401) showNeedLogin();
+        renderJobs(); return;
+      }
+      const d=await r.json();
+      misses=0;
+      job.status=d.status;
+      if(d.status==="done"){ job.videoUrl=d.videoUrl; renderJobs(); return; }
+      if(d.status==="failed"||d.status==="expired"){
+        job.error=d.error||"생성에 실패했습니다"; renderJobs(); return;
+      }
+      renderJobs();
+      setTimeout(tick,3000);
+    }catch(e){
+      /* 한 번 끊겼다고 포기하지 않습니다. 생성은 1~3분 걸리고 그동안
+         잠깐의 끊김은 흔한데, 서버는 그 사이에도 계속 만들고 있습니다.
+         여기서 실패로 적으면 다 된 영상을 학생이 못 받습니다. */
+      if(++misses<5){ setTimeout(tick,3000); return; }
+      job.status="failed";
+      job.error="서버에 연결하지 못했습니다 (15초간 응답 없음)";
+      renderJobs();
+    }
+  };
+  setTimeout(tick,3000);
+}
+
+/* ---------- 목록 ---------- */
+const LABEL={uploading:"이미지 올리는 중",queued:"대기 중",running:"생성 중",
+  done:"완료",failed:"실패",expired:"만료",demo:"데모"};
+function renderJobs(){
+  const box=document.getElementById("jobs");
+  document.getElementById("empty").style.display=jobs.length?"none":"";
+  box.innerHTML="";
+  jobs.forEach(j=>{
+    const el=document.createElement("div"); el.className="job";
+    const head=j.status==="done"&&j.videoUrl
+      ? '<video class="media" src="'+j.videoUrl+'" controls loop playsinline></video>'
+      : '<div class="pending">'+
+        // 지난 영상은 원본 이미지가 이미 지워져 있습니다(용량 때문에
+        // 완성 직후 지웁니다). 그때는 빈 자리로 둡니다 — 깨진 그림보다 낫습니다.
+        (j.src?'<img src="'+j.src+'" alt="">':'')+
+        (j.status==="running"||j.status==="queued"||j.status==="uploading"
+          ? '<div class="sweep"></div>':"")+
+        '<span>'+(LABEL[j.status]||j.status)+'</span></div>';
+    el.innerHTML=head+
+      '<div class="body">'+
+      (j.by?'<div class="by">'+esc(j.by)+'</div>':'')+
+      '<div class="jt">'+j.prompt.slice(0,70)+'</div>'+
+      '<div class="js"><span>'+j.duration+'초 · '+j.res+
+      (j.ar?' · '+(j.ar==="auto"?"원본 비율":j.ar):'')+
+      (j.at?' · '+j.at:'')+'</span>'+
+      '<span class="'+(j.error?"err":"")+'">'+(j.error||("$"+j.cost.toFixed(2)))+'</span></div>'+
+      (j.status==="done"?'<div class="acts">'+
+        '<button data-dl="'+j.id+'">내려받기</button>'+
+        (j.hung
+          ? '<a class="hungLink" href="exhibition.html#/g/'+j.hung+'" '+
+            'target="_blank" rel="noopener">전시장에서 보기 ↗</a>'
+          // 남의 영상은 걸 수 없습니다. 전시장은 만든 사람의 것이고,
+          // 서버도 남의 생성물로는 걸기를 받지 않습니다.
+          : (j.mine===false?'':'<button data-hang="'+j.id+'">전시장에 걸기</button>'))+
+        '</div>':"")+
+      '</div>';
+    box.appendChild(el);
+  });
+  box.querySelectorAll("[data-dl]").forEach(b=>b.addEventListener("click",()=>{
+    const j=jobs.find(x=>x.id===b.dataset.dl);
+    const a=document.createElement("a"); a.href=j.videoUrl; a.download="work.mp4"; a.click();
+  }));
+  box.querySelectorAll("[data-hang]").forEach(b=>b.addEventListener("click",()=>{
+    const j=jobs.find(x=>x.id===b.dataset.hang);
+    openHang(j,b.closest(".acts"));
+  }));
+}
+renderJobs();
+
+/* ============================================================
+   전시장에 걸기
+   ------------------------------------------------------------
+   POST /api/works 가 works 에 한 줄 넣습니다. 전시장이 아직 없으면
+   서버가 그때 만듭니다 — 빈 전시장을 먼저 만들게 하면 거기서 이탈합니다.
+
+   자리 번호는 벽의 위치입니다. 학생이 "3번"이 어디인지 알 수 없으므로
+   이름을 같이 보여줍니다. 이름은 서버가 보내줍니다 — 전시장마다 쓰는
+   전시관이 다르고(기본 10자리 · 큰 20자리), 여기서 표를 따로 들고 있으면
+   방을 하나 더 만들 때마다 세 곳이 어긋납니다. lib/rooms.ts 가 원본입니다.
+   ============================================================ */
+
+async function openHang(job,acts){
+  if(!job||!acts) return;
+  acts.innerHTML='<span class="hangMsg">빈 자리를 확인하는 중…</span>';
+
+  let free=[],handle=null,slotName=[],roomName="";
+  try{
+    const r=await fetch("/api/works",{cache:"no-store"});
+    if(r.status===401){
+      acts.innerHTML='<span class="hangMsg">걸려면 로그인이 필요합니다 '+
+        '<a href="/login?next=%2Fstudio-ai.html">로그인하기</a></span>';
+      return;
+    }
+    if(!r.ok) throw 0;
+    const d=await r.json();
+    free=d.free||[]; handle=d.gallery&&d.gallery.handle;
+    slotName=(d.room&&d.room.slots)||[]; roomName=(d.room&&d.room.name)||"";
+  }catch(e){
+    acts.innerHTML='<span class="hangMsg err">자리를 불러오지 못했습니다</span>';
+    return;
+  }
+
+  if(!free.length){
+    acts.innerHTML='<span class="hangMsg err">'+(roomName||"전시장")+'의 자리가 '+
+      '모두 찼습니다. 하나를 내리거나, 전시장 꾸미기에서 더 큰 전시관으로 '+
+      '바꾼 뒤 다시 거세요.</span>';
+    return;
+  }
+
+  const opts=free.map(s=>'<option value="'+s+'">'+s+
+    (slotName[s]?' · '+slotName[s]:'')+'</option>').join("");
+  acts.innerHTML=
+    '<div class="hang">'+
+      '<input class="hTitle" placeholder="작품 제목" maxlength="60" />'+
+      '<input class="hNote" placeholder="한 줄 설명 (없어도 됩니다)" maxlength="200" />'+
+      '<select class="hSlot">'+opts+'</select>'+
+      '<div class="hRow">'+
+        '<button class="hCancel">취소</button>'+
+        '<button class="hGo">걸기</button>'+
+      '</div>'+
+      '<div class="hangMsg" '+(handle?'':'style="display:none"')+'>'+
+        (handle?'내 전시장: '+handle:'')+'</div>'+
+    '</div>';
+
+  const t=acts.querySelector(".hTitle");
+  t.value=job.ko||job.prompt.slice(0,40);
+  t.focus(); t.select();
+
+  acts.querySelector(".hCancel").addEventListener("click",renderJobs);
+  acts.querySelector(".hGo").addEventListener("click",async()=>{
+    const btn=acts.querySelector(".hGo");
+    btn.disabled=true; btn.textContent="거는 중…";
+    try{
+      const r=await fetch("/api/works",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          generationId:job.id,
+          slot:parseInt(acts.querySelector(".hSlot").value,10),
+          title:t.value.trim(),
+          note:acts.querySelector(".hNote").value.trim(),
+        }),
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||("HTTP "+r.status));
+      job.hung=d.handle;
+      renderJobs();
+    }catch(e){
+      btn.disabled=false; btn.textContent="걸기";
+      let m=acts.querySelector(".hangMsg");
+      m.style.display=""; m.className="hangMsg err"; m.textContent=e.message;
+    }
+  });
+}
+
+/* ============================================================
+   설정 불러오기 · 관리자 화면
+   화면의 잠금은 안내입니다. 실제 차단은 서버가 합니다.
+   ============================================================ */
+const ALL_RES=["480p","720p","1080p"];
+const ALL_MODELS=Object.keys(MODELS);
+
+async function loadSettings(){
+  try{
+    const r=await fetch(API+"/settings");
+    // 로그인만 안 한 것과 서버가 아예 없는 것은 다릅니다. 예전에는 둘 다
+    // "데모 모드" 로 뭉뚱그려서, 학생 입장에서는 그냥 고장난 걸로 보였습니다.
+    if(r.status===401){
+      showNeedLogin();
+      DEMO=true;
+      // 값은 기본값(학생 기준)으로 두고 화면은 그대로 그립니다.
+      // 여기서 빠져나가면 슬라이더 상한이 반영되지 않습니다.
+    }
+    else if(!r.ok) throw new Error("HTTP "+r.status);
+    else Object.assign(S,await r.json());
+  }catch(e){
+    DEMO=true;
+    document.getElementById("demoTag").style.display="";
+    document.getElementById("adminPeek").style.display="";   // 데모에서 관리자 화면 확인용
+    // 서버가 없으면 홈(Next 안내 화면)도 없습니다. 눌러도 안 되는 버튼을
+    // 남겨두면 고장난 것처럼 보입니다 — 전시장 쪽 로그인 버튼과 같은 원칙.
+    // 전시장 링크는 그대로 둡니다. 같은 폴더의 정적 파일이라 서버 없이도 열립니다.
+    const h=document.querySelector(".goHome"); if(h) h.style.display="none";
+  }
+  applySettings();
+}
+function applySettings(){
+  if(!S.isAdmin&&!S.models.includes(model)) model=S.models[0]||ALL_MODELS[0];
+  buildModels(); buildRes(); buildDur(); refresh();
+  renderAdmin();
+  // DEMO 는 "서버가 없다" 또는 "로그인 전" 입니다. 둘 다 쓸 수 없는 길입니다.
+  document.getElementById("pwLink").style.display=DEMO?"none":"";
+  showApproval();
+  loadHistory();
+}
+
+/* ---------- 관리자 설정 여닫기 ----------
+   관리자가 아니면 버튼조차 없습니다. 관리자여도 처음에는 닫혀 있고,
+   눌러야 펴집니다.
+
+   안의 값은 열 때 채웁니다. 학생 명단은 서버에 한 번 물어봐야 하는데,
+   열어보지도 않을 화면 때문에 매번 부를 이유가 없습니다. */
+let adminOpen=false, adminFilled=false;
+const adminToggle=document.getElementById("adminToggle");
+
+function renderAdmin(){
+  /* 두 역할이 있습니다.
+       관리자  — 한도·화질·모델·길이(예산) + 학생 계정
+       선생님  — 학생 계정만
+     선생님에게는 설정 영역을 감추는 것으로 끝내지 않습니다. 저장 요청은
+     서버가 403 으로 막습니다(settings 라우트). 여기서 감추는 것은 누를 수도
+     없는 것을 보여주지 않기 위해서입니다. */
+  const canManage=S.isAdmin||S.isTeacher;
+  const on=canManage&&adminOpen;
+
+  adminToggle.style.display=canManage?"":"none";
+  adminToggle.querySelector("span").textContent=S.isAdmin?"관리자 설정":"학생 계정";
+  adminToggle.classList.toggle("on",on);
+  adminToggle.setAttribute("aria-expanded",on?"true":"false");
+  adminToggle.querySelector(".caret").textContent=on?"▴":"▾";
+
+  document.getElementById("adminBox").style.display=on?"":"none";
+  document.getElementById("settingsOnly").style.display=S.isAdmin?"":"none";
+  document.querySelector(".adminHead h2").textContent=
+    S.isAdmin?"관리자 설정":"학생 계정";
+
+  if(on){
+    // 이미 펴져 있는 상태에서 설정을 저장하면 값이 바뀌므로 다시 채웁니다.
+    if(S.isAdmin) fillAdmin();
+    else document.getElementById("adminWho").textContent=
+      (S.email?S.email+" · ":"")+"선생님";
+    if(!adminFilled){ adminFilled=true; loadStudents(); }
+  }
+}
+function setAdminOpen(v){
+  adminOpen=v; renderAdmin();
+  // 접을 때는 목록이 위로 딸려 올라옵니다. 스크롤이 어디에 있든
+  // 방금 연 것이 눈에 들어오도록 맨 위로 보냅니다.
+  if(v) document.querySelector("aside").scrollTo({top:0,behavior:"smooth"});
+}
+adminToggle.addEventListener("click",()=>setAdminOpen(!adminOpen));
+document.getElementById("adminHide").addEventListener("click",()=>setAdminOpen(false));
+
+/* ---------- 사용 중지 안내 ----------
+   중지된 계정도 로그인은 됩니다. 화면이 아니라 서버가 막으므로, 여기서는
+   "왜 안 되는지" 만 알려주면 됩니다. */
+function showApproval(){
+  if(DEMO||S.isAdmin||S.approved!==false) return;
+  const tag=document.getElementById("demoTag");
+  tag.style.display=""; tag.classList.add("needLogin");
+  tag.textContent="사용이 중지된 계정입니다 · 선생님께 문의하세요";
+  document.getElementById("genBtn").disabled=true;
+}
+
+/* ============================================================
+   학생 계정 (관리자)
+   ------------------------------------------------------------
+   선생님이 명단으로 계정을 만들고 초기 비밀번호를 알려주는 방식입니다.
+   메일은 전혀 쓰지 않습니다 — Supabase 기본 메일이 조직 팀원이 아닌
+   주소로는 발송을 거부해서 학생에게 어차피 닿지 않습니다.
+
+   계정을 만들 때 나오는 비밀번호는 그 직후 한 번만 보입니다. 저장하지
+   않습니다. 반면 초기화는 언제나 123456 으로 되돌립니다 — 수업 중에 무작위
+   문자열을 30명에게 불러주는 것이 실제로는 되지 않아서입니다.
+   그 대신 초기화된 계정은 학생이 비밀번호를 바꾸기 전까지 열려 있는
+   셈이므로, 필요한 계정에만 그 자리에서 쓰세요.
+   ============================================================ */
+let CAN_MANAGE=false, VIEWER_IS_ADMIN=false;
+
+async function loadStudents(){
+  const box=document.getElementById("stuList");
+  box.innerHTML='<div class="tip">불러오는 중…</div>';
+  try{
+    const r=await fetch("/api/students",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json();
+    CAN_MANAGE=!!d.canManage; VIEWER_IS_ADMIN=!!d.viewerIsAdmin;
+    if(d.classDomain) document.getElementById("stuDomain").textContent="@"+d.classDomain;
+    document.getElementById("stuAdd").disabled=!CAN_MANAGE;
+    renderStudents(d.students||[]);
+  }catch(e){
+    box.innerHTML='<div class="tip err">명단을 불러오지 못했습니다</div>';
+  }
+}
+
+function renderStudents(list){
+  const box=document.getElementById("stuList");
+  const off=list.filter(s=>!s.approved).length;
+  document.getElementById("stuCount").textContent=
+    off?("중지 "+off+"명 / 전체 "+list.length+"명"):("전체 "+list.length+"명");
+
+  box.innerHTML="";
+  if(!CAN_MANAGE){
+    const n=document.createElement("div"); n.className="tip err";
+    n.textContent="계정 만들기와 비밀번호 초기화는 SUPABASE_SERVICE_ROLE_KEY 를 "+
+      ".env.local 에 넣고 서버를 다시 시작하면 열립니다.";
+    box.appendChild(n);
+  }
+  if(!list.length){
+    const n=document.createElement("div"); n.className="tip";
+    n.textContent="아직 등록한 학생이 없습니다.";
+    box.appendChild(n); return;
+  }
+
+  list.forEach(s=>{
+    const row=document.createElement("div"); row.className="stu"+(s.approved?"":" wait");
+    const state=s.isAdmin?"관리자":(s.approved?"사용 중":"중지됨");
+    row.innerHTML=
+      '<div class="who"><b>'+esc(s.email)+'</b><span>'+state+'</span></div>'+
+      '<div class="acts">'+
+        (s.isAdmin?"":'<button data-appr="'+s.id+'">'+(s.approved?"사용 중지":"사용 재개")+'</button>')+
+        ((CAN_MANAGE&&!s.isAdmin)?'<button data-pw="'+s.id+'">비밀번호 초기화</button>':"")+
+      '</div>'+
+      '<div class="msg"></div>';
+    box.appendChild(row);
+  });
+
+  box.querySelectorAll("[data-appr]").forEach(b=>b.addEventListener("click",async()=>{
+    const s=list.find(x=>x.id===b.dataset.appr);
+    b.disabled=true; b.textContent="처리 중…";
+    try{
+      const r=await fetch("/api/students",{
+        method:"PATCH", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id:s.id,approved:!s.approved}),
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||("HTTP "+r.status));
+      loadStudents();
+    }catch(e){
+      b.disabled=false; b.textContent=s.approved?"사용 중지":"사용 재개";
+      msgIn(b,"err",e.message);
+    }
+  }));
+
+  box.querySelectorAll("[data-pw]").forEach(b=>b.addEventListener("click",async()=>{
+    if(!confirm("비밀번호를 123456 으로 되돌립니다.\n\n"+
+                "누구나 아는 값이라, 학생이 바꾸기 전까지는 반의 다른 사람도 "+
+                "이 계정으로 들어올 수 있습니다. 계속할까요?")) return;
+    b.disabled=true; b.textContent="만드는 중…";
+    try{
+      const r=await fetch("/api/students",{
+        method:"PUT", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id:b.dataset.pw}),
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||("HTTP "+r.status));
+      msgIn(b,"pw","비밀번호: "+d.password+" · 학생에게 알려주고 바꾸게 하세요");
+    }catch(e){
+      msgIn(b,"err",e.message);
+    }
+    b.disabled=false; b.textContent="비밀번호 초기화";
+  }));
+}
+
+function msgIn(btn,cls,text){
+  const m=btn.closest(".stu").querySelector(".msg");
+  m.className="msg "+cls; m.textContent=text;
+}
+
+/* ---------- 계정 만들기 ---------- */
+document.getElementById("stuAdd").addEventListener("click",async()=>{
+  const ta=document.getElementById("stuNew");
+  const out=document.getElementById("stuNewOut");
+  const emails=ta.value.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);
+  if(!emails.length){ ta.focus(); return; }
+
+  const btn=document.getElementById("stuAdd");
+  btn.disabled=true; btn.textContent="만드는 중…";
+  out.innerHTML="";
+  try{
+    const r=await fetch("/api/students",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({emails}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("HTTP "+r.status));
+    ta.value="";
+    showNewAccounts(d.created||[],d.failed||[]);
+    loadStudents();
+  }catch(e){
+    out.innerHTML='<div class="tip err">'+esc(e.message)+'</div>';
+  }
+  btn.disabled=false; btn.textContent="계정 만들기";
+});
+
+/* 초기 비밀번호는 지금 이 화면에만 있습니다. 서버는 저장하지 않습니다 —
+   저장하면 그게 곧 평문 비밀번호 목록이 되기 때문입니다.
+   그래서 인쇄나 복사로 남길 수 있게 해둡니다. */
+function showNewAccounts(created,failed){
+  const out=document.getElementById("stuNewOut");
+  out.innerHTML="";
+  if(!created.length&&!failed.length) return;
+
+  if(created.length){
+    const w=document.createElement("div"); w.className="newAcc";
+    w.innerHTML='<div class="head">만든 계정 '+created.length+'개 · '+
+      '<b>이 비밀번호는 지금만 보입니다.</b> 복사하거나 인쇄해서 학생에게 알려주세요.</div>'+
+      '<table><tr><th>주소</th><th>초기 비밀번호</th></tr>'+
+      created.map(c=>'<tr><td>'+esc(c.email)+'</td><td>'+esc(c.password)+'</td></tr>').join("")+
+      '</table>'+
+      '<div class="acts">'+
+        '<button id="accCopy">표 복사</button>'+
+        '<button id="accCsv">CSV 내려받기</button>'+
+        '<button id="accHide">숨기기</button>'+
+      '</div>';
+    out.appendChild(w);
+
+    const text=created.map(c=>c.email+"\t"+c.password).join("\n");
+    document.getElementById("accCopy").addEventListener("click",e=>{
+      navigator.clipboard.writeText(text)
+        .then(()=>{e.target.textContent="복사했습니다";})
+        .catch(()=>{e.target.textContent="복사하지 못했습니다";});
+    });
+    document.getElementById("accCsv").addEventListener("click",()=>{
+      // 엑셀이 UTF-8 로 읽도록 BOM 을 붙입니다
+      const csv="﻿주소,초기 비밀번호\n"+created.map(c=>c.email+","+c.password).join("\n");
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+      a.download="학생계정-"+new Date().toISOString().slice(0,10)+".csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    });
+    document.getElementById("accHide").addEventListener("click",()=>{out.innerHTML="";});
+  }
+
+  if(failed.length){
+    const f=document.createElement("div"); f.className="tip err";
+    f.innerHTML="만들지 못한 것 "+failed.length+"개<br>"+
+      failed.map(x=>esc(x.email)+" — "+esc(x.reason)).join("<br>");
+    out.appendChild(f);
+  }
+}
+function esc(s){
+  return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+/* 데모에서 관리자 화면을 보기 위한 토글. 서버가 붙으면 나타나지 않습니다. */
+document.getElementById("adminPeek").addEventListener("click",()=>{
+  S.isAdmin=!S.isAdmin;
+  document.getElementById("adminPeek").textContent=
+    S.isAdmin?"학생으로 보기":"관리자로 보기";
+  applySettings();
+});
+
+function fillAdmin(){
+  document.getElementById("adminWho").textContent=S.email?S.email+" · 관리자":"관리자";
+  document.getElementById("setQuota").value=S.quota;
+  document.getElementById("setMaxDur").value=S.maxDuration;
+  document.getElementById("setMaxDur").max=String(S.hardMaxDuration);
+
+  const resRow=document.getElementById("setRes"); resRow.innerHTML="";
+  ALL_RES.forEach(r=>{
+    const b=document.createElement("button");
+    b.className="opt"+(S.resolutions.includes(r)?" sel":""); b.textContent=r;
+    b.addEventListener("click",()=>{
+      S.resolutions=S.resolutions.includes(r)
+        ? S.resolutions.filter(x=>x!==r) : [...S.resolutions,r];
+      if(!S.resolutions.length) S.resolutions=["480p"];   // 최소 하나는 열어둡니다
+      fillAdmin(); buildRes();
+    });
+    resRow.appendChild(b);
+  });
+
+  const mRow=document.getElementById("setModels"); mRow.innerHTML="";
+  ALL_MODELS.forEach(m=>{
+    const b=document.createElement("button");
+    b.className="opt"+(S.models.includes(m)?" sel":"");
+    b.textContent=m==="grok-imagine-video"?"Imagine Video":"Imagine Video 1.5";
+    b.addEventListener("click",()=>{
+      S.models=S.models.includes(m)?S.models.filter(x=>x!==m):[...S.models,m];
+      if(!S.models.length) S.models=[ALL_MODELS[0]];
+      fillAdmin(); buildModels();
+    });
+    mRow.appendChild(b);
+  });
+
+  const list=document.getElementById("exList"); list.innerHTML="";
+  if(!S.overrides.length)
+    list.innerHTML='<div class="tip" style="margin-top:6px">예외 없음 · 모두 기본 한도를 씁니다</div>';
+  S.overrides.forEach((o,i)=>{
+    const d=document.createElement("div"); d.className="exItem";
+    d.innerHTML="<span>"+o.email+" — <b>"+o.quota+"개</b></span>";
+    const x=document.createElement("button"); x.textContent="삭제";
+    x.addEventListener("click",()=>{S.overrides.splice(i,1);fillAdmin();});
+    d.appendChild(x); list.appendChild(d);
+  });
+}
+document.getElementById("exAdd").addEventListener("click",()=>{
+  const em=document.getElementById("exEmail").value.trim().toLowerCase();
+  const q=parseInt(document.getElementById("exQuota").value,10);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)||!(q>=0)) return;
+  S.overrides=[...S.overrides.filter(o=>o.email!==em),{email:em,quota:q}];
+  document.getElementById("exEmail").value=""; fillAdmin();
+});
+document.getElementById("setQuota").addEventListener("input",e=>{
+  const v=parseInt(e.target.value,10);
+  if(v>=1){S.quota=v;refresh();}
+});
+document.getElementById("setMaxDur").addEventListener("input",e=>{
+  const v=parseInt(e.target.value,10);
+  if(v>=1&&v<=S.hardMaxDuration){ S.maxDuration=v; buildDur(); refresh(); }
+});
+document.getElementById("setSave").addEventListener("click",async()=>{
+  const st=document.getElementById("setStatus");
+  st.textContent="저장하는 중…";
+  try{
+    const r=await fetch(API+"/settings",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({quota:S.quota,resolutions:S.resolutions,
+        models:S.models,maxDuration:S.maxDuration,overrides:S.overrides}),
+    });
+    if(!r.ok){
+      // 서버가 이유를 적어 보냅니다. "HTTP 400" 만으로는 무엇이 틀렸는지
+      // 알 수 없습니다.
+      const d=await r.json().catch(()=>null);
+      throw new Error(d&&d.error?d.error:"HTTP "+r.status);
+    }
+    st.textContent="저장했습니다. 학생 화면에 바로 반영됩니다.";
+  }catch(e){
+    st.textContent=DEMO
+      ? "데모 모드라 저장되지 않았습니다. 화면에만 반영됩니다."
+      : "저장하지 못했습니다 — "+e.message;
+  }
+  refresh();
+});
+
+loadSettings();
+</script>

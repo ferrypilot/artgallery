@@ -1,0 +1,3572 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Art Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!-- 사이트 표준(글꼴·색·모서리). 값은 저기 한 곳에만 있습니다.
+     오프라인으로 전시를 옮길 때 이 파일도 함께 가져가세요 — OFFLINE.md -->
+<link rel="stylesheet" href="theme.css" />
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#08080a}
+  #root{position:relative;width:100vw;height:100vh;background:#08080a;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e8e6e1}
+  canvas{display:block}
+  .serif{font-family:'Noto Serif KR',serif}
+  button{font-family:inherit;cursor:pointer}
+
+  #root.light #mark,#root.light #hint,#root.light #ctxHint{color:#5f5c56}
+  #root.light #wt{color:#1a1a1e}
+  #root.light #wa{color:#4a4740}
+  #root.light #wn{color:#5f5c56}
+  #root.light .rule{background:#a8a49c}
+  #root.light .bar{background:rgba(0,0,0,.14)}
+  #root.light #fill{background:#2a2a30}
+
+  /* ============ 로비 ============ */
+  #lobby{position:absolute;inset:0;z-index:35;background:#0a0a0c;overflow-y:auto;padding:0 0 80px}
+  #lobby.hide{display:none}
+  .lobbyTop{max-width:1100px;margin:0 auto;padding:64px 28px 0;
+    display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+  .lobbyTop h1{font-size:clamp(26px,4vw,40px);font-weight:300;letter-spacing:.05em;line-height:1.3}
+  .lobbyTop .eyebrow{font-size:10px;letter-spacing:.34em;color:#6e6b65;text-transform:uppercase;margin-bottom:14px}
+  .whoWrap{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+  .idChip{font-size:9.5px;letter-spacing:.14em;color:#8a8780;border:1px solid #26262e;padding:8px 11px}
+  .idChip.admin{color:#d8b48a;border-color:#4a3e30}
+  .idChip.guest{color:#5c5a55}
+  .topBtn{border:1px solid #26262e;padding:9px 14px;font-size:12px;letter-spacing:0;
+    font-weight:700;color:#a8a49c;
+    background:transparent;transition:.2s;white-space:nowrap}
+  .topBtn:hover{border-color:#8a8780;color:#e8e6e1}
+  .lobbyNote{max-width:1100px;margin:0 auto;padding:26px 28px 0;font-size:12px;color:#6e6b65;line-height:1.9}
+
+  .grid{max-width:1100px;margin:0 auto;padding:40px 28px 0;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:20px}
+  .card{position:relative;border:1px solid #1c1c23;background:#0d0d10;text-align:left;overflow:hidden;
+    transition:border-color .25s,transform .25s;cursor:pointer}
+  .card:hover{border-color:#44444e;transform:translateY(-2px)}
+  .card:focus-visible{outline:1px solid #8a8780;outline-offset:2px}
+  .card .thumb{width:100%;aspect-ratio:16/9;background:#111;display:block;object-fit:cover}
+  .card .meta{padding:16px 17px 18px}
+  .card .ct{font-size:16px;font-weight:700;letter-spacing:-.01em}
+  .card .cn{font-size:10.5px;color:#8a8780;margin-top:6px;letter-spacing:.1em}
+  .card .cs{font-size:10px;color:#5c5a55;margin-top:12px;display:flex;gap:12px}
+  .mine{position:absolute;top:10px;left:10px;font-size:8.5px;letter-spacing:.2em;
+    background:rgba(10,10,13,.8);border:1px solid #3a3a44;color:#c8c4bb;padding:4px 8px}
+  .del{position:absolute;top:8px;right:8px;width:26px;height:26px;line-height:1;z-index:2;
+    background:rgba(10,10,13,.78);border:1px solid #2c2c36;color:#8a8780;font-size:14px;
+    opacity:0;transition:.2s}
+  .card:hover .del{opacity:1}
+  .del:hover{border-color:#7a4a44;color:#c08a80}
+  .del:focus-visible{opacity:1;outline:1px solid #8a8780}
+  /* 대표 이미지 바꾸기. 카드에 걸리는 그림이니 카드에서 바로 손댈 수
+     있어야 합니다. 삭제(×) 왼쪽에 나란히, 같은 규칙으로 나타납니다. */
+  .cov{position:absolute;top:8px;right:38px;height:26px;padding:0 9px;line-height:1;z-index:2;
+    background:rgba(10,10,13,.78);border:1px solid #2c2c36;color:#8a8780;
+    font-size:10.5px;letter-spacing:.06em;opacity:0;transition:.2s}
+  .card:hover .cov{opacity:1}
+  .cov:hover{border-color:#6a6a74;color:#e8e6e1}
+  .cov:focus-visible{opacity:1;outline:1px solid #8a8780}
+  .card.new{border-style:dashed;border-color:#2c2c36;background:transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:230px;gap:12px;color:#6e6b65;text-align:center;padding:20px}
+  .card.new:hover{border-color:#8a8780;color:#e8e6e1}
+  .card.new .plus{font-size:26px;font-weight:300;line-height:1}
+  .card.new .cap{font-size:11px;letter-spacing:.2em}
+  .card.new .sub{font-size:9.5px;letter-spacing:.08em;color:#4e4c48;line-height:1.7}
+
+  /* ============ 모달 ============ */
+  .modal{position:absolute;inset:0;z-index:60;background:rgba(6,6,8,.93);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+  .modal.on{display:flex}
+  .box{width:min(420px,92vw);border:1px solid #22222a;background:#0b0b0e;padding:32px 30px;margin:auto}
+  .box h2{font-family:'Noto Serif KR',serif;font-size:22px;font-weight:300;
+    letter-spacing:.03em;color:#f2f0eb}
+  /* 모달 안의 글자는 읽으라고 있는 것입니다.
+     예전에는 라벨이 9px · 자간 .26em · 대문자였는데, 한글에는 특히
+     나빴습니다. 대문자 변환은 한글에 아무 효과가 없으면서 자간만 남아
+     글자가 흩어졌고, 색(#6e6b65)은 배경 대비가 3.8:1 로 기준 미달이었습니다.
+     제목의 넓은 자간은 남기고, 읽어야 하는 곳만 키우고 밝혔습니다. */
+  .box p.note{font-size:12.5px;color:#a09c94;line-height:1.85;margin-top:11px;letter-spacing:.01em}
+  .box p.warn{font-size:12.5px;color:#c49b8e;line-height:1.85;margin-top:11px;letter-spacing:.01em}
+  .fl{font-size:11.5px;letter-spacing:.04em;color:#b0aca4;margin:20px 0 8px}
+  .fl .err{float:right;letter-spacing:.01em;color:#c88478;font-size:11.5px}
+  .fl .val{float:right;color:#8f8c85;font-size:11.5px;letter-spacing:.01em}
+  .tip{font-size:11.5px;color:#8a8780;letter-spacing:.01em;line-height:1.8;margin-top:8px}
+  .tip b{color:#c8c4bb;font-weight:400;font-family:'IBM Plex Mono',monospace}
+
+  input[type=text],input[type=email]{width:100%;padding:11px 13px;border:1px solid #33333e;
+    background:rgba(255,255,255,.04);color:#f2f0eb;font-family:'Noto Serif KR',serif;
+    font-size:14px;letter-spacing:.01em}
+  input:focus{outline:none;border-color:#8a8780;background:rgba(255,255,255,.07)}
+  /* 예시 문구는 흐릿해야 입력값과 구분되지만, 안 보일 만큼은 아닙니다 */
+  input::placeholder,textarea::placeholder{color:#807d76;
+    font-family:'Noto Serif KR',serif;font-size:12.5px;letter-spacing:.01em}
+  input.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.08em}
+  input.code{font-family:'IBM Plex Mono',monospace;font-size:20px;letter-spacing:.5em;text-align:center}
+  textarea{width:100%;padding:11px 13px;border:1px solid #33333e;background:rgba(255,255,255,.04);
+    color:#f2f0eb;font-family:'Noto Serif KR',serif;font-size:14px;line-height:1.75;resize:none}
+  textarea:focus{outline:none;border-color:#8a8780;background:rgba(255,255,255,.07)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .row5{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+  .opt{padding:11px 7px;border:1px solid #2c2c36;background:transparent;color:#bcb8af;
+    font-size:12.5px;font-weight:700;letter-spacing:0;transition:.2s}
+  .opt:hover{border-color:#4a4a54;color:#e8e6e1}
+  .opt.sel{border-color:#8a8780;color:#f2f0eb;background:rgba(255,255,255,.06)}
+  /* 창마다 주 동작 하나만 채웁니다 — 밝은 로비 모달과 같은 규칙입니다.
+     예전에는 닫기와 걸기가 똑같은 외곽선이라 어느 쪽이 진행인지
+     한눈에 안 들어왔습니다. */
+  .go{margin-top:24px;width:100%;padding:13px;background:#e8e6e1;color:#0b0b0e;
+    border:1px solid #e8e6e1;font-size:12.5px;letter-spacing:.04em;
+    font-weight:500;transition:.2s}
+  .go:hover{background:#fff;border-color:#fff}
+  .go.danger{background:#8e3a2c;border-color:#8e3a2c;color:#fff}
+  .go.danger:hover{background:#a04434;border-color:#a04434}
+  .go[disabled]{background:#26262e;border-color:#26262e;color:#6f6c66;
+    opacity:1;cursor:not-allowed}
+  .go[disabled]:hover{background:#26262e;border-color:#26262e}
+  .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:24px}
+  .acts.three{grid-template-columns:1fr 1fr 1fr}
+  .ghost{padding:12px;background:transparent;color:#a8a49c;border:1px solid #2c2c36;
+    font-size:12.5px;letter-spacing:.04em}
+  .ghost:hover{border-color:#4a4a54;color:#e8e6e1}
+  .ghost.danger:hover{border-color:#7a4a44;color:#c08a80}
+  .linkish{background:none;border:none;color:#6e6b65;font-size:10.5px;letter-spacing:.08em;
+    text-decoration:underline;text-underline-offset:3px;padding:0;margin-top:16px}
+  .linkish:hover{color:#c8c4bb}
+
+  /* 데모용 메일함 */
+  .mailbox{margin-top:18px;border:1px dashed #3a3320;background:rgba(216,180,138,.05);padding:16px 15px}
+  .mailbox .tag{font-size:8.5px;letter-spacing:.24em;color:#8a7550;text-transform:uppercase}
+  .mailbox .body{font-size:11px;color:#a89878;line-height:1.85;margin-top:9px}
+  .mailbox .code{font-family:'IBM Plex Mono',monospace;font-size:22px;letter-spacing:.42em;
+    color:#e8d5b4;margin-top:10px}
+
+  #drop{border:1px dashed #33333e;background:rgba(255,255,255,.02);padding:24px 18px;
+    text-align:center;transition:.2s;cursor:pointer}
+  #drop:hover,#drop.over{border-color:#8a8780;background:rgba(255,255,255,.05)}
+  #drop .big{font-size:13px;color:#e8e6e1;letter-spacing:.02em}
+  #drop .small{font-size:11.5px;color:#8a8780;margin-top:8px;letter-spacing:.01em;line-height:1.75}
+  #stage{width:100%;aspect-ratio:16/9;border:1px solid #26262e;background:#0d0d10;
+    display:none;object-fit:contain}
+  #stage.on{display:block}
+  #fileMeta{font-size:11.5px;color:#8a8780;margin-top:9px;letter-spacing:.01em;
+    display:flex;justify-content:space-between;gap:10px}
+  #prev{width:100%;aspect-ratio:16/9;border:1px solid #26262e;display:block;background:#0d0d10}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+  .pane{display:none}.pane.on{display:block}
+
+  input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:20px}
+  /* 1px 선에 9px 손잡이는 어두운 배경에서 거의 안 보입니다 */
+  input[type=range]::-webkit-slider-runnable-track{height:2px;background:#4a4a56}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+    background:#e8e6e1;margin-top:-5.5px;border-radius:50%}
+  input[type=range]::-moz-range-track{height:2px;background:#4a4a56}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;background:#e8e6e1;
+    border:none;border-radius:50%}
+  input[type=color]{width:100%;height:30px;padding:0;border:1px solid #26262e;background:none}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:none}
+
+  /* ============ HUD ============ */
+  /* 방 안 글자는 전부 10px 에 자간 .1~.22em 이었습니다. 라틴 소문자에는
+     맞지만 한글은 낱자가 흩어져 읽는 대신 더듬게 됩니다. 크기를 올리고
+     자간을 0 으로 되돌립니다 — 아래 나눔고딕 블록이 자간을 .02em 으로
+     한 번 더 잡아줍니다. */
+  #mark{position:absolute;top:22px;left:24px;z-index:10;font-size:12px;letter-spacing:0;
+    color:#7d7a74;pointer-events:none}
+  #hint{position:absolute;bottom:22px;right:24px;z-index:10;font-size:11.5px;letter-spacing:0;
+    color:#7d7a74;text-align:right;line-height:2;pointer-events:none}
+  #back{position:absolute;top:18px;right:170px;z-index:22;padding:9px 16px;
+    border:1px solid rgba(140,138,130,.4);background:rgba(10,10,13,.6);color:#dcd8cf;
+    font-size:12px;font-weight:700;letter-spacing:0;backdrop-filter:blur(6px)}
+  #gear{position:absolute;top:18px;right:22px;z-index:22;padding:9px 16px;
+    border:1px solid rgba(140,138,130,.4);background:rgba(10,10,13,.6);color:#dcd8cf;
+    font-size:12px;font-weight:700;letter-spacing:0;backdrop-filter:blur(6px)}
+  #back:hover,#gear:hover{border-color:#8a8780}
+  #cross{position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;
+    border-radius:50%;background:rgba(232,230,225,.5);z-index:9;pointer-events:none;
+    opacity:0;transition:opacity .2s}
+  #cross.on{opacity:1}
+
+  #label{position:absolute;bottom:22px;left:24px;z-index:10;max-width:min(360px,72vw);
+    pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s}
+  #label.on{opacity:1;transform:translateY(0)}
+  .rule{width:26px;height:1px;background:#4a4a52;margin-bottom:14px}
+  #wt{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  #wa{font-size:12.5px;color:#b0aca3;margin-top:6px;letter-spacing:0}
+  #wn{font-size:12.5px;color:#8f8b83;margin-top:12px;line-height:1.75;letter-spacing:0}
+  .meter{display:flex;align-items:center;gap:9px;margin-top:14px}
+  .meter span{font-size:10.5px;letter-spacing:.04em;color:#7d7a74}
+  .bar{width:78px;height:2px;background:#232329}
+  #fill{height:100%;width:0%;background:#c8c4bb;transition:width .18s linear}
+
+  #ctxHint{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:11;
+    font-size:12.5px;font-weight:700;letter-spacing:0;color:#b0aca3;opacity:0;transition:opacity .3s;
+    pointer-events:none;white-space:nowrap}
+  #ctxHint.on{opacity:1}
+
+  /* 전시 설정.
+
+     예전에는 제목이 9px 에 자간 .26em 이었습니다. 라틴 대문자 몇 글자를
+     띄엄띄엄 놓을 때 쓰는 값인데, 한글을 그렇게 놓으면 낱자가 흩어져
+     읽는 것이 아니라 더듬게 됩니다. 게다가 색이 #6e6b65 라 거의 검은
+     바탕에서 대비가 2.5:1 밖에 안 됐습니다.
+
+     글자를 키우고 자간을 0 으로 되돌리고 색을 올렸습니다. 폭도 조금
+     넓혀서 "지우고 방 그림으로" 같은 버튼 글자가 접히지 않게 했습니다. */
+  #panel{position:absolute;top:0;right:0;bottom:0;width:302px;z-index:21;
+    background:rgba(9,9,12,.95);border-left:1px solid #22222a;backdrop-filter:blur(12px);
+    padding:66px 26px 34px;overflow-y:auto;
+    transform:translateX(100%);transition:transform .34s cubic-bezier(.4,0,.2,1)}
+  #panel.on{transform:translateX(0)}
+  .grp{margin-bottom:26px}
+  .grp>h3{font-size:12.5px;letter-spacing:0;color:#b0aca3;
+    margin-bottom:12px;font-weight:700}
+  .grp>h3 .val{float:right;color:#8f8b83;font-size:12px;letter-spacing:0;font-weight:400}
+  .grp p.small{font-size:12.5px;color:#928e86;line-height:1.75;letter-spacing:0}
+  /* 고른 그림 미리보기. 로비 카드와 같은 비율로 잘라 보여줍니다 —
+     여기서 보이는 대로 카드에 걸려야 학생이 다시 고르지 않습니다. */
+  #coverPrev{width:100%;aspect-ratio:16/9;object-fit:cover;display:none;
+    border:1px solid #26262e;background:#0d0d10;margin-bottom:9px}
+  #coverPrev.on{display:block}
+  #root.light #coverPrev{border-color:#d3d6dc;background:#f0f0f1}
+  /* 로비에서 여는 창의 미리보기. 위와 같은 비율로 보여줍니다. */
+  #cvPrev{width:100%;aspect-ratio:16/9;object-fit:cover;display:none;
+    border:1px solid #26262e;background:#0d0d10;margin-top:16px}
+  #cvPrev.on{display:block}
+  #root.lobbyMode #cvPrev{border-color:#e2e2e6;background:#f0f0f1}
+
+  /* 저장이 실패했을 때. 조용히 넘어가면 학생은 저장된 줄 압니다. */
+  .grp p.small.warn{color:#c08a80}
+  #root.light .grp p.small.warn{color:#a03a28}
+  .divider{height:1px;background:#1c1c23;margin:0 0 24px}
+  .panelBtn{width:100%;padding:12px;background:transparent;color:#dcd8cf;border:1px solid #34343e;
+    font-size:12.5px;font-weight:700;letter-spacing:0;transition:.2s}
+  .panelBtn:hover{border-color:#8a8780}
+  .panelBtn.danger{color:#a98a82;margin-top:6px}
+  .panelBtn.danger:hover{border-color:#7a4a44;color:#c9a096}
+
+  #move{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:12;display:none;
+    padding:16px 32px;border:1px solid #34343c;background:rgba(12,12,15,.75);color:#dcd8cf;
+    font-size:12.5px;font-weight:700;letter-spacing:0;user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  @media (hover:none){#move{display:block} .del{opacity:1}}
+
+  /* ============ 입장 문 ============ */
+  #door{position:absolute;inset:0;z-index:38;pointer-events:none;display:none;
+    opacity:1;transition:opacity .4s}
+  #door.on{display:block}
+  #door.fade{opacity:0}
+  .leaf{position:absolute;top:0;bottom:0;width:50.4%;background:#0e0e12;
+    transition:transform 1s cubic-bezier(.5,0,.15,1)}
+  .leaf.l{left:0;border-right:1px solid #2a2a32}
+  .leaf.r{right:0;border-left:1px solid #2a2a32}
+  #door.open .leaf.l{transform:translateX(-100%)}
+  #door.open .leaf.r{transform:translateX(100%)}
+  .doorLabel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    text-align:center;color:#e8e6e1;transition:opacity .4s;white-space:nowrap}
+  #door.open .doorLabel{opacity:0}
+  .doorLabel .dt{font-size:clamp(22px,4vw,34px);font-weight:300;letter-spacing:.08em}
+  .doorLabel .dn{font-size:10.5px;letter-spacing:.28em;color:#8a8780;margin-top:15px}
+
+  /* ============ 로비 — 밝은 톤 ============
+     전시장 안은 어둡게 유지합니다. 밝은 로비에서 어두운 전시실로
+     들어가는 대비가 실제 미술관의 진입 경험과 같습니다. */
+  #lobby{background:#f4f4f5;color:#1a1a1e}
+  .lobbyTop h1{color:#141417}
+  .lobbyTop .eyebrow{color:#8e8e95}
+  .lobbyNote{color:#6b6b72}
+  .idChip{color:#6b6b72;border-color:#dcdce0;background:#fff}
+  .idChip.guest{color:#97979d}
+  .idChip.admin{color:#8a6330;border-color:#e2d1b0;background:#fdf8ef}
+  .topBtn{color:#55555c;border-color:#dcdce0;background:#fff}
+  .topBtn:hover{border-color:#8e8e95;color:#141417}
+  .card{background:#fff;border-color:#e2e2e6}
+  .card:hover{border-color:#b4b4ba;box-shadow:0 6px 22px rgba(20,20,23,.07)}
+  .card:focus-visible{outline-color:#8e8e95}
+  .card .thumb{background:#e8e8ea}
+  .card .ct{color:#141417}
+  .card .cn{color:#6b6b72}
+  .card .cs{color:#97979d}
+  .mine{background:rgba(255,255,255,.93);border-color:#c9c9cf;color:#3a3a40}
+  .del{background:rgba(255,255,255,.93);border-color:#dcdce0;color:#8e8e95}
+  .del:hover{border-color:#c9958c;color:#a8524a}
+  .card.new{border-color:#cfcfd5;color:#8e8e95;background:transparent}
+  .card.new:hover{border-color:#8e8e95;color:#141417;box-shadow:none}
+  .card.new .sub{color:#adadb4}
+
+  /* 로비에서 연 모달도 같은 톤으로 — 밝은 화면에서 검은 창이 튀지 않게 */
+  #root.lobbyMode .modal{background:rgba(244,244,245,.88)}
+  #root.lobbyMode .box{background:#fff;border-color:#e2e2e6;
+    box-shadow:0 18px 50px rgba(20,20,23,.12)}
+  #root.lobbyMode .box h2{color:#141417}
+  #root.lobbyMode .box p.note{color:#6b6b72}
+  #root.lobbyMode .box p.warn{color:#9a4b3d}
+  #root.lobbyMode .fl,#root.lobbyMode .fl .val{color:#8e8e95}
+  #root.lobbyMode .fl .err{color:#a8524a}
+  #root.lobbyMode input[type=text],#root.lobbyMode input[type=email],
+  #root.lobbyMode textarea{background:#fafafb;border-color:#dcdce0;color:#141417}
+  #root.lobbyMode input:focus,#root.lobbyMode textarea:focus{border-color:#8e8e95}
+  #root.lobbyMode input::placeholder,#root.lobbyMode textarea::placeholder{color:#b4b4ba}
+  #root.lobbyMode .opt{border-color:#dcdce0;color:#6b6b72}
+  #root.lobbyMode .opt:hover{border-color:#b4b4ba;color:#141417}
+  #root.lobbyMode .opt.sel{border-color:#55555c;color:#141417;background:rgba(20,20,23,.05)}
+  #root.lobbyMode .go{color:#141417;border-color:#c9c9cf}
+  #root.lobbyMode .go:hover{border-color:#55555c;background:rgba(20,20,23,.04)}
+  #root.lobbyMode .go.danger{border-color:#dcc0ba;color:#9a4b3d}
+  #root.lobbyMode .go.danger:hover{border-color:#b5695c;background:rgba(154,75,61,.06)}
+  #root.lobbyMode .ghost{color:#6b6b72;border-color:#dcdce0}
+  #root.lobbyMode .ghost:hover{border-color:#b4b4ba;color:#141417}
+  #root.lobbyMode .ghost.danger{color:#9a4b3d;border-color:#e4cdc7}
+  #root.lobbyMode .ghost.danger:hover{border-color:#b5695c;color:#87301f;
+    background:rgba(154,75,61,.05)}
+  #root.lobbyMode .linkish{color:#8e8e95}
+  #root.lobbyMode .linkish:hover{color:#141417}
+  #root.lobbyMode .mailbox{border-color:#e2d1b0;background:#fdf8ef}
+  #root.lobbyMode .mailbox .tag{color:#a08040}
+  #root.lobbyMode .mailbox .body{color:#7a6540}
+  #root.lobbyMode .mailbox .code{color:#5a4520}
+
+  /* ============ 로비 가독성 정리 ============
+     읽는 글자는 12px 이상, 자간은 좁게. 색은 세 단계만.
+       #16181d 본문 · #4c515b 보조 · #737a85 약함
+     전시장 안(어두운 화면)에는 영향을 주지 않도록
+     모두 #lobby / .lobbyMode 아래로만 적용합니다. */
+  #lobby{color:#16181d}
+  #lobby .lobbyTop .eyebrow{font-size:10.5px;letter-spacing:.18em;color:#737a85}
+  #lobby .lobbyTop h1{color:#16181d;letter-spacing:.02em}
+  #lobby .lobbyNote{font-size:13px;line-height:1.85;letter-spacing:0;color:#4c515b}
+
+  #lobby .idChip{font-size:12px;letter-spacing:.01em;color:#16181d;
+    border-color:#d3d6dc;background:#fff;padding:9px 13px}
+  #lobby .idChip.guest{color:#737a85}
+  #lobby .idChip.admin{color:#8a5a18;border-color:#e3cfa6;background:#fdf6e8}
+  #lobby .topBtn{font-size:12px;letter-spacing:.01em;color:#16181d;
+    border-color:#d3d6dc;padding:10px 15px}
+  #lobby .topBtn:hover{border-color:#16181d;background:#f6f7f8;color:#16181d}
+  /* 작품을 만들러 가는 길 — 로비에서 유일하게 채운 버튼 */
+  #lobby .topBtn.primary{background:#16181d;border-color:#16181d;color:#fff;
+    text-decoration:none;display:inline-block;font-weight:500;letter-spacing:.04em}
+  #lobby .topBtn.primary:hover{background:#000;border-color:#000;color:#fff}
+  /* <a> 로 만든 topBtn — 홈처럼 진짜 이동하는 것은 링크여야 합니다.
+     버튼과 달리 밑줄이 기본이라 그것만 지웁니다. */
+  #lobby a.topBtn{text-decoration:none;display:inline-block}
+
+  #lobby .card{border-color:#d3d6dc}
+  #lobby .card:hover{border-color:#8b929d;box-shadow:0 8px 26px rgba(20,20,23,.10)}
+  #lobby .card .meta{padding:17px 18px 19px}
+  #lobby .card .ct{font-size:17px;color:#16181d}
+  #lobby .card .cn{font-size:12px;letter-spacing:.01em;color:#4c515b;margin-top:7px}
+  #lobby .card .cs{font-size:11.5px;letter-spacing:.01em;color:#737a85;margin-top:13px;gap:14px}
+  /* 내 전시장은 채워서 한눈에 */
+  #lobby .mine{font-size:10.5px;letter-spacing:.08em;background:#16181d;
+    border-color:#16181d;color:#fff;padding:5px 9px}
+  #lobby .del{width:30px;height:30px;font-size:16px;background:#fff;
+    border-color:#d3d6dc;color:#4c515b}
+  #lobby .del:hover{border-color:#a03a28;color:#a03a28;background:#fff}
+  #lobby .cov{height:30px;padding:0 11px;right:46px;font-size:11.5px;letter-spacing:.01em;
+    background:#fff;border-color:#d3d6dc;color:#4c515b}
+  #lobby .cov:hover{border-color:#16181d;color:#16181d;background:#fff}
+  #lobby .card.new{border-color:#c3c8d0;color:#4c515b}
+  #lobby .card.new:hover{border-color:#16181d;color:#16181d}
+  #lobby .card.new .plus{font-size:28px}
+  #lobby .card.new .cap{font-size:12.5px;letter-spacing:.06em}
+  #lobby .card.new .sub{font-size:11.5px;letter-spacing:0;color:#737a85}
+
+  /* 로비에서 연 창 */
+  #root.lobbyMode .box h2{color:#16181d}
+  #root.lobbyMode .box p.note{font-size:12.5px;line-height:1.8;letter-spacing:0;color:#4c515b}
+  #root.lobbyMode .box p.warn{font-size:12.5px;line-height:1.8;color:#a03a28}
+  #root.lobbyMode .fl{font-size:11.5px;letter-spacing:.08em;color:#4c515b;text-transform:none}
+  #root.lobbyMode .fl .val{font-size:11.5px;letter-spacing:.01em;color:#737a85}
+  #root.lobbyMode .fl .err{font-size:11.5px;color:#a03a28}
+  #root.lobbyMode input[type=text],#root.lobbyMode input[type=email],
+  #root.lobbyMode textarea{border-color:#d3d6dc;color:#16181d;font-size:14px;padding:11px 13px}
+  #root.lobbyMode input:focus,#root.lobbyMode textarea:focus{
+    border-color:#16181d;box-shadow:0 0 0 3px rgba(22,24,29,.07)}
+  #root.lobbyMode input::placeholder,#root.lobbyMode textarea::placeholder{
+    color:#a3a9b4;font-size:12px}
+  #root.lobbyMode input.code{font-size:22px;color:#16181d}
+  #root.lobbyMode .opt{font-size:12px;letter-spacing:.01em;padding:10px 6px;
+    border-color:#d3d6dc;color:#4c515b}
+  #root.lobbyMode .opt:hover{border-color:#8b929d;color:#16181d;background:#f6f7f8}
+  #root.lobbyMode .opt.sel{background:#16181d;border-color:#16181d;color:#fff}
+  /* 창마다 주 동작 하나만 채웁니다 */
+  #root.lobbyMode .go{background:#16181d;border-color:#16181d;color:#fff;
+    font-size:13px;letter-spacing:.06em;padding:14px;font-weight:500}
+  #root.lobbyMode .go:hover{background:#000;border-color:#000}
+  #root.lobbyMode .go[disabled]{background:#e6e8eb;border-color:#e6e8eb;color:#a3a9b4;opacity:1}
+  #root.lobbyMode .go[disabled]:hover{background:#e6e8eb;border-color:#e6e8eb}
+  #root.lobbyMode .go.danger{background:#a03a28;border-color:#a03a28;color:#fff}
+  #root.lobbyMode .go.danger:hover{background:#87301f;border-color:#87301f}
+  #root.lobbyMode .go.danger[disabled]{background:#e6e8eb;border-color:#e6e8eb;color:#a3a9b4}
+  #root.lobbyMode .ghost{font-size:12px;letter-spacing:.01em;padding:13px;
+    border-color:#d3d6dc;color:#16181d}
+  #root.lobbyMode .ghost:hover{border-color:#16181d;background:#f6f7f8;color:#16181d}
+  #root.lobbyMode .linkish{font-size:12px;color:#4c515b}
+  #root.lobbyMode .linkish:hover{color:#16181d}
+  #root.lobbyMode .mailbox{border-color:#e3cfa6;background:#fdf6e8}
+  #root.lobbyMode .mailbox .tag{font-size:10px;letter-spacing:.14em;color:#8a5a18}
+  #root.lobbyMode .mailbox .body{font-size:12px;line-height:1.75;color:#6b5528}
+  #root.lobbyMode .mailbox .code{font-size:24px;letter-spacing:.4em;color:#3d2f10}
+  #lobby button:focus-visible,#root.lobbyMode button:focus-visible{
+    outline:2px solid #16181d;outline-offset:2px}
+
+  /* ════════════════════════════════════════════════════════
+     로비 — 따뜻한 톤
+     ------------------------------------------------------------
+     회색(#f4f4f5)은 중립이지만 차갑습니다. 종이와 나무의 색으로
+     바꾸면 같은 배치에서도 전시장 로비처럼 읽힙니다. 어두운 전시실로
+     들어가는 대비는 그대로 두고, 로비만 데웁니다.
+     전부 #lobby 아래로만 씁니다 — 전시장 안은 건드리지 않습니다.
+     ════════════════════════════════════════════════════════ */
+  #lobby{background:var(--paper)}
+  #lobby .lobbyTop{align-items:center;padding-top:56px}
+
+  /* ── 머리말 버튼 ───────────────────────────────────────
+     아이콘 + 글자. 아이콘은 15px 선 하나 굵기로만 그렸습니다. */
+  #lobby .topBtn.ic,#lobby .idChip.ic{display:inline-flex;align-items:center;gap:7px}
+  #lobby .topBtn svg,#lobby .idChip svg{width:15px;height:15px;flex:none;opacity:.62}
+  #lobby .topBtn.primary svg{opacity:.9}
+  #lobby .topBtn{border-radius:var(--r);border-color:var(--line);background:var(--card);
+    box-shadow:0 1px 2px rgba(60,48,32,.04)}
+  #lobby .topBtn:hover{border-color:#16181d;background:#fff;
+    box-shadow:0 3px 10px rgba(60,48,32,.09)}
+  #lobby .topBtn:hover svg{opacity:.9}
+  #lobby .topBtn.primary{border-radius:var(--r);box-shadow:0 2px 8px rgba(22,24,29,.18)}
+  #lobby .idChip{border-radius:var(--r);border-color:var(--line);background:var(--card)}
+  #lobby .idChip.admin{border-color:#e8d5ad;background:#fdf7ea}
+  /* 주소가 길면 카드 줄이 통째로 밀립니다. 칩 안에서 잘라냅니다. */
+  #lobby .idChip .t{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ── 안내 세 줄 ────────────────────────────────────────
+     줄글이던 것을 번호로 끊었습니다. 읽는 양은 같지만 눈이 세 번
+     쉬고, 셋 중 무엇이 나에게 해당하는지 바로 골라집니다. */
+  #lobby .lobbyGuide{list-style:none;display:flex;flex-wrap:wrap;gap:10px 26px;
+    padding-top:20px}
+  #lobby .lobbyGuide li{display:flex;align-items:center;gap:7px}
+  #lobby .lobbyGuide b{font-weight:500;color:#737a85}
+  #lobby .lobbyGuide .e{font-size:15px;line-height:1}
+
+  /* ── 카드 ──────────────────────────────────────────────
+     모서리를 둥글리고 그림자를 얕게 깔면 카드가 배경에서 한 겹
+     떠오릅니다. 종이 위에 놓인 사진처럼 보이게 하는 것이 전부입니다. */
+  #lobby .grid{padding-top:34px;gap:22px}
+  #lobby .card{border-radius:var(--r-card);border-color:var(--hair);background:var(--card);
+    box-shadow:0 1px 3px rgba(60,48,32,.05)}
+  #lobby .card:hover{border-color:#d8cdbb;transform:translateY(-3px);
+    box-shadow:0 12px 30px rgba(60,48,32,.13)}
+  #lobby .thumbWrap{position:relative;display:block}
+  #lobby .card .thumb{background:#efe9df}
+  /* 빈 전시장 표. 캔버스에 글자를 그리면 확대할 때 뭉개져서 위에 얹습니다. */
+  #lobby .emptyTag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:11.5px;letter-spacing:.02em;color:#2a2b30;white-space:nowrap;
+    background:rgba(255,255,255,.88);border:1px solid rgba(255,255,255,.6);
+    border-radius:999px;padding:6px 13px;backdrop-filter:blur(3px);
+    box-shadow:0 2px 8px rgba(20,16,10,.12)}
+  #lobby .card .ctRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  /* 제목이 길어도 칩을 밀어내지 않습니다 */
+  #lobby .card .ct{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 내 전시장 — 검은 딱지는 너무 셉니다. 카드 안에서 한 톤 낮춥니다. */
+  #lobby .mine{position:static;flex:none;background:#f2eee6;border:1px solid #e2dbcf;
+    color:#5f5646;border-radius:999px;font-size:11px;letter-spacing:.01em;padding:4px 10px}
+  #lobby .del{border-radius:8px}
+  #lobby .cov{border-radius:8px}
+
+  /* ── 만들기 카드 ───────────────────────────────────────
+     점선 빈칸이 아니라 다른 카드와 같은 흰 카드로 두되, 여기만 색을
+     씁니다. 로비에서 학생이 처음 눌러야 하는 곳이기 때문입니다. */
+  #lobby .card.new{border-style:solid;border-color:#e0e5ec;background:#fff;
+    color:#3d6ea8;border-radius:14px}
+  #lobby .card.new:hover{border-color:#3d6ea8;color:#2f5c8f;background:#fcfdff}
+  #lobby .card.new .plus{font-size:34px;font-weight:300;color:#3d6ea8;line-height:1}
+  #lobby .card.new .cap{color:#3d6ea8}
+  #lobby .card.new .sub{color:#8b93a0}
+
+  /* ════════════════════════════════════════════════════════
+     로비 — 나눔고딕
+     ------------------------------------------------------------
+     이 화면의 글자는 원래 IBM Plex Mono 였습니다. 라틴 문자에는 맞지만
+     한글에는 없는 폰트라, 한글이 시스템 폰트로 떨어지면서 모노 자간만
+     그대로 남아 글자가 흩어져 보였습니다. "1.  💡  로그인  없이" 처럼
+     띄어쓰기가 두 배로 보이던 것이 그 때문입니다.
+     본문용 한글 폰트로 바꾸고, 모노에 맞춰 잡아둔 자간을 0 으로 되돌립니다.
+
+     전시장 안(어두운 3D 화면)은 건드리지 않습니다. 로비와 로비에서 여는
+     창에만 적용합니다.
+     ════════════════════════════════════════════════════════ */
+  #lobby, #root.lobbyMode .modal{
+    font-family:var(--font); letter-spacing:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* 전시실 안(어두운 화면)의 글자도 같은 글꼴을 씁니다. 팔레트는 그대로
+     어둡게 둡니다 — 밝은 로비에서 어두운 전시실로 들어가는 대비는
+     의도한 것이고, 바꾸는 것은 글꼴뿐입니다.
+     예전에는 여기가 모노라, 같은 로그인 창이 로비에서는 나눔고딕,
+     전시실 안에서는 글자가 흩어진 모노로 보였습니다. */
+  #root{ font-family:var(--font); letter-spacing:0 }
+  #hint,#ctxHint,#mark{ letter-spacing:.02em }
+  /* .serif 는 이 화면에서 쓰지 않습니다. 제목은 굵기로 세웁니다. */
+  #lobby .serif, #root.lobbyMode .box h2{font-family:inherit}
+
+  /* 전시실 안에서 여는 창과 입력칸도 같은 글꼴로 맞춥니다. 예전에는
+     같은 창이 로비에서는 나눔고딕, 전시실 안에서는 본문 세리프로 열려
+     두 화면이 다른 프로그램처럼 보였습니다. 제목은 글꼴을 바꾸는 대신
+     굵기로 세웁니다.
+     주소·인증코드처럼 글자 하나하나를 확인해야 하는 칸만 모노로 둡니다 —
+     영문 소문자와 숫자라서 모노가 오히려 읽기 쉽습니다. */
+  .box h2{font-family:var(--font);font-weight:700;letter-spacing:-.012em}
+  /* 작품을 바라볼 때 뜨는 이름표. .serif 가 붙어 있어 여기만 세리프로
+     남아 있었습니다 — 전시실 안의 마지막 한 줄입니다. */
+  #wt{font-family:var(--font)}
+  input[type=text],input[type=email],textarea{font-family:var(--font);letter-spacing:0}
+  input.mono,input.code,.tip b,.mailbox .code{font-family:var(--font-mono)}
+
+  #lobby .lobbyTop{padding:52px 28px 0;align-items:flex-end}
+  #lobby .lobbyTop .eyebrow{font-size:11px;letter-spacing:.16em;color:#9a9184;
+    font-weight:700;margin-bottom:10px}
+  #lobby .lobbyTop h1{font-weight:700;letter-spacing:-.012em;line-height:1.3;
+    font-size:clamp(25px,3.3vw,34px);color:#16181d}
+
+  /* 안내 세 줄과 카드 사이에 실선 하나. 머리말과 내용을 나눕니다. */
+  #lobby .lobbyGuide{padding:20px 28px 20px;gap:9px 24px;font-size:13px;
+    border-bottom:1px solid var(--hair);color:#6d6558}
+  #lobby .lobbyGuide li{gap:6px}
+  #lobby .lobbyGuide b{font-weight:700;color:#a09788}
+  #lobby .lobbyGuide .e{font-size:14px}
+
+  #lobby .topBtn,#lobby .idChip{font-weight:700;font-size:12.5px;letter-spacing:0}
+  #lobby .topBtn{padding:9px 14px}
+  #lobby .idChip{padding:9px 13px;font-weight:400}
+
+  #lobby .grid{padding-top:28px;gap:22px;
+    grid-template-columns:repeat(auto-fill,minmax(254px,1fr))}
+  #lobby .card .meta{padding:15px 16px 17px}
+  #lobby .card .ct{font-weight:700;font-size:16px;letter-spacing:-.01em;
+    line-height:1.35;color:#16181d}
+  #lobby .card .cn{font-size:12px;color:#8d8579;margin-top:6px;letter-spacing:0}
+  #lobby .card .cs{font-size:12px;color:#9a9184;margin-top:11px;gap:0;letter-spacing:0}
+  /* 숫자 둘을 가운뎃점으로 잇습니다. 사이를 벌려 두 덩어리로 두면
+     "작품 0/10" 과 "방명록 0" 이 서로 다른 줄처럼 읽힙니다. */
+  #lobby .card .cs span+span::before{content:"·";margin:0 8px;color:#cfc6b8}
+  #lobby .mine{font-weight:700;font-size:11px}
+  #lobby .cov{font-weight:700}
+
+  #lobby .card.new{min-height:0;gap:10px}
+  #lobby .card.new .cap{font-weight:700;font-size:13px;letter-spacing:0}
+  #lobby .card.new .sub{font-size:12px;letter-spacing:0;color:#9a9184}
+  #lobby .emptyTag{font-weight:700;font-size:11.5px}
+
+  /* 로비에서 여는 창 — 같은 폰트로 맞춥니다 */
+  #root.lobbyMode .box h2{font-weight:700;letter-spacing:-.01em}
+  #root.lobbyMode .fl{font-weight:700;letter-spacing:0}
+  #root.lobbyMode .opt,#root.lobbyMode .go,#root.lobbyMode .ghost{
+    font-weight:700;letter-spacing:0}
+  #root.lobbyMode input.mono{letter-spacing:.04em}
+</style>
+
+<div id="root" class="lobbyMode">
+  <div id="mark"></div>
+  <button id="back">로비</button>
+  <button id="gear">전시 설정</button>
+  <div id="cross"></div>
+
+  <div id="label">
+    <div class="rule"></div>
+    <div id="wt" class="serif"></div>
+    <div id="wa"></div>
+    <div id="wn"></div>
+    <div class="meter"><span>소리</span><div class="bar"><div id="fill"></div></div></div>
+  </div>
+
+  <div id="ctxHint"></div>
+  <div id="hint">드래그로 둘러보기 · 바닥 클릭 이동 · W A S D · V 시점</div>
+  <button id="move">앞으로</button>
+
+  <aside id="panel">
+    <div class="grp" id="ownerGrp">
+      <h3>이 전시장 <span class="val" id="slotCount"></span></h3>
+      <button class="panelBtn" id="addWorkBtn">빈 자리에 작품 걸기</button>
+      <button class="panelBtn" id="backupMineBtn">내 전시 백업</button>
+      <button class="panelBtn" id="backupAllBtn" style="display:none">전체 전시 백업 · 관리자</button>
+      <button class="panelBtn danger" id="delGalleryBtn">전시장 삭제</button>
+    </div>
+    <div class="grp" id="viewerGrp" style="display:none">
+      <h3>이 전시장 <span class="val" id="slotCount2"></span></h3>
+      <p class="small" id="viewerMsg"></p>
+      <button class="panelBtn" id="panelLoginBtn" style="margin-top:11px">이메일로 로그인</button>
+    </div>
+    <div class="divider"></div>
+    <div class="grp">
+      <h3>내 캐릭터</h3>
+      <div class="row">
+        <button class="opt" data-body="male">남</button>
+        <button class="opt" data-body="female">여</button>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>시점</h3>
+      <div class="row">
+        <button class="opt sel" data-view="first">1인칭</button>
+        <button class="opt" data-view="third">3인칭</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <!-- 전시관. 주인과 관리자만, 서버가 있을 때만 보입니다. -->
+    <div class="grp" id="roomGrp" style="display:none">
+      <h3>전시관</h3>
+      <div class="row" id="roomPick"></div>
+      <p class="small" id="roomMsg"></p>
+    </div>
+    <div class="grp">
+      <h3>전시실 분위기</h3>
+      <div class="row">
+        <button class="opt" data-rmtheme="night">심야</button>
+        <button class="opt" data-rmtheme="white">백색 큐브</button>
+        <button class="opt" data-rmtheme="concrete">콘크리트</button>
+        <button class="opt" data-rmtheme="deep">심해</button>
+      </div>
+    </div>
+    <div class="grp"><h3>벽 색상</h3><input type="color" id="wallColor" value="#131318" /></div>
+    <div class="grp"><h3>바닥 색상</h3><input type="color" id="floorColor" value="#0a0a0c" /></div>
+    <!-- 가구. 주인과 관리자만, 서버가 있을 때만 보입니다. -->
+    <div class="grp" id="furnGrp" style="display:none">
+      <h3>가구 <span class="val" id="furnCount"></span></h3>
+      <div class="row" id="furnPick"></div>
+      <div class="row" id="furnTurn" style="display:none;margin-top:6px">
+        <button class="panelBtn" id="furnTurnL">↺ 왼쪽</button>
+        <button class="panelBtn" id="furnTurnR">↻ 오른쪽</button>
+      </div>
+      <button class="panelBtn" id="furnRemove" style="margin-top:6px">치울 것 고르기</button>
+      <button class="panelBtn danger" id="furnClear">모두 치우기</button>
+      <p class="small" id="furnMsg"></p>
+    </div>
+
+    <!-- 로비 카드에 걸리는 그림. 주인과 관리자만 보입니다. -->
+    <div class="grp" id="coverGrp" style="display:none">
+      <h3>대표 이미지</h3>
+      <img id="coverPrev" alt="" />
+      <button class="panelBtn" id="coverPick">그림 고르기</button>
+      <button class="panelBtn" id="coverClear" style="display:none">지우고 방 그림으로</button>
+      <input type="file" id="coverFile" accept="image/*" style="display:none" />
+      <p class="small" id="coverMsg">로비 카드에 이 그림이 걸립니다.
+        고르지 않으면 전시실을 그린 그림이 나옵니다.</p>
+    </div>
+
+    <!-- 주인과 관리자에게만 보입니다. 관람자가 바꾼 색은 그 사람 화면에만
+         남습니다 — 남의 전시장 색을 저장할 수는 없으니까요. -->
+    <div class="grp" id="themeSaveGrp" style="display:none">
+      <button class="panelBtn" id="themeSave">전시 설정 저장</button>
+      <p class="small" id="themeSaveMsg">분위기와 색을 이 전시장에 남깁니다.</p>
+    </div>
+    <div class="grp">
+      <h3>액자</h3>
+      <div class="row">
+        <button class="opt sel" data-frame="on">표시</button>
+        <button class="opt" data-frame="off">숨김</button>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>재생 반경 <span class="val" id="radiusVal">7.5m</span></h3>
+      <input type="range" id="radius" min="3.5" max="13" step="0.5" value="7.5" />
+    </div>
+  </aside>
+
+  <!-- 입장 문 -->
+  <div id="door">
+    <div class="leaf l"></div>
+    <div class="leaf r"></div>
+    <div class="doorLabel">
+      <div class="dt serif"></div>
+      <div class="dn"></div>
+    </div>
+  </div>
+
+  <!-- 로비 -->
+  <div id="lobby">
+    <div class="lobbyTop">
+      <div>
+        <div class="eyebrow">Generative Video Exhibition · 2026</div>
+        <h1 class="serif">Art Gallery</h1>
+      </div>
+      <!-- 아이콘은 그림이 아니라 표지판입니다. 글자보다 먼저 읽히라고
+           둔 것이라 장식을 빼고 선 하나 굵기로만 그렸습니다.
+           글자는 <span class="t"> 안에 둡니다 — 바깥에서 textContent 를
+           바꾸면 아이콘까지 지워지기 때문입니다. -->
+      <div class="whoWrap">
+        <a class="topBtn ic" id="btnHome" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.5 20v-6h5v6"/></svg><span class="t">홈</span></a>
+        <a class="topBtn primary ic" id="btnStudio" href="studio-ai.html"
+           target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2-1.9 5.5L10.1 13l-5.6-2 5.6-2z"/><path d="M18.5 4v3M20 5.5h-3"/></svg><span class="t">이미지를 영상으로</span></a>
+        <button class="topBtn ic" id="btnNewTop" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="t">전시장 만들기</span></button>
+        <span class="idChip guest ic" id="idChip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.3-3.7 4.1-5.6 7.5-5.6s6.2 1.9 7.5 5.6"/></svg><span class="t">둘러보는 중</span></span>
+        <button class="topBtn ic" id="btnProfile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"/></svg><span class="t">관람자 설정</span></button>
+        <button class="topBtn ic" id="btnAuth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5h4a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-4"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h9"/></svg><span class="t">로그인</span></button>
+      </div>
+    </div>
+    <!-- lobbyNote 를 같이 달아 색·크기 규칙을 물려받고, 배치만 새로 줍니다. -->
+    <ol class="lobbyNote lobbyGuide">
+      <li><b>1.</b> <span class="e">💡</span> 로그인 없이 관람 가능</li>
+      <li><b>2.</b> <span class="e">👆</span> 작품 앞 클릭 시 영상 재생</li>
+      <li><b>3.</b> <span class="e">🛠</span> 전시장 생성 및 관리 시 로그인</li>
+    </ol>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- 관람자 프로필 (게스트) -->
+  <div class="modal" id="pfm">
+    <div class="box">
+      <h2 class="serif">전시장에 남길 이름</h2>
+      <p class="note">작품 앞에 선 당신의 머리 위와 방명록에 표시됩니다. 로그인 없이 관람할 수 있습니다.</p>
+      <div class="fl">이름</div>
+      <input type="text" id="pfName" maxlength="12" placeholder="예: 김서연" />
+      <div class="fl">캐릭터</div>
+      <div class="row">
+        <button class="opt" data-pfbody="male">남</button>
+        <button class="opt" data-pfbody="female">여</button>
+      </div>
+      <p class="fl err" id="pfBodyErr" style="display:none">캐릭터를 골라주세요</p>
+      <div class="acts">
+        <button class="ghost" id="pfCancel">닫기</button>
+        <button class="go" style="margin:0" id="pfGo">저장하고 계속</button>
+      </div>
+      <div style="text-align:center"><button class="linkish" id="pfToLogin">전시장 주인이신가요? 로그인</button></div>
+    </div>
+  </div>
+
+  <!-- 로그인 안내 — 실제 로그인은 /login 에서 합니다.
+       예전에는 여기서 인증 코드를 만들어 화면에 띄우는 목업이었습니다.
+       그건 아무 이메일이나 넣어 그 사람 행세를 할 수 있다는 뜻이라 걷어냈습니다. -->
+  <div class="modal" id="lgm">
+    <div class="box">
+      <h2 class="serif" id="lgHead">이메일로 로그인</h2>
+      <p class="note" id="lgNote">쓰시는 이메일 주소로 접속 링크를 보냅니다.
+        지메일, 네이버 등 어떤 주소든 됩니다. 비밀번호는 만들지 않습니다.
+        로그인 화면으로 옮겨간 뒤, 끝나면 이 전시장으로 돌아옵니다.</p>
+
+      <div class="acts">
+        <button class="ghost" id="lgCancel">닫기</button>
+        <button class="go" style="margin:0" id="lgGo">로그인 화면으로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 전시장 만들기 -->
+  <div class="modal" id="ngm">
+    <div class="box">
+      <h2 class="serif">전시장 만들기</h2>
+      <p class="note" id="ngOwner"></p>
+      <div class="fl">학생 이름</div>
+      <input type="text" id="ngName" maxlength="12" placeholder="예: 김서연" />
+      <div class="fl">전시 제목</div>
+      <input type="text" id="ngTitle" maxlength="20" placeholder="예: 느린 아침" />
+      <div class="fl">주소 <span class="err" id="ngErr"></span></div>
+      <input type="text" class="mono" id="ngHandle" maxlength="20" placeholder="seoyeon" />
+      <div class="fl">전시실 분위기</div>
+      <div class="row">
+        <button class="opt sel" data-ngtheme="night">심야</button>
+        <button class="opt" data-ngtheme="white">백색 큐브</button>
+        <button class="opt" data-ngtheme="concrete">콘크리트</button>
+        <button class="opt" data-ngtheme="deep">심해</button>
+      </div>
+      <div class="acts">
+        <button class="ghost" id="ngCancel">닫기</button>
+        <button class="go" style="margin:0" id="ngGo">만들기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 전시장 삭제 -->
+  <div class="modal" id="dgm">
+    <div class="box">
+      <h2 class="serif">전시장 삭제</h2>
+      <p class="warn" id="dgWarn"></p>
+      <p class="note">되돌릴 수 없습니다. 확인을 위해 전시장 주소를 그대로 입력해주세요.</p>
+      <div class="fl">주소 <span class="val" id="dgTarget"></span></div>
+      <input type="text" class="mono" id="dgConfirm" placeholder="주소를 입력" />
+      <div class="acts">
+        <button class="ghost" id="dgCancel">닫기</button>
+        <button class="go danger" style="margin:0" id="dgGo" disabled>영구 삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 대표 이미지 — 로비 카드에서 바로 엽니다 -->
+  <div class="modal" id="cvm">
+    <div class="box">
+      <h2 class="serif">대표 이미지</h2>
+      <p class="note" id="cvWho"></p>
+      <img id="cvPrev" alt="" />
+      <p class="note" id="cvMsg"></p>
+      <input type="file" id="cvFile" accept="image/*" style="display:none" />
+      <div class="acts" id="cvActs">
+        <button class="ghost" id="cvCancel">닫기</button>
+        <button class="ghost danger" id="cvClear" style="display:none">지우기</button>
+        <button class="go" style="margin:0" id="cvPick">그림 고르기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 작품 걸기 -->
+  <div class="modal" id="wkm">
+    <div class="box">
+      <h2 class="serif" id="wkHead">작품 걸기</h2>
+      <p class="note" id="wkSlot"></p>
+      <div class="fl">무엇을 걸까요</div>
+      <div class="tabs">
+        <button class="opt sel" data-tab="file">이미지 · 영상 올리기</button>
+        <button class="opt" data-tab="gen">샘플로 만들기</button>
+      </div>
+      <div class="pane on" id="paneFile">
+        <div class="fl">파일</div>
+        <div id="drop">
+          <div class="big">파일을 끌어다 놓거나 클릭해서 선택</div>
+          <div class="small">JPG · PNG · WEBP · GIF · MP4 · WEBM<br>영상은 6~10초, 720p 이하를 권장합니다</div>
+        </div>
+        <img id="stage" alt="" />
+        <video id="stageV" style="display:none;width:100%;aspect-ratio:16/9;border:1px solid #26262e;background:#0d0d10;object-fit:contain" muted loop playsinline></video>
+        <div id="fileMeta"></div>
+        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none" />
+      </div>
+      <div class="pane" id="paneGen">
+        <div class="fl">미리보기</div>
+        <canvas id="prev" width="320" height="180"></canvas>
+        <div class="fl">움직임</div>
+        <div class="row5">
+          <button class="opt sel" data-motion="drift">번짐</button>
+          <button class="opt" data-motion="ripple">파문</button>
+          <button class="opt" data-motion="wash">쓸림</button>
+          <button class="opt" data-motion="orbit">궤도</button>
+          <button class="opt" data-motion="bands">결</button>
+        </div>
+        <div class="fl">색 <span class="val" id="hueVal">190</span></div>
+        <input type="range" id="hue" min="0" max="359" step="1" value="190" />
+      </div>
+      <div class="fl">캔버스 크기 <span class="val" id="sizeVal">100%</span></div>
+      <input type="range" id="sizeR" min="0.6" max="1.4" step="0.05" value="1" />
+      <div class="tip">60~140%까지 키우고 줄일 수 있습니다. 전시장 안에서 작품을 바라본 채
+        <b>[</b> 와 <b>]</b> 키를 눌러도 조절됩니다.</div>
+      <div class="fl">제목</div>
+      <input type="text" id="wkTitle" maxlength="20" placeholder="예: 느린 아침" />
+      <div class="fl">한 줄 설명</div>
+      <textarea id="wkNote" rows="2" maxlength="60" placeholder="예: 창가 화분, 바람에 흔들리는 잎"></textarea>
+      <div class="acts three" id="wkActs">
+        <button class="ghost" id="wkCancel">닫기</button>
+        <button class="ghost danger" id="wkClear">비우기</button>
+        <button class="go" style="margin:0" id="wkSave">걸기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 방명록 -->
+  <div class="modal" id="gbm">
+    <div class="box">
+      <h2 class="serif">방명록</h2>
+      <div class="note" id="gbSub"></div>
+      <div class="fl">한 줄 남기기</div>
+      <textarea id="gbText" rows="3" maxlength="80" placeholder="작품을 보고 든 생각을 짧게"></textarea>
+      <p class="warn" id="gbErr" style="display:none"></p>
+      <div class="acts">
+        <button class="ghost" id="gbCancel">닫기</button>
+        <button class="go" style="margin:0" id="gbSave">남기기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   생성형 AI 영상전 — 학생별 전시장
+   ------------------------------------------------------------
+   관람  : 로그인 없이 (이름만 정하면 됨)
+   편집·삭제 : 이메일 로그인 후, 소유자 본인과 관리자만
+
+   로그인은 이 파일이 하지 않습니다. /login 이 하고, 여기서는
+   /api/imagine/settings 응답으로 로그인 여부만 물어봅니다.
+   화면의 권한 표시는 안내일 뿐이고, 실제 차단은 서버의 RLS 가
+   합니다 — 어떤 클라이언트 코드도 그 자체로는 보안이 되지 않습니다.
+   ============================================================ */
+
+const FULL_RADIUS=2.6, MAX_PLAYING=3;
+
+/* ---------- 전시관 ----------
+   방 하나가 코드 여러 곳에 흩어져 있으면 방을 하나 더 만들 수 없습니다.
+   예전에는 가운데 가벽 하나가 메시·충돌·길찾기·바닥 클릭 네 곳에
+   따로 적혀 있어서, 가벽을 하나 더 세우는 일이 네 군데를 고치는 일이었습니다.
+   크기·가벽·자리를 여기 한 표에 적고 나머지가 이 표를 읽습니다.
+   새 전시관은 이 표에 한 줄 더하는 일입니다.
+
+     size   가로(w) · 깊이(d) · 높이(h). 미터입니다
+     parts  가운데 세우는 가벽. x·z 가 가운데, w 가 두께, d 가 길이
+     slots  작품 자리. 벽은 L 왼쪽 · R 오른쪽 · B 정면 · F 입구 쪽이고
+            at 은 그 벽을 따라간 거리입니다. 가벽에 거는 자리는 몇 번째
+            가벽(part)의 어느 면(side)인지로 적습니다 */
+const ROOMS={
+  /* 큰 전시실 — 지금은 이 방 하나뿐입니다.
+     예전에는 24×14m 짜리 "기본 전시실"(10자리)이 함께 있었는데, 벽을
+     3분의 1도 쓰지 않는 방이었습니다. 정면 벽이 24m 인데 작품이 둘뿐이었고,
+     실제로 모든 전시장이 이쪽을 골랐습니다. 고르는 사람이 없는 선택지는
+     고를 곳을 하나 더 만들 뿐이라 걷어냈습니다.
+     네 벽을 모두 쓰고, 가운데 가벽을 둘로 갈라 동선이 한 갈래로 흐르지
+     않게 했습니다. */
+  grand:{
+    name:"큰 전시실", note:"작품 20점 · 가벽 둘 · 네 벽을 모두 씁니다",
+    size:{w:28,d:16,h:4.6},
+    parts:[{x:-5.5,z:0,w:0.5,d:4.4,h:3.2},{x:5.5,z:0,w:0.5,d:4.4,h:3.2}],
+    slots:[
+      // 좌우 벽 각 넷. 안쪽(정면 벽 쪽)에서 입구 쪽으로.
+      {wall:"L",at:-6},{wall:"L",at:-2},{wall:"L",at:2},{wall:"L",at:6},
+      {wall:"R",at:-6},{wall:"R",at:-2},{wall:"R",at:2},{wall:"R",at:6},
+      // 정면 벽 다섯. 들어서면 가장 먼저 보이는 벽입니다.
+      {wall:"B",at:-9},{wall:"B",at:-4.5},{wall:"B",at:0},{wall:"B",at:4.5},{wall:"B",at:9},
+      // 입구 쪽 벽 셋. 문(가운데)과 방명록(오른쪽)을 피해 앉습니다.
+      {wall:"F",at:-10.5},{wall:"F",at:-6},{wall:"F",at:10},
+      // 가벽 둘, 각 앞뒤로 하나씩.
+      {part:0,side:"+",at:0},{part:0,side:"-",at:0},
+      {part:1,side:"+",at:0},{part:1,side:"-",at:0},
+    ],
+  },
+};
+const DEFAULT_ROOM="grand";
+/** 전시장이 쓰는 방. theme 에 적어두므로 대표 이미지(cover)와 같은 방식이고,
+ *  모르는 이름이면 기본 방으로 떨어집니다 — 손으로 고친 exhibition.json 이
+ *  오타 하나로 빈 화면이 되지 않게. */
+const roomOf=g=>ROOMS[(g&&g.theme&&g.theme.room)||DEFAULT_ROOM]||ROOMS[DEFAULT_ROOM];
+
+// 지금 들어와 있는 방. applyRoom 이 갈아끼웁니다.
+let ROOM=ROOMS[DEFAULT_ROOM].size,
+    PARTS=ROOMS[DEFAULT_ROOM].parts,
+    SLOTS=ROOMS[DEFAULT_ROOM].slots;
+const ADMIN_EMAILS=["joonall@naver.com"];   // exhibition.json 의 adminEmails 가 있으면 그쪽이 이깁니다
+const SEED_DOMAIN="school.kr";         // 시연용 씨앗 계정 주소일 뿐, 가입 제한이 아닙니다
+let PLAY_RADIUS=7.5;
+
+const THEMES={
+  night:{wall:"#131318",floor:"#0a0a0c"}, white:{wall:"#e8e6e1",floor:"#d2cfc8"},
+  concrete:{wall:"#55534e",floor:"#3a3835"}, deep:{wall:"#10202e",floor:"#0a141c"},
+};
+const MOTIONS=["drift","ripple","wash","orbit","bands"];
+const POOL=[
+  ["느린 아침","창가 화분, 바람에 흔들리는 잎"],["물결의 기억","호수 표면, 카메라 천천히 밀기"],
+  ["정오의 방","빈 방에 드는 빛, 먼지가 떠다님"],["궤도","회전하는 금속 구, 반사광"],
+  ["긴 복도","복도 끝으로 걸어가는 인물"],["숨","안개가 피어오르는 숲, 새소리"],
+  ["붉은 신호","빗속 신호등, 번지는 불빛"],["종이비행기","교실 창밖으로 날아가는 종이"],
+  ["파랑","심해로 가라앉는 빛"],["잔상","흔들리는 커튼, 반복되는 그림자"],
+  ["첫눈","가로등 아래 흩날리는 눈"],["오후 네 시","책상 위로 길어지는 그림자"],
+  ["파문","떨어지는 물방울, 확산"],["빈 의자","교실, 아무도 없는 오후"],
+  ["돌아오는 길","버스 창밖으로 흐르는 거리"],["온도","김이 오르는 컵, 천천히"],
+  ["작은 소란","새 떼가 한꺼번에 날아오름"],["여름의 끝","선풍기 날개, 커튼의 움직임"],
+  ["발자국","젖은 모래 위 남는 자국"],["점멸","형광등이 깜빡이는 복도"],
+];
+const HUES=[190,205,38,260,20,145,5,48,220,300,168,82,320,240,12];
+const SEED=[
+  ["seoyeon","김서연","느린 아침","night",10],["doyoon","박도윤","물결의 기억","deep",10],
+  ["haneul","이하늘","정오의 방","white",7],["eunwoo","최은우","궤도","night",10],
+  ["minjae","정민재","긴 복도","concrete",5],["jiwoo","한지우","숨","night",10],
+  ["sihyun","오시현","붉은 신호","night",9],["chaewon","윤채원","종이비행기","night",10],
+  ["taeoh","강태오","파랑","deep",3],["soyul","임소율","잔상","night",10],
+];
+let uid=1000;
+const GALLERIES=SEED.map(([handle,name,title,theme,count],gi)=>({
+  handle,name,title,
+  ownerEmail:handle+"@"+SEED_DOMAIN,       // 각 학생이 주인
+  theme:{...THEMES[theme]},
+  works:Array.from({length:count},(_,i)=>{
+    const p=POOL[(gi*3+i*2)%POOL.length];
+    return {id:++uid,slot:i,kind:"demo",title:p[0],note:p[1],
+      hue:HUES[(gi*4+i)%HUES.length],motion:MOTIONS[(gi+i)%MOTIONS.length]};
+  }),
+  guestbook:[],
+}));
+GALLERIES[0].guestbook.push({name:"이하늘",msg:"두 번째 작품 앞에 오래 서 있었어요."});
+GALLERIES[0].guestbook.push({name:"최은우",msg:"색이 정말 좋다"});
+GALLERIES[2].guestbook.push({name:"김서연",msg:"밝은 방이라 느낌이 완전히 달라지네"});
+
+/* ---------- 세션 / 권한 ----------
+   화면의 권한 표시는 안내입니다. 실제 차단은 서버의 RLS 가 합니다.
+   여기서 버튼을 숨기는 것은 권한 없는 사람에게 버튼을 보여준 뒤
+   에러를 띄우지 않기 위해서일 뿐입니다. */
+let SERVER=false;                        // /api 가 살아 있는가 (loadSession 이 정합니다)
+const session={email:null,name:"",body:null,isAdmin:false};
+const signedIn=()=>!!session.email;
+// 서버가 붙어 있으면 profiles.is_admin 이 정답입니다. ADMIN_EMAILS 는
+// 서버 없는 갈래 1 에서 exhibition.json 이 정해주는 값입니다.
+const isAdmin=()=>signedIn()&&(SERVER?session.isAdmin:ADMIN_EMAILS.includes(session.email));
+// 서버 목록에는 남의 이메일이 없습니다. 서버가 "내 것인지"(mine)를 표시하고,
+// 서버 없는 갈래 1 에서는 exhibition.json 의 ownerEmail 로 판정합니다.
+const canManage=g=>!!g&&signedIn()&&
+  (isAdmin()||(SERVER ? !!g.mine : g.ownerEmail===session.email));
+
+/* ---------- 그리기 ---------- */
+function drawFrame(ctx,w,h,t,hue,motion){
+  ctx.fillStyle=`hsl(${hue},22%,7%)`; ctx.fillRect(0,0,w,h);
+  if(motion==="drift"){
+    for(let i=0;i<7;i++){
+      const x=((Math.sin(t*0.21+i*1.7)*0.5+0.5)*w*1.2)-w*0.1;
+      const y=((Math.cos(t*0.17+i*2.3)*0.5+0.5)*h*1.2)-h*0.1;
+      const r=(18+i*7)*(1+Math.sin(t*0.4+i)*0.15);
+      const g=ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,`hsla(${hue+i*6},55%,62%,0.5)`); g.addColorStop(1,`hsla(${hue},55%,40%,0)`);
+      ctx.fillStyle=g; ctx.fillRect(x-r,y-r,r*2,r*2);
+    }
+  } else if(motion==="ripple"){
+    for(let i=0;i<6;i++){
+      const p=(t*0.28+i/6)%1;
+      ctx.beginPath(); ctx.arc(w/2,h/2,p*w*0.62,0,Math.PI*2);
+      ctx.strokeStyle=`hsla(${hue},60%,68%,${(1-p)*0.55})`; ctx.lineWidth=1.5+(1-p)*3; ctx.stroke();
+    }
+  } else if(motion==="wash"){
+    const off=(t*0.09)%1,g=ctx.createLinearGradient(-w*off,0,w*(2-off),h);
+    g.addColorStop(0,`hsl(${hue},30%,8%)`); g.addColorStop(0.45,`hsl(${hue+14},52%,46%)`);
+    g.addColorStop(1,`hsl(${hue},30%,9%)`); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  } else if(motion==="orbit"){
+    for(let i=0;i<26;i++){
+      const a=t*0.5+(i/26)*Math.PI*2,rad=h*0.2+(i%5)*8;
+      ctx.beginPath(); ctx.arc(w/2+Math.cos(a)*rad*1.9,h/2+Math.sin(a)*rad,1.6+(i%3),0,Math.PI*2);
+      ctx.fillStyle=`hsla(${hue+(i%7)*4},60%,70%,${0.35+(i%4)*0.12})`; ctx.fill();
+    }
+  } else {
+    for(let i=0;i<9;i++){
+      const y=((t*14+i*26)%(h+40))-20;
+      ctx.fillStyle=`hsla(${hue+i*3},48%,${34+(i%4)*9}%,0.5)`;
+      ctx.fillRect(0,y,w,5+Math.sin(t*0.7+i)*3.5);
+    }
+  }
+  ctx.fillStyle="rgba(255,255,255,0.028)";
+  for(let i=0;i<40;i++) ctx.fillRect(Math.random()*w,Math.random()*h,1,1);
+}
+function radialTexture(hard){
+  const c=document.createElement("canvas"); c.width=c.height=256;
+  const x=c.getContext("2d"),g=x.createRadialGradient(128,128,hard,128,128,128);
+  g.addColorStop(0,"rgba(255,255,255,1)"); g.addColorStop(0.5,"rgba(255,255,255,0.30)");
+  g.addColorStop(1,"rgba(255,255,255,0)"); x.fillStyle=g; x.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+}
+function makeWallTexture(hex){
+  const b=new THREE.Color(hex),hsl={}; b.getHSL(hsl);
+  const sh=d=>"#"+new THREE.Color().setHSL(hsl.h,hsl.s,Math.max(0,Math.min(1,hsl.l+d))).getHexString();
+  const c=document.createElement("canvas"); c.width=4;c.height=256;
+  const x=c.getContext("2d"),g=x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,sh(-0.035)); g.addColorStop(0.55,sh(0.012)); g.addColorStop(1,sh(-0.018));
+  x.fillStyle=g; x.fillRect(0,0,4,256);
+  return new THREE.CanvasTexture(c);
+}
+/* 3D 안에 그리는 글자(이름표·방명록판·빈 자리표)도 화면과 같은 글꼴을
+   씁니다. CSS 변수는 캔버스에 닿지 않아서 여기 한 번 더 적습니다 —
+   theme.css 의 --font 와 같은 줄로 맞춰 두세요. */
+const UIFONT='"Nanum Gothic","맑은 고딕","Malgun Gothic",sans-serif';
+const lum=h=>{const c=new THREE.Color(h);return 0.2126*c.r+0.7152*c.g+0.0722*c.b;};
+const shift=(h,d)=>{const c=new THREE.Color(h),s={};c.getHSL(s);
+  return "#"+new THREE.Color().setHSL(s.h,s.s,Math.max(0,Math.min(1,s.l+d))).getHexString();};
+const sampleCv=document.createElement("canvas"); sampleCv.width=32; sampleCv.height=18;
+function averageColor(src){
+  try{
+    const x=sampleCv.getContext("2d"); x.drawImage(src,0,0,32,18);
+    const d=x.getImageData(0,0,32,18).data;
+    let r=0,g=0,b=0;
+    for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];}
+    const n=d.length/4,c=new THREE.Color(r/n/255,g/n/255,b/n/255),hsl={};
+    c.getHSL(hsl);
+    return new THREE.Color().setHSL(hsl.h,Math.min(0.8,hsl.s*1.5+0.15),0.5);
+  }catch(e){return new THREE.Color("#8fa8c8");}
+}
+
+/* ---------- 씬 ---------- */
+const root=document.getElementById("root");
+const scene=new THREE.Scene();
+scene.background=new THREE.Color("#08080a");
+scene.fog=new THREE.Fog("#08080a",9,32);
+const camera=new THREE.PerspectiveCamera(66,innerWidth/innerHeight,0.1,140);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputEncoding=THREE.sRGBEncoding;
+root.appendChild(renderer.domElement);
+renderer.domElement.style.position="absolute"; renderer.domElement.style.inset="0";
+addEventListener("resize",()=>{renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+
+const wallMat=new THREE.MeshBasicMaterial({map:makeWallTexture("#131318"),side:THREE.DoubleSide});
+const floorMat=new THREE.MeshBasicMaterial({color:"#0a0a0c"});
+const ceilMat=new THREE.MeshBasicMaterial({color:"#050506"});
+const partMat=new THREE.MeshBasicMaterial({color:"#131318"});
+/* 방의 껍데기 — 바닥·천장·네 벽·가벽. 방마다 크기가 달라서 한 번 만들고
+   두는 대신 들어갈 때마다 다시 세웁니다. 재료는 그대로 쓰므로(색은
+   applyTheme 이 재료를 고칩니다) 여기서는 형태만 새로 만듭니다. */
+const shell=new THREE.Group(); scene.add(shell);
+let fl=null, partMeshes=[];
+/* 걸어다닐 수 있는 범위. tick 과 클릭 이동이 같은 값을 봐야 합니다 —
+   따로 적어두면 한쪽만 고쳤을 때 목적지가 벽 속에 잡힙니다. */
+let LIMX=0, LIMZ=0;
+
+function applyRoom(room){
+  ROOM=room.size; PARTS=room.parts; SLOTS=room.slots;
+
+  shell.children.slice().forEach(m=>{shell.remove(m); m.geometry.dispose();});
+  partMeshes=[];
+
+  fl=new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w,ROOM.d),floorMat);
+  fl.rotation.x=-Math.PI/2; shell.add(fl);
+  const cl=new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w,ROOM.d),ceilMat);
+  cl.rotation.x=Math.PI/2; cl.position.y=ROOM.h; shell.add(cl);
+  [[ROOM.w,[0,ROOM.h/2,-ROOM.d/2],0],[ROOM.w,[0,ROOM.h/2,ROOM.d/2],Math.PI],
+   [ROOM.d,[-ROOM.w/2,ROOM.h/2,0],Math.PI/2],[ROOM.d,[ROOM.w/2,ROOM.h/2,0],-Math.PI/2]]
+   .forEach(([wide,p,ry])=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(wide,ROOM.h),wallMat);
+    m.position.set(p[0],p[1],p[2]); m.rotation.y=ry; shell.add(m);});
+
+  PARTS.forEach(p=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(p.w,p.h,p.d),partMat);
+    m.position.set(p.x,p.h/2,p.z); shell.add(m); partMeshes.push(m);
+  });
+
+  LIMX=ROOM.w/2-0.7; LIMZ=ROOM.d/2-0.7;
+  // 문과 방명록은 입구 쪽 벽에 붙어 있습니다. 벽이 옮겨가면 함께 갑니다.
+  doorGroup.position.set(0,0,ROOM.d/2-0.03);
+  gbBoard.position.set(Math.min(5.4,ROOM.w/2-2.4),1.85,ROOM.d/2-0.03);
+}
+
+/* 가벽이 막는 영역. 실제 몸통보다 넉넉히 잡습니다 — 딱 맞게 잡으면
+   모서리를 스치며 끼입니다. 옆(x)은 몸으로 지나가려는 쪽이라 더 넓게. */
+const PAD_X=0.7, PAD_Z=0.5;
+function partAt(x,z){
+  for(const p of PARTS)
+    if(Math.abs(x-p.x)<p.w/2+PAD_X && Math.abs(z-p.z)<p.d/2+PAD_Z) return p;
+  return null;
+}
+const blocked=(x,z)=>!!partAt(x,z);
+/** 가벽이나 가구 속에 든 점을 가장 가까운 바깥으로 밀어냅니다. 걸음과
+ *  클릭 이동이 같은 함수를 봐야 합니다 — 따로 적으면 한쪽만 어긋납니다.
+ *  가벽은 네모라 옆으로, 가구는 원이라 바깥쪽으로 밀어냅니다. */
+function pushOut(o){
+  const p=partAt(o.x,o.z);
+  if(p) o.x=o.x>=p.x?p.x+p.w/2+PAD_X:p.x-p.w/2-PAD_X;
+  const f=furnAt(o.x,o.z);
+  if(f){
+    let dx=o.x-f.x, dz=o.z-f.z, d=Math.hypot(dx,dz);
+    if(d<1e-4){dx=1;dz=0;d=1;}                 // 정확히 한가운데면 아무 쪽으로나
+    o.x=f.x+dx/d*f.r; o.z=f.z+dz/d*f.r;
+  }
+  return o;
+}
+
+const gbCanvas=document.createElement("canvas"); gbCanvas.width=720; gbCanvas.height=440;
+const gbTex=new THREE.CanvasTexture(gbCanvas);
+const gbBoard=new THREE.Mesh(new THREE.PlaneGeometry(3.3,2.0),
+  new THREE.MeshBasicMaterial({map:gbTex,transparent:true}));
+gbBoard.position.set(5.4,1.85,ROOM.d/2-0.03); gbBoard.rotation.y=Math.PI; scene.add(gbBoard);
+function drawGuestbook(){
+  const c=gbCanvas,x=c.getContext("2d"),light=root.classList.contains("light");
+  const ink=light?"#16181d":"#e8e6e1",dim=light?"#54514b":"#9a968e",faint=light?"#8f8b83":"#55555f";
+  x.clearRect(0,0,c.width,c.height);
+  x.fillStyle=light?"rgba(255,255,255,0.34)":"rgba(255,255,255,0.028)"; x.fillRect(0,0,c.width,c.height);
+  x.strokeStyle=faint; x.lineWidth=2; x.strokeRect(1,1,c.width-2,c.height-2);
+  x.fillStyle=dim; x.font='700 21px '+UIFONT; x.fillText("방명록",40,56);
+  x.fillStyle=faint; x.fillRect(40,76,44,2);
+  const gb=current?current.guestbook:[];
+  if(!gb.length){
+    x.fillStyle=dim; x.font='400 24px '+UIFONT; x.fillText("아직 비어 있습니다",40,150);
+    x.font='400 18px '+UIFONT; x.fillText("G 를 눌러 첫 글을 남겨보세요",40,190);
+  } else {
+    let y=132;
+    gb.slice(-5).reverse().forEach(e=>{
+      x.fillStyle=ink; x.font='400 25px '+UIFONT; x.fillText(e.msg.slice(0,26),40,y);
+      x.fillStyle=dim; x.font='700 16px '+UIFONT; x.fillText("— "+e.name,40,y+27);
+      y+=62;
+    });
+  }
+  gbTex.needsUpdate=true;
+}
+const emptyCanvas=document.createElement("canvas"); emptyCanvas.width=320; emptyCanvas.height=180;
+const emptyTex=new THREE.CanvasTexture(emptyCanvas);
+function drawEmpty(){
+  const c=emptyCanvas,x=c.getContext("2d"),light=root.classList.contains("light");
+  x.clearRect(0,0,c.width,c.height);
+  x.strokeStyle=light?"rgba(0,0,0,0.26)":"rgba(232,230,225,0.20)";
+  x.lineWidth=2; x.setLineDash([7,7]); x.strokeRect(1,1,c.width-2,c.height-2); x.setLineDash([]);
+  x.fillStyle=light?"rgba(0,0,0,0.42)":"rgba(232,230,225,0.38)";
+  x.font='700 16px '+UIFONT; x.textAlign="center";
+  x.fillText("빈 자리",c.width/2,c.height/2+5);
+  emptyTex.needsUpdate=true;
+}
+const hlCanvas=document.createElement("canvas"); hlCanvas.width=320; hlCanvas.height=180;
+(()=>{const x=hlCanvas.getContext("2d");
+  x.strokeStyle="rgba(255,255,255,0.95)"; x.lineWidth=3; x.strokeRect(1.5,1.5,317,177);})();
+/* 클릭한 자리에 잠깐 남는 고리. 이게 없으면 "눌리긴 한 건가" 를
+   알 수 없어서, 학생들이 같은 자리를 여러 번 두드립니다. */
+const mark=new THREE.Mesh(new THREE.RingGeometry(0.3,0.38,36),
+  new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,
+    side:THREE.DoubleSide,depthWrite:false}));
+mark.rotation.x=-Math.PI/2; mark.position.y=0.02; scene.add(mark);
+
+const highlight=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+  new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(hlCanvas),transparent:true,
+    opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+scene.add(highlight);
+
+/* ---------- 작품 ---------- */
+const glowTex=radialTexture(6);
+
+/* 입구 문 — 들어온 곳이자 나가는 곳. 돌아서면 눈에 들어옵니다. */
+const doorGroup=new THREE.Group();
+doorGroup.position.set(0,0,ROOM.d/2-0.03); doorGroup.rotation.y=Math.PI;
+scene.add(doorGroup);
+const doorFrameMat=new THREE.MeshBasicMaterial({color:"#2a2a32"});
+const doorFrame=new THREE.Mesh(new THREE.PlaneGeometry(2.52,3.2),doorFrameMat);
+doorFrame.position.set(0,1.56,0.01); doorGroup.add(doorFrame);
+const doorOpening=new THREE.Mesh(new THREE.PlaneGeometry(2.3,3.0),
+  new THREE.MeshBasicMaterial({color:"#050507"}));
+doorOpening.position.set(0,1.5,0.02); doorGroup.add(doorOpening);
+const doorGlow=new THREE.Mesh(new THREE.PlaneGeometry(4.2,1.7),
+  new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,
+    depthWrite:false,opacity:0.2,color:"#c8b48a"}));
+doorGlow.position.set(0,3.2,0.03); doorGroup.add(doorGlow);
+const doorPick=new THREE.Mesh(new THREE.PlaneGeometry(2.52,3.2),
+  new THREE.MeshBasicMaterial({visible:false}));
+doorPick.position.set(0,1.56,0.07); doorPick.userData.door=true; doorGroup.add(doorPick);
+
+// 문과 방명록까지 다 만들어졌으니 이제 방을 세웁니다. 로비에서 전시장에
+// 들어갈 때마다 enterGallery 가 그 전시장의 방으로 다시 부릅니다.
+applyRoom(ROOMS[DEFAULT_ROOM]);
+let panels=[],frames=[],empties=[],pickables=[],framesOn=true;
+function slotTransform(slot){
+  const s=SLOTS[slot];
+  // 가벽에 거는 자리. 벽보다 좁게 겁니다 — 가벽은 몸통이 짧습니다.
+  if(s.part!==undefined){
+    const p=PARTS[s.part], plus=s.side==="+", pw=1.9;
+    return {pos:[p.x+(plus?p.w/2+0.01:-p.w/2-0.01),1.72,p.z+s.at],
+            ry:plus?Math.PI/2:-Math.PI/2, pw, ph:pw*(9/16)};
+  }
+  const pw=2.5, ph=pw*(9/16);
+  let pos,ry;
+  if(s.wall==="L")      {pos=[-ROOM.w/2+0.02,1.78,s.at];ry= Math.PI/2;}
+  else if(s.wall==="R") {pos=[ ROOM.w/2-0.02,1.78,s.at];ry=-Math.PI/2;}
+  else if(s.wall==="B") {pos=[s.at,1.78,-ROOM.d/2+0.02];ry=0;}
+  else                  {pos=[s.at,1.78, ROOM.d/2-0.02];ry=Math.PI;}   // F · 입구 쪽 벽
+  return {pos,ry,pw,ph};
+}
+function clearRoom(){
+  [...panels,...empties].forEach(p=>{
+    if(p.video){p.video.pause();p.video.removeAttribute("src");p.video.load();}
+    scene.remove(p.group); if(p.spill) scene.remove(p.spill);
+    p.group.traverse(o=>{
+      if(o.geometry) o.geometry.dispose();
+      if(o.material&&o.material.map&&![glowTex,emptyTex].includes(o.material.map))
+        o.material.map.dispose();
+    });
+    if(p.spill) p.spill.geometry.dispose();
+  });
+  panels=[];empties=[];frames=[];pickables=[];
+  highlight.material.opacity=0; hoverSlot=null; hoverDoor=false; hintKey="";
+}
+/* 작품 크기 — 자리의 기본 폭 × 개별 배율, 비율은 미디어 원본을 따릅니다 */
+const SCALE_MIN=0.6, SCALE_MAX=1.4;
+function applySize(e,aspect){
+  if(aspect) e.aspect=aspect;
+  const a=e.aspect||16/9, sc=Math.max(SCALE_MIN,Math.min(SCALE_MAX,e.work.scale||1));
+  let w=e.baseW*sc, h=w/a;
+  const maxH=Math.min(1.85*sc,2.45);          // 천장·바닥에 닿지 않게
+  if(h>maxH){h=maxH; w=h*a;}
+  e.screen.geometry.dispose(); e.screen.geometry=new THREE.PlaneGeometry(w,h);
+  e.frame.geometry.dispose();  e.frame.geometry=new THREE.PlaneGeometry(w+0.09,h+0.09);
+  e.halo.geometry.dispose();   e.halo.geometry=new THREE.PlaneGeometry(w*2.6,h*3.4);
+  e.pick.geometry.dispose();   e.pick.geometry=new THREE.PlaneGeometry(w+0.09,h+0.09);
+  e.spill.geometry.dispose();  e.spill.geometry=new THREE.PlaneGeometry(w*2.4,w*2.4);
+  e.hlSize=[w+0.12,h+0.12];
+  if(hoverSlot===e.work.slot){                // 선택 테두리도 즉시 따라오게
+    highlight.geometry.dispose();
+    highlight.geometry=new THREE.PlaneGeometry(w+0.12,h+0.12);
+  }
+}
+function buildRoomContents(g){
+  clearRoom();
+  /* 이 방에 없는 자리에 걸린 작품은 건너뜁니다. 큰 전시실에서 기본
+     전시실로 되돌린 전시장이나, 손으로 고친 exhibition.json 에서 생깁니다.
+     걸러내지 않으면 좌표를 못 찾아 전시장이 통째로 열리지 않습니다. */
+  const works=g.works.filter(w=>w.slot>=0&&w.slot<SLOTS.length);
+  const dropped=g.works.length-works.length;
+  if(dropped) console.warn("이 전시관에 없는 자리의 작품 "+dropped+"점을 건너뜁니다");
+  const filled=new Set(works.map(w=>w.slot));
+  works.forEach(w=>{
+    const {pos,ry,pw,ph}=slotTransform(w.slot);
+    const group=new THREE.Group();
+    group.position.set(pos[0],pos[1],pos[2]); group.rotation.y=ry; scene.add(group);
+    const color=new THREE.Color().setHSL((w.hue||200)/360,0.6,0.5);
+    const halo=new THREE.Mesh(new THREE.PlaneGeometry(pw*2.6,ph*3.4),
+      new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,
+        depthWrite:false,opacity:0,color:color.clone()}));
+    halo.position.z=0.012; group.add(halo);
+    const frame=new THREE.Mesh(new THREE.PlaneGeometry(pw+0.09,ph+0.09),
+      new THREE.MeshBasicMaterial({color:"#26262c"}));
+    frame.position.z=0.02; frame.visible=framesOn; group.add(frame); frames.push(frame);
+    let tex=null,ctx=null,video=null;
+    if(w.kind==="demo"){
+      const cv=document.createElement("canvas"); cv.width=320;cv.height=180;
+      ctx=cv.getContext("2d"); drawFrame(ctx,320,180,0,w.hue,w.motion);
+      tex=new THREE.CanvasTexture(cv);
+    } else if(w.kind==="image"){
+      tex=new THREE.Texture();
+      const img=new Image();
+      img.onload=()=>{
+        tex.image=img; tex.needsUpdate=true;
+        const e=panels.find(p=>p.work.id===w.id);
+        if(e){applySize(e,img.naturalWidth/img.naturalHeight);
+          e.color.copy(averageColor(img));
+          e.halo.material.color.copy(e.color); e.spill.material.color.copy(e.color);}
+      };
+      img.src=w.src;
+    } else {
+      video=document.createElement("video");
+      video.src=w.src; video.loop=true; video.muted=true;
+      video.playsInline=true; video.preload="metadata"; video.crossOrigin="anonymous";
+      tex=new THREE.VideoTexture(video); tex.minFilter=THREE.LinearFilter;
+      video.addEventListener("loadeddata",()=>{
+        try{video.currentTime=0.05;}catch(e){}
+        const en=panels.find(p=>p.work.id===w.id);
+        if(en){applySize(en,video.videoWidth/video.videoHeight);
+          en.color.copy(averageColor(video));
+          en.halo.material.color.copy(en.color); en.spill.material.color.copy(en.color);}
+      });
+    }
+    const screen=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:tex}));
+    screen.position.z=0.026; group.add(screen);
+    const pick=new THREE.Mesh(new THREE.PlaneGeometry(pw+0.09,ph+0.09),
+      new THREE.MeshBasicMaterial({visible:false}));
+    pick.position.z=0.05; pick.userData.slot=w.slot; group.add(pick); pickables.push(pick);
+    const n=new THREE.Vector3(0,0,1).applyQuaternion(group.quaternion);
+    const spill=new THREE.Mesh(new THREE.PlaneGeometry(pw*2.4,pw*2.4),
+      new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,
+        depthWrite:false,opacity:0,color:color.clone()}));
+    spill.rotation.x=-Math.PI/2;
+    spill.position.set(pos[0]+n.x*1.5,0.015,pos[2]+n.z*1.5); scene.add(spill);
+    const entry={work:w,group,ctx,tex,video,halo,frame,screen,spill,pick,normal:n,
+      gain:0,t:0,last:0,playing:false,color,baseW:pw,aspect:16/9,hlSize:[pw+0.12,ph+0.12]};
+    panels.push(entry);
+    applySize(entry);                          // 저장된 크기 반영
+  });
+  SLOTS.forEach((_,i)=>{
+    if(filled.has(i)) return;
+    const {pos,ry,pw,ph}=slotTransform(i);
+    const group=new THREE.Group();
+    group.position.set(pos[0],pos[1],pos[2]); group.rotation.y=ry; scene.add(group);
+    const plate=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),
+      new THREE.MeshBasicMaterial({map:emptyTex,transparent:true}));
+    plate.position.z=0.024; group.add(plate);
+    const pick=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),
+      new THREE.MeshBasicMaterial({visible:false}));
+    pick.position.z=0.05; pick.userData.slot=i; group.add(pick); pickables.push(pick);
+    const n=new THREE.Vector3(0,0,1).applyQuaternion(group.quaternion);
+    empties.push({slot:i,group,normal:n,hlSize:[pw+0.06,ph+0.06]});
+  });
+  applyFrameColor();
+  pickables.push(doorPick);                    // 문도 조준 대상
+  const t=works.length+"/"+SLOTS.length;
+  document.getElementById("slotCount").textContent=t;
+  document.getElementById("slotCount2").textContent=t;
+}
+
+/* ---------- 아바타 ----------
+
+   만화 비율입니다. 사람은 키가 머리 일곱 개 반쯤인데 여기는 넷입니다 —
+   "귀여운 3D 캐릭터" 로 읽히게 하는 것의 8할이 이 비율 하나입니다.
+   나머지는 얼굴 · 머리카락 덩어리 · 옷 · 신발이고, 전부 지금처럼 구와
+   원기둥으로 깎습니다. 모델 파일도 새 라이브러리도 쓰지 않습니다 —
+   전시 당일 인터넷 없는 자리에서도 열려야 하기 때문입니다(OFFLINE.md).
+
+   색은 스톡 일러스트의 원색을 그대로 쓰지 않고 한 단 낮춥니다. 여기는
+   어두운 전시장이고 주인공은 작품입니다. 관람객이 방에서 가장 밝고
+   채도 높은 물체가 되면, 작품 앞에 섰을 때 작품보다 자기가 보입니다. */
+
+const BODY={
+  male:{
+    scale:1.00, hairStyle:"boy", skirt:false, bag:false,
+    shoulder:0.163, chest:0.152, waist:0.134, hip:0.144,
+    armX:0.178, armR:0.040, legX:0.070, legR:0.055,
+    skin:"#bfa189", hair:"#4a3529", top:"#d2ccc0", bottom:"#4b5666",
+    shoe:"#5b4435", accent:"#8c5748",
+  },
+  female:{
+    scale:0.97, hairStyle:"girl", skirt:true, bag:true,
+    shoulder:0.151, chest:0.141, waist:0.126, hip:0.142,
+    armX:0.166, armR:0.036, legX:0.062, legR:0.050,
+    skin:"#c4a68f", hair:"#33251f", top:"#4e6376", bottom:"#39414e",
+    shoe:"#674d3d", accent:"#7b5a45",
+  },
+};
+/* 고를 수 있는 몸. 예전에는 "중립" 이 하나 더 있었고 그게 기본값이라
+   아무도 고르지 않아도 넘어갔습니다. 둘만 남기면서 기본값을 없앴습니다 —
+   이제 학생이 직접 고르지 않으면 다음으로 갈 수 없습니다. 이름처럼
+   물어보는 것이지, 대신 정해주지 않습니다. */
+const BODY_KEYS=Object.keys(BODY);
+const FALLBACK_BODY=BODY_KEYS[0];
+const avatar=new THREE.Group(); avatar.visible=false; scene.add(avatar);
+
+/* 아바타만 빛을 받습니다.
+
+   방의 벽·바닥·작품은 빛을 계산하지 않는 재질(MeshBasicMaterial)입니다.
+   그 재질은 원기둥을 세워도 색 하나짜리 직사각형으로 찍혀서, 3D 로 만들어
+   두고도 종이 인형처럼 보입니다. 사람만 빛을 받는 재질로 두고 조명을 셋
+   답니다 — 전시장 분위기는 그대로고 사람만 입체로 섭니다. */
+const MAT={};
+"skin hair top bottom shoe accent white pupil".split(" ").forEach(k=>{
+  MAT[k]=new THREE.MeshLambertMaterial({color:"#8a8a8a"});
+  MAT[k].userData.base=new THREE.Color("#8a8a8a");
+});
+// 몸통과 치마는 뚫린 껍데기라 안쪽 면도 그려야 구멍이 보이지 않습니다.
+MAT.top.side=THREE.DoubleSide; MAT.bottom.side=THREE.DoubleSide;
+
+/** 고른 몸의 색을 재질에 칠합니다. 재질을 새로 만들지 않고 색만 바꿉니다 —
+ *  작품 빛에 물드는 처리가 이 재질들을 계속 붙잡고 있기 때문입니다. */
+function paintBody(b){
+  const c={skin:b.skin,hair:b.hair,top:b.top,bottom:b.bottom,
+           shoe:b.shoe,accent:b.accent,white:"#efece4",pupil:"#241d19"};
+  Object.keys(c).forEach(k=>{MAT[k].userData.base.set(c[k]); MAT[k].color.set(c[k]);});
+}
+
+// 위에서 내려오는 넓은 빛과 바닥에서 되받는 빛. 형태를 부드럽게 감쌉니다.
+const hemi=new THREE.HemisphereLight("#ffffff","#3a3a40",0.62); scene.add(hemi);
+// 주광 — 얼굴과 가슴에 밝은 면을 만들어 앞뒤를 갈라줍니다.
+const keyLight=new THREE.DirectionalLight("#ffffff",0.78);
+keyLight.position.set(2.4,4.2,3.0); scene.add(keyLight);
+// 뒤에서 얕게 — 어두운 방에서 실루엣이 벽에 묻히지 않게 합니다.
+const rimLight=new THREE.DirectionalLight("#ffffff",0.26);
+rimLight.position.set(-2.6,2.0,-3.2); scene.add(rimLight);
+
+const rig={};
+const shadow=new THREE.Mesh(new THREE.PlaneGeometry(0.95,0.95),
+  new THREE.MeshBasicMaterial({map:radialTexture(2),transparent:true,opacity:0.5,color:"#000",depthWrite:false}));
+shadow.rotation.x=-Math.PI/2; shadow.position.y=0.012;
+const tagCanvas=document.createElement("canvas"); tagCanvas.width=512; tagCanvas.height=140;
+const tagTex=new THREE.CanvasTexture(tagCanvas);
+const nameTag=new THREE.Sprite(new THREE.SpriteMaterial({map:tagTex,transparent:true,depthWrite:false}));
+nameTag.scale.set(1.35,0.37,1); nameTag.visible=false;
+function drawNameTag(text){
+  const c=tagCanvas,x=c.getContext("2d"); x.clearRect(0,0,c.width,c.height);
+  if(!text){tagTex.needsUpdate=true;nameTag.visible=false;return;}
+  const label=isAdmin()?text+" · 관리자":text;
+  x.font='700 44px '+UIFONT; x.textAlign="center"; x.textBaseline="middle";
+  const tw=Math.min(x.measureText(label).width,420),bw=tw+68,bh=76;
+  const bx=(c.width-bw)/2,by=(c.height-bh)/2;
+  x.fillStyle="rgba(10,10,13,0.72)"; x.fillRect(bx,by,bw,bh);
+  x.strokeStyle=isAdmin()?"rgba(216,180,138,0.5)":"rgba(200,196,187,0.34)";
+  x.lineWidth=1.5; x.strokeRect(bx+.75,by+.75,bw-1.5,bh-1.5);
+  x.fillStyle=isAdmin()?"rgba(216,180,138,0.7)":"rgba(200,196,187,0.55)";
+  x.fillRect(bx+16,c.height/2-0.5,12,1);
+  x.fillStyle="#e8e6e1"; x.fillText(label,c.width/2+10,c.height/2+2,420);
+  tagTex.needsUpdate=true; nameTag.visible=true;
+}
+
+/* ---------- 가구 ----------
+
+   전시장에 놓는 물건입니다. 종류는 여기 표에 적힌 것뿐이고, 학생이 모양을
+   직접 만들지는 않습니다 — 여섯 가지를 어디에 어떻게 놓느냐가 전시를
+   꾸미는 일이고, 아무 모양이나 만들 수 있게 하면 전시장이 창고가 됩니다.
+
+   높이를 낮게 잡았습니다. 작품은 중심 1.78m 에 걸리는데 가장 큰 작품은
+   아래끝이 0.55m 까지 내려옵니다. 앉는 것들은 그보다 낮아서 벽 앞에
+   붙여놔도 작품을 가리지 않습니다. 화분과 안내대만 높은데, 대신 좁습니다.
+
+   r 은 부딪히는 반지름입니다. 네모난 상자 대신 원으로 잡은 이유 — 가구는
+   아무 각도로나 돌아가는데, 축에 나란한 상자로는 돌아간 소파를 다룰 수
+   없습니다. 원은 어느 각도에서도 그대로입니다. */
+const FMAT={
+  wood:  new THREE.MeshLambertMaterial({color:"#6b5844"}),
+  fabric:new THREE.MeshLambertMaterial({color:"#565f6b"}),
+  metal: new THREE.MeshLambertMaterial({color:"#4a4d55"}),
+  pot:   new THREE.MeshLambertMaterial({color:"#6a5f52"}),
+  leaf:  new THREE.MeshLambertMaterial({color:"#4c6150"}),
+};
+const box=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+const rod=(r1,r2,h,m)=>new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,12),m);
+/** 다리 넷. 상판 아래에 같은 모양으로 붙습니다. */
+function legs(g,w,d,h,t){
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
+    const l=box(t,h,t,FMAT.wood);
+    l.position.set(sx*(w/2-t*0.8),h/2,sz*(d/2-t*0.8)); g.add(l);
+  });
+}
+const FURNITURE={
+  bench:{name:"벤치", r:0.62, build(){
+    const g=new THREE.Group(); legs(g,1.30,0.40,0.36,0.07);
+    const top=box(1.40,0.09,0.44,FMAT.wood); top.position.y=0.405; g.add(top);
+    return g;
+  }},
+  sofa:{name:"소파", r:0.72, build(){
+    const g=new THREE.Group(); legs(g,1.30,0.56,0.13,0.07);
+    const seat=box(1.44,0.20,0.62,FMAT.fabric); seat.position.y=0.23; g.add(seat);
+    const back=box(1.44,0.34,0.16,FMAT.fabric); back.position.set(0,0.50,-0.23); g.add(back);
+    [-1,1].forEach(sx=>{const a=box(0.14,0.18,0.62,FMAT.fabric);
+      a.position.set(sx*0.65,0.42,0); g.add(a);});
+    return g;
+  }},
+  table:{name:"낮은 테이블", r:0.56, build(){
+    const g=new THREE.Group(); legs(g,0.92,0.54,0.34,0.06);
+    const top=box(1.00,0.05,0.60,FMAT.wood); top.position.y=0.365; g.add(top);
+    return g;
+  }},
+  stool:{name:"스툴", r:0.30, build(){
+    const g=new THREE.Group();
+    const l=rod(0.05,0.06,0.36,FMAT.metal); l.position.y=0.18; g.add(l);
+    const ft=rod(0.20,0.20,0.02,FMAT.metal); ft.position.y=0.01; g.add(ft);
+    const st=rod(0.22,0.22,0.08,FMAT.fabric); st.position.y=0.40; g.add(st);
+    return g;
+  }},
+  plant:{name:"화분", r:0.36, build(){
+    const g=new THREE.Group();
+    const pt=rod(0.17,0.22,0.30,FMAT.pot); pt.position.y=0.15; g.add(pt);
+    const stem=rod(0.022,0.028,0.34,FMAT.leaf); stem.position.y=0.44; g.add(stem);
+    [[0,0.72,0,0.24],[0.13,0.66,0.06,0.17],[-0.11,0.68,-0.07,0.15]].forEach(([x,y,z,r])=>{
+      const b=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),FMAT.leaf);
+      b.scale.set(1,0.72,1); b.position.set(x,y,z); g.add(b);
+    });
+    return g;
+  }},
+  stand:{name:"안내대", r:0.32, build(){
+    const g=new THREE.Group();
+    const col=rod(0.16,0.22,0.82,FMAT.wood); col.position.y=0.41; g.add(col);
+    const top=box(0.40,0.04,0.30,FMAT.wood);
+    top.position.y=0.86; top.rotation.x=-0.28; g.add(top);
+    return g;
+  }},
+};
+const FURNITURE_KEYS=Object.keys(FURNITURE);
+const MAX_FURNITURE=8;
+/* 돌리는 단위 둘. 45° 는 벽에 맞춰 세울 때, 15° 는 미세하게 틀 때 씁니다.
+   방에 비스듬한 벽이 없어서 대개 45° 로 충분하고, 15° 는 휠로만 씁니다. */
+const ROT_STEP=Math.PI/4, ROT_FINE=Math.PI/12;
+/* 한 번 누른 것인지 두 번인지 가르는 시간. 첫 클릭의 "돌리기" 를 이만큼
+   미뤄두고, 그 사이에 두 번째가 오면 물리고 "들기" 로 갑니다. */
+const DOUBLE_MS=230;
+
+/* 놓인 가구. layout 은 저장되는 값 그대로이고, furnMeshes 는 화면에
+   세워진 것입니다. 둘의 순서가 같습니다. */
+const furnGroup=new THREE.Group(); scene.add(furnGroup);
+let layout=[], furnMeshes=[], furnPicks=[];
+
+/** layout 을 화면에 세웁니다. 바꿀 때마다 통째로 다시 세웁니다 — 여덟 개라
+ *  아껴서 얻을 것이 없고, 한 점만 고치는 길을 따로 두면 어긋납니다. */
+function applyFurniture(list){
+  carrying=null;                            // 방을 다시 세우면 들고 있던 것도 놓습니다
+  layout=Array.isArray(list)?list.slice(0,MAX_FURNITURE):[];
+  furnGroup.children.slice().forEach(o=>{
+    furnGroup.remove(o);
+    o.traverse(m=>{if(m.geometry)m.geometry.dispose();});
+  });
+  furnMeshes=[]; furnPicks=[];
+  layout.forEach((it,i)=>{
+    const def=FURNITURE[it.t]; if(!def) return;
+    const g=def.build();
+    g.position.set(it.x,0,it.z); g.rotation.y=it.r||0;
+    furnGroup.add(g); furnMeshes.push(g);
+    // 집는 몸통은 따로 둡니다. 다리 사이 빈 곳을 찍어도 잡히게.
+    const pick=new THREE.Mesh(new THREE.CylinderGeometry(def.r,def.r,1.0,10),
+      new THREE.MeshBasicMaterial({visible:false}));
+    pick.position.set(it.x,0.5,it.z); pick.userData.furn=i;
+    furnGroup.add(pick); furnPicks.push(pick);
+  });
+}
+/** 이 자리를 막고 있는 가구. 반지름 안에 들어오면 그것입니다.
+ *  들고 있는 것은 세지 않습니다 — 들고 다니는 소파가 자기를 든 사람을
+ *  밀어내면 안 되고, 내려놓을 때 자기 자리를 자기가 막아도 안 됩니다. */
+function furnAt(x,z,skip){
+  for(let i=0;i<layout.length;i++){
+    if(i===skip) continue;
+    if(carrying&&i===carrying.i) continue;
+    const it=layout[i], def=FURNITURE[it.t]; if(!def) continue;
+    const dx=x-it.x, dz=z-it.z;
+    if(dx*dx+dz*dz < def.r*def.r) return {x:it.x,z:it.z,r:def.r};
+  }
+  return null;
+}
+
+/* 덩어리 하나. 얼굴·머리카락·관절이 전부 이것으로 만들어집니다. */
+const ball=(r,mat)=>new THREE.Mesh(new THREE.SphereGeometry(r,14,10),mat||MAT.skin);
+/** 마디 하나. 그룹의 원점이 관절이고 몸통은 아래로 자랍니다 —
+ *  그룹을 rotation.x 로 돌리면 관절이 접히는 것처럼 보입니다. */
+function limb(rTop,rBot,len,mat){
+  const g=new THREE.Group();
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBot,len,12),mat||MAT.skin);
+  m.position.y=-len/2; g.add(m);
+  g.add(ball(rTop*1.02,mat));             // 관절 쪽 끝을 덮습니다
+  return g;
+}
+
+function buildAvatar(type){
+  // 없어진 "neutral" 이 남아 있는 옛 값이 와도 화면이 죽지 않게 합니다.
+  const b=BODY[type]||BODY[FALLBACK_BODY];
+  paintBody(b);
+  for(let i=avatar.children.length-1;i>=0;i--){
+    const ch=avatar.children[i]; avatar.remove(ch);
+    ch.traverse(o=>{if(o.geometry)o.geometry.dispose();});
+  }
+  /* 키 약 1.4m, 머리 지름 0.35m — 키가 머리 넷입니다.
+     사람 비율(일곱 반)로 두면 아무리 얼굴을 그려 넣어도 만화로 읽히지
+     않습니다. 순서가 반대입니다. */
+  const hipY=0.60, torsoH=0.36, tt=hipY+torsoH, hr=0.165, hy=tt+0.05+hr*0.94;
+
+  /* 허리 위는 한 덩어리로 묶습니다. 걸을 때 이 그룹만 위아래로 흔들면
+     머리·팔·몸통이 함께 움직입니다. */
+  const upper=new THREE.Group(); avatar.add(upper); rig.upper=upper;
+
+  // ── 몸통 = 겉옷. 옆선을 돌려 깎고 앞뒤를 눌러 납작하게. ──
+  const prof=[[b.hip*1.02,0],[b.hip,torsoH*0.22],[b.waist,torsoH*0.50],
+              [b.chest,torsoH*0.78],[b.shoulder,torsoH*0.93],[b.shoulder*0.50,torsoH]];
+  const torso=new THREE.Mesh(
+    new THREE.LatheGeometry(prof.map(v=>new THREE.Vector2(v[0],v[1])),24),MAT.top);
+  torso.scale.z=0.80; torso.position.y=hipY; upper.add(torso); rig.torso=torso;
+
+  const pelvis=ball(b.hip*1.0,MAT.bottom); pelvis.scale.set(1,0.60,0.80);
+  pelvis.position.y=hipY+0.012; upper.add(pelvis);
+
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.058,0.070,0.055,12),MAT.skin);
+  neck.position.y=tt+0.010; upper.add(neck);
+
+  // ── 머리 ──
+  const head=new THREE.Mesh(new THREE.SphereGeometry(hr,24,18),MAT.skin);
+  head.scale.set(0.98,1.06,0.98); head.position.y=hy; upper.add(head);
+  [-1,1].forEach(s=>{                      // 귀
+    const e=ball(hr*0.21,MAT.skin); e.scale.set(0.50,1.0,0.85);
+    e.position.set(s*hr*0.94,hy-0.006,-0.004); upper.add(e);
+  });
+
+  /* 얼굴.
+
+     부품을 머리 겉면에 얹으려면 그 자리의 반지름을 알아야 합니다. 눈을
+     한가운데 기준으로 대충 놓으면 얼굴 옆쪽에서는 구 안에 파묻혀 사라지고
+     — 처음에 눈이 안 보이던 것이 이 때문입니다 — 멀리 놓으면 떠 보입니다.
+     x·y 를 주면 그 자리의 겉면 z 를 돌려주는 함수 하나로 정리합니다. */
+  const faceZ=(x,y)=>{
+    const dy=(y-hy)/(hr*1.06);
+    const r=hr*Math.sqrt(Math.max(0,1-dy*dy));
+    return Math.sqrt(Math.max(0,r*r-x*x));
+  };
+  /* 눈은 흰자 위에 눈동자를 얹은 덩어리입니다. 평면에 그림을 붙이면 옆에서
+     볼 때 얼굴이 떠 보이는데, 이렇게 두면 옆에서 봐도 튀어나온 눈입니다. */
+  const eyeY=hy+hr*0.09, eyeX=hr*0.36;
+  [-1,1].forEach(s=>{
+    const ez=faceZ(eyeX,eyeY);
+    const wht=ball(hr*0.26,MAT.white); wht.scale.set(0.90,1.10,0.52);
+    wht.position.set(s*eyeX,eyeY,ez-hr*0.02); upper.add(wht);
+    const pup=ball(hr*0.145,MAT.pupil); pup.scale.set(1,1.06,0.62);
+    pup.position.set(s*eyeX,eyeY-hr*0.015,ez+hr*0.07); upper.add(pup);
+    const by=eyeY+hr*0.30;
+    const brw=new THREE.Mesh(new THREE.BoxGeometry(hr*0.34,hr*0.06,hr*0.07),MAT.hair);
+    brw.position.set(s*eyeX,by,faceZ(eyeX,by)+hr*0.01); brw.rotation.z=-s*0.13;
+    upper.add(brw);
+  });
+  // 웃는 입 — 반원을 뒤집어 입꼬리가 올라가게 둡니다.
+  const my=hy-hr*0.42;
+  const mouth=new THREE.Mesh(
+    new THREE.TorusGeometry(hr*0.20,hr*0.032,8,20,Math.PI*0.85),MAT.pupil);
+  mouth.rotation.z=Math.PI+Math.PI*0.075;
+  mouth.position.set(0,my,faceZ(0,my)-hr*0.03); upper.add(mouth);
+
+  // ── 머리카락 ──
+  const cap=new THREE.Mesh(
+    new THREE.SphereGeometry(hr*1.05,24,16,0,Math.PI*2,0,Math.PI*0.50),MAT.hair);
+  cap.scale.set(1.0,1.08,1.02); cap.position.y=hy+0.004; upper.add(cap);
+  if(b.hairStyle==="boy"){
+    // 위로 쓸어 올린 앞머리 덩어리
+    const q=ball(hr*0.46,MAT.hair); q.scale.set(1.30,0.60,0.90);
+    q.position.set(0,hy+hr*0.66,hr*0.30); q.rotation.x=-0.34; upper.add(q);
+    // 한쪽으로 넘긴 가닥. 눕혀야 상투가 아니라 머리카락으로 읽힙니다.
+    const q2=ball(hr*0.34,MAT.hair); q2.scale.set(1.05,0.42,0.85);
+    q2.position.set(hr*0.30,hy+hr*0.80,hr*0.16);
+    q2.rotation.set(-0.42,0,0.42); upper.add(q2);
+  } else {
+    // 단발 — 뒤와 옆으로 볼륨, 앞머리는 눈썹 위까지
+    const bk=ball(hr*0.92,MAT.hair); bk.scale.set(1.06,0.95,0.80);
+    bk.position.set(0,hy-hr*0.22,-hr*0.46); upper.add(bk);
+    [-1,1].forEach(s=>{
+      const sd=ball(hr*0.42,MAT.hair); sd.scale.set(0.70,1.35,0.95);
+      sd.position.set(s*hr*0.88,hy-hr*0.40,-hr*0.10); upper.add(sd);
+    });
+    const fr=ball(hr*0.56,MAT.hair); fr.scale.set(1.14,0.52,0.82);
+    fr.position.set(0,hy+hr*0.56,hr*0.40); upper.add(fr);
+  }
+
+  // ── 옷의 남은 것 ──
+  if(b.skirt){
+    const sk=new THREE.Mesh(
+      new THREE.CylinderGeometry(b.hip*1.0,b.hip*1.62,0.20,20,1,true),MAT.bottom);
+    sk.scale.z=0.86; sk.position.y=hipY-0.055; avatar.add(sk);
+  } else {
+    const tie=new THREE.Mesh(new THREE.BoxGeometry(0.030,0.090,0.012),MAT.accent);
+    tie.position.set(0,tt-0.105,b.chest*0.82); upper.add(tie);
+    const knot=ball(0.020,MAT.accent); knot.scale.set(1,0.85,0.7);
+    knot.position.set(0,tt-0.048,b.chest*0.82); upper.add(knot);
+  }
+  if(b.bag){
+    const bag=new THREE.Mesh(new THREE.BoxGeometry(b.chest*1.55,0.20,0.085),MAT.accent);
+    bag.position.set(0,hipY+torsoH*0.55,-b.chest*0.84); upper.add(bag);
+    [-1,1].forEach(s=>{
+      const st=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.115,0.018),MAT.accent);
+      st.position.set(s*b.chest*0.56,hipY+torsoH*0.83,b.chest*0.62);
+      st.rotation.x=0.16; upper.add(st);
+    });
+  }
+
+  /* 팔 — 어깨는 몸통 꼭대기가 아니라 조금 아래입니다. 소매는 겉옷 색이고
+     손만 살색입니다. */
+  const arm=(side)=>{
+    const sx=side*b.armX, sy=tt-0.052;
+    const up=limb(b.armR*1.06,b.armR*0.94,0.20,MAT.top);
+    up.position.set(sx,sy,0); up.rotation.z=-side*0.06; upper.add(up);
+    const lo=limb(b.armR*0.94,b.armR*0.84,0.18,MAT.top);
+    lo.position.y=-0.20; up.add(lo);
+    const hand=ball(b.armR*1.10,MAT.skin); hand.scale.set(0.92,1.05,0.70);
+    hand.position.y=-0.185; lo.add(hand);
+    return {up,lo};
+  };
+  const aL=arm(-1), aR=arm(1);
+  rig.armL=aL.up; rig.armR=aR.up; rig.elbowL=aL.lo; rig.elbowR=aR.lo;
+
+  /* 다리 — 허리 위 그룹이 아니라 아바타에 바로 답니다. 걸을 때 상체만
+     흔들리고 발은 바닥에 붙어 있어야 합니다.
+     치마를 입으면 다리가 맨살, 아니면 바지 색입니다. */
+  const legMat=b.skirt?MAT.skin:MAT.bottom;
+  const leg=(side)=>{
+    const sx=side*b.legX;
+    const up=limb(b.legR*1.12,b.legR*0.96,0.29,legMat);
+    up.position.set(sx,hipY-0.015,0); avatar.add(up);
+    const lo=limb(b.legR*0.96,b.legR*0.82,0.25,legMat);
+    lo.position.y=-0.29; up.add(lo);
+    const shoe=new THREE.Mesh(new THREE.BoxGeometry(b.legR*2.3,0.055,0.15),MAT.shoe);
+    shoe.position.set(0,-0.262,0.026); lo.add(shoe);
+    const toe=ball(b.legR*1.15,MAT.shoe); toe.scale.set(1.0,0.48,0.95);
+    toe.position.set(0,-0.258,0.088); lo.add(toe);
+    return {up,lo};
+  };
+  const lL=leg(-1), lR=leg(1);
+  rig.legL=lL.up; rig.legR=lR.up; rig.kneeL=lL.lo; rig.kneeR=lR.lo;
+
+  avatar.add(shadow); nameTag.position.y=hy+hr+0.24; avatar.add(nameTag);
+  avatar.scale.setScalar(b.scale);
+  poseAvatar(0,0);                          // 가만히 선 자세로 시작합니다
+}
+
+/* 걸음. sw 는 다리가 앞뒤로 벌어진 각도이고, 무릎과 팔꿈치는 한쪽으로만
+   접힙니다 — 양쪽으로 접으면 사람이 아니라 인형이 됩니다. */
+function poseAvatar(sw,bob){
+  if(!rig.legL) return;
+  rig.legL.rotation.x=sw;  rig.legR.rotation.x=-sw;
+  rig.kneeL.rotation.x=Math.max(0, sw)*1.05;
+  rig.kneeR.rotation.x=Math.max(0,-sw)*1.05;
+  rig.armR.rotation.x=sw*0.62; rig.armL.rotation.x=-sw*0.62;
+  // 팔꿈치는 서 있을 때도 조금 굽어 있습니다. 곧게 편 팔은 어색합니다.
+  rig.elbowL.rotation.x=-0.14-Math.max(0,-sw)*0.55;
+  rig.elbowR.rotation.x=-0.14-Math.max(0, sw)*0.55;
+  rig.upper.position.y=bob;
+}
+buildAvatar(FALLBACK_BODY);
+
+/* ---------- 상태 ---------- */
+const player={pos:new THREE.Vector3(0,0,6),yaw:Math.PI,pitch:0,phase:0};
+const vel=new THREE.Vector3();
+let viewMode="first",glowScale=1,current=null,running=false,audioReady=false;
+const EYE=1.62;
+
+/* ---------- 테마 ---------- */
+const wallInput=document.getElementById("wallColor"),floorInput=document.getElementById("floorColor");
+function applyFrameColor(){
+  const hex=wallInput.value,light=lum(hex)>0.42;
+  frames.forEach(f=>f.material.color.set(light?shift(hex,-0.55):shift(hex,0.09)));
+}
+function applyTheme(w,f){
+  const light=lum(w)>0.42;
+  wallMat.map.dispose(); wallMat.map=makeWallTexture(w); wallMat.needsUpdate=true;
+  floorMat.color.set(f);
+  ceilMat.color.set(shift(w,light?0.03:-0.025));
+  partMat.color.set(shift(w,light?-0.04:0.006));
+  const bg=shift(w,light?-0.04:-0.03);
+  scene.background.set(bg); scene.fog.color.set(bg);
+  glowScale=light?0.34:1;
+  /* 아바타에 닿는 빛만 방 밝기에 맞춥니다. 밝은 방에서 세게 때리면
+     마네킹만 도드라지고, 어두운 방에서 약하면 벽에 묻힙니다.
+     바닥에서 되받는 빛은 바닥 색을 그대로 씁니다 — 서 있는 곳의
+     색이 다리 안쪽에 올라옵니다. */
+  hemi.groundColor.set(f);
+  /* 세기는 "예전 납작하던 때와 같은 밝기 언저리" 를 노립니다. 빛을 세게
+     주면 형태는 잘 보이지만 어두운 전시실에서 마네킹만 하얗게 떠서
+     작품보다 눈에 띕니다 — 관람객이 주인공이 되면 안 됩니다.
+     밝은 면과 어두운 면의 비(약 2:1)로 입체를 만들고, 평균은 벽과
+     비슷하게 둡니다. */
+  hemi.intensity=light?0.35:0.34;
+  keyLight.intensity=light?0.53:0.58;
+  rimLight.intensity=light?0.11:0.22;
+  shadow.material.opacity=light?0.28:0.5;
+  // 목적지 고리도 바닥에 따라 뒤집습니다. 밝은 바닥 위의 흰 고리는
+  // 있으나 마나입니다 — 눌렀는지 확인하려고 두는 표시니까요.
+  mark.material.color.set(lum(f)>0.42?"#2a2c33":"#ffffff");
+  doorFrameMat.color.set(light?shift(w,-0.5):shift(w,0.12));
+  doorGlow.material.opacity=light?0.07:0.2;
+  root.classList.toggle("light",light);
+  applyFrameColor(); drawGuestbook(); drawEmpty();
+}
+
+/* ---------- 라우팅 ---------- */
+const lobby=document.getElementById("lobby"),ctxHint=document.getElementById("ctxHint");
+const crossEl=document.getElementById("cross");
+function showLobby(){
+  running=false; current=null;
+  panels.forEach(p=>{if(p.video)p.video.pause();});
+  lobby.classList.remove("hide");
+  root.classList.add("lobbyMode");
+  document.getElementById("panel").classList.remove("on");
+  crossEl.classList.remove("on");
+  if(document.pointerLockElement) document.exitPointerLock();
+  renderGrid();
+}
+let pendingHandle=null, sizeTipShown=false, playTipShown=false;
+let entryT=0; const ENTRY_DUR=1.6;
+/* 클릭으로 정한 목적지. null 이면 손으로 걷는 중입니다. */
+let goal=null;
+const doorEl=document.getElementById("door");
+
+/* 문이 열리며 입장 — 카드 클릭에서 시작합니다 */
+function enterThroughDoor(g){
+  if(!session.name){pendingHandle=g.handle;openProfile();return;}
+  doorEl.querySelector(".dt").textContent=g.title;
+  doorEl.querySelector(".dn").textContent=g.name;
+  doorEl.classList.remove("open","fade");
+  doorEl.classList.add("on");
+  // 닫힌 문이 한 번 그려진 뒤에 열려야 합니다
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    location.hash="#/g/"+g.handle;
+    setTimeout(()=>doorEl.classList.add("open"),160);
+    setTimeout(()=>doorEl.classList.remove("on","open"),1500);
+  }));
+}
+
+/* 문이 닫히며 퇴장 */
+function exitThroughDoor(){
+  if(!current){location.hash="#/";return;}
+  doorEl.querySelector(".dt").textContent=current.title;
+  doorEl.querySelector(".dn").textContent=current.name;
+  doorEl.classList.remove("fade");
+  doorEl.classList.add("on","open");
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    doorEl.classList.remove("open");            // 뒤에서 문이 닫힙니다
+    setTimeout(()=>{
+      location.hash="#/";
+      doorEl.classList.add("fade");
+      setTimeout(()=>doorEl.classList.remove("on","fade"),420);
+    },1050);
+  }));
+}
+function updateHint(){
+  const locked=document.pointerLockElement===renderer.domElement, manage=canManage(current);
+  const edit=manage?"E 편집 · [ ] 크기 · ":"";
+  document.getElementById("hint").textContent=locked
+    ? "W A S D · 바닥 클릭 이동 · 작품 클릭 재생 · "+edit+"V 시점 · G 방명록 · ESC 커서"
+    : "드래그로 둘러보기 · 바닥 클릭 이동 · W A S D · 작품 클릭 재생 · "+edit+"V 시점 · G 방명록";
+}
+function refreshRoomPermissions(){
+  if(!current) return;
+  const manage=canManage(current);
+  document.getElementById("ownerGrp").style.display=manage?"":"none";
+  document.getElementById("viewerGrp").style.display=manage?"none":"";
+  document.getElementById("panelLoginBtn").style.display=signedIn()?"none":"";
+
+  // 백업은 서버가 있을 때만. 전체 백업은 관리자만 보입니다.
+  document.getElementById("backupMineBtn").style.display=SERVER?"":"none";
+  document.getElementById("backupAllBtn").style.display=(SERVER&&isAdmin())?"":"none";
+  document.getElementById("delGalleryBtn").style.display="";
+  // 저장은 서버가 있어야 합니다. 오프라인 전시에서는 저장할 곳이 없습니다.
+  document.getElementById("themeSaveGrp").style.display=(SERVER&&manage)?"":"none";
+  document.getElementById("coverGrp").style.display=(SERVER&&manage)?"":"none";
+  document.getElementById("roomGrp").style.display=(SERVER&&manage)?"":"none";
+  document.getElementById("furnGrp").style.display=(SERVER&&manage)?"":"none";
+  showCover(); showRoomPick(); showFurniture();
+  document.getElementById("viewerMsg").textContent=signedIn()
+    ? "다른 학생의 전시장입니다. 작품 편집과 삭제는 주인과 관리자만 할 수 있습니다."
+    : "관람 중입니다. 이 전시장의 주인이라면 로그인하세요.";
+  document.getElementById("mark").textContent=
+    current.name+" · "+current.title+(manage?"  ·  편집 가능":"");
+  updateHint();
+}
+function enterGallery(handle){
+  const g=GALLERIES.find(x=>x.handle===handle);
+  if(!g) return showLobby();
+  if(!session.name){pendingHandle=handle;openProfile();return;}
+  current=g; lobby.classList.add("hide"); root.classList.remove("lobbyMode");
+  wallInput.value=g.theme.wall; floorInput.value=g.theme.floor;
+  applyTheme(g.theme.wall,g.theme.floor); markRoomTheme();
+  applyRoom(roomOf(g));                        // 자리 좌표가 방에서 나옵니다
+  buildRoomContents(g); applyFurniture(g.layout);
+  drawGuestbook(); refreshRoomPermissions();
+  // 문 바로 안쪽에 섭니다. 방이 깊어져도 들어서는 자리는 문 앞입니다.
+  player.pos.set(0,0,ROOM.d/2-0.75); player.yaw=Math.PI; player.pitch=0; vel.set(0,0,0);
+  goal=null;
+  entryT=ENTRY_DUR;                            // 문을 통과해 걸어 들어오는 구간
+  running=true; audioReady=true; crossEl.classList.add("on");
+  if(!playTipShown){
+    playTipShown=true;
+    setTimeout(()=>flash("작품을 바라보고 클릭하면 재생됩니다",4200),1400);
+  } else if(canManage(g)&&!sizeTipShown){
+    sizeTipShown=true;
+    setTimeout(()=>flash("E 키로 작품 바꾸기 · [ ] 키로 크기 조절",4600),1400);
+  }
+}
+function route(){
+  const m=location.hash.replace(/^#/,"").match(/^\/g\/([\w-]+)$/);
+  if(m) enterGallery(m[1]); else showLobby();
+}
+addEventListener("hashchange",route);
+
+/* ---------- 로비 ---------- */
+/* 색을 흰쪽(k>0) 또는 검은쪽(k<0)으로 당깁니다. 벽 하나에서 천장·바닥·
+   좌우 벽 색을 만들어 쓰려고 둔 것입니다. THREE.Color 는 이미 올라와 있습니다. */
+function tint(hex,k){
+  const c=new THREE.Color(hex);
+  c.lerp(new THREE.Color(k>0?0xffffff:0x000000),Math.abs(k));
+  return "#"+c.getHexString();
+}
+
+/* 카드에 들어갈 전시장 미리보기.
+   ------------------------------------------------------------
+   예전에는 벽 색 위에 점선 사각형 하나였습니다. 그것으로는 이 카드가
+   "방" 이라는 것이 보이지 않았습니다. 한 점 투시로 실제 전시실을 그리고,
+   색은 그 전시장이 정말 쓰는 theme 를 그대로 씁니다 — 카드가 곧 문을
+   열고 들어갔을 때의 예고편이 됩니다.
+
+   걸린 작품 수만큼 뒷벽 액자에 불이 들어옵니다. 숫자를 읽지 않아도
+   찬 전시장과 빈 전시장이 구별됩니다.
+   "빈 전시장" 이라는 글자는 여기서 그리지 않습니다. 카드 위에 HTML 로
+   얹습니다 — 캔버스 글자는 확대하면 뭉개집니다. */
+function roomPoster(theme,hung){
+  const W=320,H=180,c=document.createElement("canvas");
+  c.width=W*2; c.height=H*2;              // 카드가 커져도 뭉개지지 않게 2배로
+  const x=c.getContext("2d"); x.scale(2,2);
+
+  const wall=theme.wall||"#131318", floor=theme.floor||"#0a0a0c";
+  const light=lum(wall)>0.42;
+
+  // 소실점 사각형 = 뒷벽. 이 네 값이 방 전체의 원근을 정합니다.
+  const bx0=76,bx1=244,by0=38,by1=130;
+
+  // 밝은 테마와 어두운 테마는 같은 값으로 명암을 주면 안 됩니다.
+  // 밝은 벽에 -.07 은 아무것도 아니고, 어두운 벽에 -.20 은 검은 덩어리입니다.
+  const D=(a,b)=>light?a:b;
+
+  // 바닥 — 앞이 넓고 뒤가 좁습니다
+  x.fillStyle=tint(floor,D(-.07,.05));
+  x.beginPath(); x.moveTo(0,H); x.lineTo(W,H); x.lineTo(bx1,by1); x.lineTo(bx0,by1); x.closePath(); x.fill();
+
+  // 천장 — 벽보다 한 단 밝게
+  x.fillStyle=tint(wall,D(.07,.10));
+  x.beginPath(); x.moveTo(0,0); x.lineTo(W,0); x.lineTo(bx1,by0); x.lineTo(bx0,by0); x.closePath(); x.fill();
+
+  // 좌우 벽 — 왼쪽을 밝게 두어 빛이 한쪽에서 오는 것처럼 보이게 합니다.
+  // 좌우가 같은 밝기면 방이 종이접기처럼 납작해집니다.
+  x.fillStyle=tint(wall,D(-.13,-.10));
+  x.beginPath(); x.moveTo(0,0); x.lineTo(bx0,by0); x.lineTo(bx0,by1); x.lineTo(0,H); x.closePath(); x.fill();
+  x.fillStyle=tint(wall,D(-.22,-.19));
+  x.beginPath(); x.moveTo(W,0); x.lineTo(bx1,by0); x.lineTo(bx1,by1); x.lineTo(W,H); x.closePath(); x.fill();
+
+  // 뒷벽
+  x.fillStyle=wall; x.fillRect(bx0,by0,bx1-bx0,by1-by0);
+
+  // 모서리 선. 색만으로는 면이 어디서 꺾이는지 흐릿합니다. 이 네 줄이
+  // 방의 골격입니다.
+  x.lineWidth=1; x.strokeStyle=D("rgba(0,0,0,.13)","rgba(232,230,225,.13)");
+  x.beginPath();
+  x.moveTo(0,0);   x.lineTo(bx0,by0);
+  x.moveTo(W,0);   x.lineTo(bx1,by0);
+  x.moveTo(0,H);   x.lineTo(bx0,by1);
+  x.moveTo(W,H);   x.lineTo(bx1,by1);
+  x.strokeRect(bx0,by0,bx1-bx0,by1-by0);
+  x.stroke();
+
+  /* 액자. 걸린 수만큼 앞에서부터 채웁니다.
+     frame(...) 은 네 점을 받습니다 — 옆벽 액자는 직사각형이 아니라
+     사다리꼴이라 사각형 그리기로는 안 됩니다. */
+  const edge=(mat,px)=>{                     // 옆벽의 위·아래 모서리 y
+    const t=mat==="L" ? px/bx0 : (W-px)/(W-bx1);
+    return [t*by0, H+t*(by1-H)];
+  };
+  let left=hung;
+  const frame=(pts)=>{
+    const on=left>0; if(on) left--;
+    x.beginPath(); x.moveTo(pts[0],pts[1]); x.lineTo(pts[2],pts[3]);
+    x.lineTo(pts[4],pts[5]); x.lineTo(pts[6],pts[7]); x.closePath();
+    // 빈 액자는 벽보다 밝은 화면(매트), 걸린 액자는 짙게 — 멀리서도
+    // 어느 벽이 찼는지 셀 수 있습니다.
+    x.fillStyle = on ? D("#33353d","#e7e0cf") : tint(wall,D(.17,.13));
+    x.fill();
+    x.lineWidth=1.2;
+    x.strokeStyle = on ? D("rgba(0,0,0,.45)","rgba(255,246,225,.5)")
+                       : D("rgba(0,0,0,.30)","rgba(232,230,225,.28)");
+    x.stroke();
+  };
+
+  // 옆벽 두 점씩 — 가까운 것부터
+  [["L",22,74],["L",84,120]].forEach(([m,a,b])=>{
+    const A=edge(m,a),B=edge(m,b);
+    frame([a,A[0]+(A[1]-A[0])*.30, b,B[0]+(B[1]-B[0])*.30,
+           b,B[0]+(B[1]-B[0])*.70, a,A[0]+(A[1]-A[0])*.70]);
+  });
+  [["R",298,246],["R",236,200]].forEach(([m,a,b])=>{
+    const A=edge(m,a),B=edge(m,b);
+    frame([a,A[0]+(A[1]-A[0])*.30, b,B[0]+(B[1]-B[0])*.30,
+           b,B[0]+(B[1]-B[0])*.70, a,A[0]+(A[1]-A[0])*.70]);
+  });
+  // 뒷벽 두 점
+  [[100,140],[180,220]].forEach(([a,b])=>{
+    frame([a,by0+22, b,by0+22, b,by1-24, a,by1-24]);
+  });
+
+  // 바닥에 떨어지는 빛. 방이 평면으로 보이지 않게 하는 것은 이 한 겹입니다.
+  const gl=x.createRadialGradient(160,by1+6,4,160,by1+6,110);
+  gl.addColorStop(0, D("rgba(255,250,236,.50)","rgba(255,238,206,.15)"));
+  gl.addColorStop(1,"rgba(0,0,0,0)");
+  x.fillStyle=gl; x.fillRect(0,by1-16,W,H-by1+16);
+
+  // 네 귀퉁이를 눌러 시선을 가운데로 모읍니다.
+  // 밝은 방에 검은 비네트를 씌우면 때가 탄 것처럼 보여서, 밝은 쪽은
+  // 갈색으로 아주 얕게만 깝니다.
+  const vg=x.createRadialGradient(160,86,54,160,86,196);
+  vg.addColorStop(0,"rgba(0,0,0,0)");
+  vg.addColorStop(1, D("rgba(92,72,44,.13)","rgba(0,0,0,.36)"));
+  x.fillStyle=vg; x.fillRect(0,0,W,H);
+
+  return c.toDataURL();
+}
+
+function posterFor(g){
+  // 학생이 고른 대표 이미지가 있으면 그것이 먼저입니다. 그린 방 그림은
+  // 아무것도 고르지 않았을 때의 기본값입니다.
+  if(g.theme&&g.theme.cover) return g.theme.cover;
+  const w0=g.works[0];
+  // 서버 없이 여는 데모의 씨앗 작품은 예전 그림을 그대로 씁니다.
+  // 실제로 검증된 화면이라 굳이 바꾸지 않았습니다.
+  if(w0&&w0.kind==="demo"){
+    const c=document.createElement("canvas"); c.width=320;c.height=180;
+    drawFrame(c.getContext("2d"),320,180,2.4,w0.hue,w0.motion);
+    return c.toDataURL();
+  }
+  return roomPoster(g.theme,g.works.length);
+}
+function renderGrid(){
+  const grid=document.getElementById("grid"); grid.innerHTML="";
+  const chip=document.getElementById("idChip"),auth=document.getElementById("btnAuth");
+  chip.classList.toggle("admin",isAdmin());
+  chip.classList.toggle("guest",!signedIn());
+  // .t 안의 글자만 바꿉니다. chip 자체에 textContent 를 쓰면 아이콘이 지워집니다.
+  chip.querySelector(".t").textContent=
+    signedIn()?(isAdmin()?"관리자 · ":"")+session.email:"둘러보는 중";
+  auth.querySelector(".t").textContent=signedIn()?"로그아웃":"로그인";
+
+  // 서버가 붙어 있으면 POST /api/galleries 로 실제로 저장됩니다.
+  const nb=document.createElement("div");
+  nb.className="card new"; nb.tabIndex=0;
+  nb.innerHTML='<div class="plus">+</div><div class="cap">전시장 만들기</div>'+
+    (signedIn()?"":'<div class="sub">로그인이 필요합니다</div>');
+  const newFn=()=>{ if(!signedIn()){pendingAfterLogin="new";openLogin();return;} openNewGallery(); };
+  nb.addEventListener("click",newFn);
+  nb.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")newFn();});
+  grid.appendChild(nb);
+
+  // 머리말의 같은 버튼. 전시장이 많아지면 만들기 카드가 화면 아래로
+  // 밀려나서, 위에도 하나 둡니다. 손님에게는 감춥니다 — 아래 카드가
+  // 이미 "로그인이 필요합니다" 라고 말하고 있습니다.
+  const nt=document.getElementById("btnNewTop");
+  nt.style.display=signedIn()?"":"none";
+  nt.onclick=newFn;
+
+  GALLERIES.forEach(g=>{
+    const manage=canManage(g);
+    const mine=signedIn()&&(SERVER?!!g.mine:g.ownerEmail===session.email);
+    const d=document.createElement("div");
+    d.className="card"; d.tabIndex=0;
+    // "내 전시장" 표는 그림 위가 아니라 제목 옆으로 옮겼습니다. 그림을
+    // 가리지 않고, 제목과 함께 한 줄로 읽힙니다.
+    d.innerHTML=
+      (manage?'<button class="del" title="전시장 삭제">×</button>':"")+
+      (manage&&SERVER?'<button class="cov" title="대표 이미지 바꾸기">대표 이미지</button>':"")+
+      '<div class="thumbWrap"><img class="thumb" src="'+posterFor(g)+'" alt="">'+
+      (g.works.length?"":'<span class="emptyTag">빈 전시장</span>')+'</div>'+
+      '<div class="meta"><div class="ctRow"><div class="ct">'+g.title+'</div>'+
+      (mine?'<span class="mine">내 전시장</span>':"")+'</div>'+
+      '<div class="cn">'+g.name+' · /g/'+g.handle+'</div>'+
+      '<div class="cs"><span>작품 '+g.works.length+'/'+roomOf(g).slots.length+'</span>'+
+      '<span>방명록 '+g.guestbook.length+'</span></div></div>';
+    const open=()=>{
+      // 포인터 잠금은 클릭 제스처와 같은 프레임에서 요청해야 허용됩니다
+      if(renderer.domElement.requestPointerLock){
+        try{renderer.domElement.requestPointerLock();}catch(e){}
+      }
+      enterThroughDoor(g);
+    };
+    d.addEventListener("click",open);
+    d.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")open();});
+    const del=d.querySelector(".del");
+    if(del) del.addEventListener("click",e=>{e.stopPropagation();openDelete(g);});
+    const cov=d.querySelector(".cov");
+    if(cov) cov.addEventListener("click",e=>{e.stopPropagation();openCover(g);});
+    grid.appendChild(d);
+  });
+}
+
+/* ---------- 모달 ---------- */
+function openModal(id){
+  document.getElementById(id).classList.add("on");
+  if(document.pointerLockElement) document.exitPointerLock();
+}
+function closeModal(id){document.getElementById(id).classList.remove("on");}
+function selectIn(a,v){
+  document.querySelectorAll("[data-"+a+"]").forEach(b=>b.classList.toggle("sel",b.dataset[a]===v));
+}
+
+/* 게스트 프로필 */
+const pfName=document.getElementById("pfName");
+function openProfile(){
+  pfName.value=session.name; selectIn("pfbody",session.body);
+  openModal("pfm"); setTimeout(()=>pfName.focus(),60);
+}
+document.querySelectorAll("[data-pfbody]").forEach(b=>
+  b.addEventListener("click",()=>{
+    session.body=b.dataset.pfbody; selectIn("pfbody",session.body);
+    document.getElementById("pfBodyErr").style.display="none";
+  }));
+document.getElementById("pfGo").addEventListener("click",()=>{
+  const n=pfName.value.trim(); if(!n){pfName.focus();return;}
+  // 기본값을 없앴으니 고르지 않고 지나갈 수 없습니다. 조용히 아무 몸이나
+  // 세우면 학생은 자기가 고른 줄 압니다.
+  const err=document.getElementById("pfBodyErr");
+  if(!session.body){err.style.display="";return;}
+  err.style.display="none";
+  session.name=n; buildAvatar(session.body); drawNameTag(n); selectIn("body",session.body);
+  closeModal("pfm");
+  if(pendingHandle){
+    const h=pendingHandle; pendingHandle=null;
+    const g=GALLERIES.find(x=>x.handle===h);
+    if(g) enterThroughDoor(g); else enterGallery(h);
+  }
+  else if(current) refreshRoomPermissions(); else renderGrid();
+});
+pfName.addEventListener("keydown",e=>{if(e.code==="Enter")document.getElementById("pfGo").click();});
+document.getElementById("btnProfile").addEventListener("click",openProfile);
+document.getElementById("pfToLogin").addEventListener("click",()=>{closeModal("pfm");openLogin();});
+
+/* 닫기 — 전시장에 들어가려다 연 경우라면 입장을 취소하고 로비로 */
+function closeProfile(){
+  closeModal("pfm");
+  if(pendingHandle){
+    pendingHandle=null;
+    if(location.hash && location.hash!=="#/") location.hash="#/";
+    else showLobby();
+  }
+}
+document.getElementById("pfCancel").addEventListener("click",closeProfile);
+addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  if(document.getElementById("pfm").classList.contains("on")) closeProfile();
+  // 모드를 켜둔 채 잊어버리지 않게, ESC 는 언제나 들기·놓기·치우기를 끕니다.
+  if(carrying) cancelCarry();
+  else if(placing||removing){placing=null;removing=false;hintKey="";showFurniture();}
+});
+
+/* ---------- 로그인 ----------
+   실제 인증은 /login 이 합니다. 이 파일은 세션을 "물어보기만" 합니다.
+
+   예전에는 여기서 인증 코드를 만들어 화면에 띄우고 그걸 입력받았습니다.
+   흐름을 보여주는 목업이었지만, 아무 이메일이나 넣으면 그 사람 행세를
+   할 수 있다는 뜻이기도 했습니다. 학생에게 열기 전에 걷어냈습니다.
+
+   서버가 없으면(갈래 1 · OFFLINE.md) 로그인 자체가 사라지고 관람 전용이
+   됩니다. 그쪽은 exhibition.json 을 손으로 고치는 방식이라 화면 안에서
+   편집할 일이 없습니다. 가짜 로그인을 남겨두는 것보다 이게 정직합니다. */
+
+let pendingAfterLogin=null;
+
+function loginHref(){
+  return "/login?next="+encodeURIComponent(location.pathname+location.search+location.hash);
+}
+function openLogin(){
+  if(!SERVER){ alert("이 전시는 서버 없이 열려 있어 로그인을 쓰지 않습니다."); return; }
+  openModal("lgm");
+}
+document.getElementById("lgGo").addEventListener("click",()=>{ location.href=loginHref(); });
+document.getElementById("lgCancel").addEventListener("click",()=>{pendingAfterLogin=null;closeModal("lgm");});
+
+document.getElementById("btnAuth").addEventListener("click",async()=>{
+  if(signedIn()){
+    // 로그아웃은 쿠키를 지워야 하므로 서버가 합니다.
+    try{ await fetch("/api/auth/signout",{method:"POST"}); }catch(e){}
+    session.email=null; session.isAdmin=false;
+    drawNameTag(session.name);
+    if(current) refreshRoomPermissions();
+    renderGrid();
+  } else openLogin();
+});
+document.getElementById("panelLoginBtn").addEventListener("click",openLogin);
+
+/* 서버에 지금 누구인지 물어봅니다. 쿠키가 실려 나가므로 별도 토큰이 없습니다. */
+async function loadSession(){
+  try{
+    const r=await fetch("/api/imagine/settings",{cache:"no-store"});
+    if(r.status===401){ SERVER=true; return; }          // 서버는 있고 로그인만 안 함
+    if(!r.ok) return;                                    // 503 등 — 서버 없는 것으로 봅니다
+    const d=await r.json();
+    SERVER=true;
+    session.email=(d.email||"").toLowerCase();
+    session.isAdmin=!!d.isAdmin;
+    if(!session.name) session.name=session.email.split("@")[0];
+  }catch(e){ /* 정적 호스팅 — 관람 전용 */ }
+}
+
+/* ---------- 전시장 만들기 ---------- */
+const ngName=document.getElementById("ngName"),ngTitle=document.getElementById("ngTitle");
+const ngHandle=document.getElementById("ngHandle"),ngErr=document.getElementById("ngErr");
+let ngTheme="night";
+document.querySelectorAll("[data-ngtheme]").forEach(b=>
+  b.addEventListener("click",()=>{ngTheme=b.dataset.ngtheme;selectIn("ngtheme",ngTheme);}));
+function openNewGallery(){
+  if(!signedIn()){pendingAfterLogin="new";openLogin();return;}
+  document.getElementById("ngOwner").textContent=
+    "소유자는 "+session.email+" 이 됩니다. 이 계정으로만 편집하고 삭제할 수 있습니다.";
+  ngName.value=session.name||""; ngTitle.value=""; ngErr.textContent="";
+  ngHandle.value=(session.email.split("@")[0]||"room").replace(/[^a-z0-9-]/g,"")||"room";
+  if(GALLERIES.some(g=>g.handle===ngHandle.value)) ngHandle.value+="-2";
+  ngTheme="night"; selectIn("ngtheme","night");
+  openModal("ngm"); setTimeout(()=>ngTitle.focus(),60);
+}
+function validHandle(h){
+  if(!/^[a-z0-9-]{2,20}$/.test(h)) return "영문 소문자·숫자·하이픈 2~20자";
+  if(GALLERIES.some(g=>g.handle===h)) return "이미 쓰이는 주소";
+  return "";
+}
+ngHandle.addEventListener("input",()=>{
+  ngHandle.value=ngHandle.value.toLowerCase().replace(/[^a-z0-9-]/g,"");
+  ngErr.textContent=ngHandle.value?validHandle(ngHandle.value):"";
+});
+document.getElementById("ngCancel").addEventListener("click",()=>closeModal("ngm"));
+document.getElementById("ngGo").addEventListener("click",async()=>{
+  if(!signedIn()) return;
+  const name=ngName.value.trim(),title=ngTitle.value.trim(),h=ngHandle.value.trim();
+  if(!name){ngName.focus();return;} if(!title){ngTitle.focus();return;}
+  const err=validHandle(h); if(err){ngErr.textContent=err;ngHandle.focus();return;}
+  const theme={...THEMES[ngTheme]};
+
+  // 서버가 붙어 있으면 먼저 저장합니다. 화면에만 만들면 새로고침할 때
+  // 사라져서, 학생 눈에는 만들기가 고장난 것으로 보입니다.
+  if(SERVER){
+    const btn=document.getElementById("ngGo");
+    const label=btn.textContent; btn.disabled=true; btn.textContent="만드는 중…";
+    try{
+      const r=await fetch("/api/galleries",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({handle:h,title,name,
+          theme:{wall:theme.wall,floor:theme.floor}}),
+      });
+      if(!r.ok){
+        const d=await r.json().catch(()=>null);
+        throw new Error(d&&d.error?d.error:"HTTP "+r.status);
+      }
+    }catch(e){
+      btn.disabled=false; btn.textContent=label;
+      ngErr.textContent=e.message;          // 주소 중복도 여기로 옵니다
+      return;
+    }
+    btn.disabled=false; btn.textContent=label;
+  }
+
+  GALLERIES.push({handle:h,name,title,mine:true,ownerEmail:session.email,
+    theme,works:[],guestbook:[]});
+  closeModal("ngm"); location.hash="#/g/"+h;
+});
+
+/* ---------- 삭제 ---------- */
+const dgConfirm=document.getElementById("dgConfirm"),dgGo=document.getElementById("dgGo");
+let dgTargetGallery=null;
+function openDelete(g){
+  if(!canManage(g)) return;
+  dgTargetGallery=g;
+  document.getElementById("dgWarn").textContent=
+    g.name+"님의 «"+g.title+"» — 작품 "+g.works.length+"점과 방명록 "+
+    g.guestbook.length+"개가 함께 사라집니다.";
+  document.getElementById("dgTarget").textContent=g.handle;
+  dgConfirm.value=""; dgGo.disabled=true;
+  openModal("dgm"); setTimeout(()=>dgConfirm.focus(),60);
+}
+dgConfirm.addEventListener("input",()=>{
+  dgGo.disabled=!dgTargetGallery||dgConfirm.value.trim()!==dgTargetGallery.handle;
+});
+document.getElementById("dgCancel").addEventListener("click",()=>{dgTargetGallery=null;closeModal("dgm");});
+dgGo.addEventListener("click",async()=>{
+  const g=dgTargetGallery;
+  if(!g||!canManage(g)) return;
+
+  // 서버가 붙어 있으면 먼저 DB 에서 지웁니다. 실패하면 화면도 그대로 둡니다.
+  if(SERVER){
+    const label=dgGo.textContent; dgGo.disabled=true; dgGo.textContent="지우는 중…";
+    try{
+      const r=await fetch("/api/galleries?handle="+encodeURIComponent(g.handle),
+                          {method:"DELETE"});
+      if(!r.ok){
+        const d=await r.json().catch(()=>null);
+        throw new Error(d&&d.error?d.error:"HTTP "+r.status);
+      }
+    }catch(e){
+      dgGo.disabled=false; dgGo.textContent=label;
+      flash("지우지 못했습니다 — "+e.message);
+      return;
+    }
+    dgGo.disabled=false; dgGo.textContent=label;
+  }
+
+  g.works.forEach(w=>{if(w.src&&w.src.startsWith("blob:"))URL.revokeObjectURL(w.src);});
+  const i=GALLERIES.indexOf(g); if(i>=0) GALLERIES.splice(i,1);
+  dgTargetGallery=null; closeModal("dgm");
+  if(current===g){current=null;location.hash="#/";} else renderGrid();
+});
+document.getElementById("delGalleryBtn").addEventListener("click",()=>{if(current)openDelete(current);});
+
+/* ---------- 작품 걸기 ---------- */
+const wkTitle=document.getElementById("wkTitle"),wkNote=document.getElementById("wkNote");
+const hueInput=document.getElementById("hue"),hueVal=document.getElementById("hueVal");
+const prev=document.getElementById("prev"),prevCtx=prev.getContext("2d");
+const drop=document.getElementById("drop"),fileInput=document.getElementById("fileInput");
+const stage=document.getElementById("stage"),stageV=document.getElementById("stageV");
+const fileMeta=document.getElementById("fileMeta");
+let wkMotion="drift",wkSlotIndex=0,prevT=0,prevRaf=null,wkTab="file",pending=null;
+function previewLoop(){
+  prevT+=0.033;
+  drawFrame(prevCtx,prev.width,prev.height,prevT,parseInt(hueInput.value,10),wkMotion);
+  prevRaf=requestAnimationFrame(previewLoop);
+}
+function setTab(t){
+  wkTab=t; selectIn("tab",t);
+  document.getElementById("paneFile").classList.toggle("on",t==="file");
+  document.getElementById("paneGen").classList.toggle("on",t==="gen");
+  if(t==="gen"&&!prevRaf) previewLoop();
+  if(t!=="gen"&&prevRaf){cancelAnimationFrame(prevRaf);prevRaf=null;}
+}
+document.querySelectorAll("[data-tab]").forEach(b=>
+  b.addEventListener("click",()=>setTab(b.dataset.tab)));
+function clearPending(){
+  if(pending&&pending.src&&pending.src.startsWith("blob:")) URL.revokeObjectURL(pending.src);
+  pending=null;
+  stage.classList.remove("on"); stage.removeAttribute("src");
+  stageV.style.display="none"; stageV.removeAttribute("src");
+  fileMeta.textContent=""; drop.style.display="";
+}
+function acceptFile(f){
+  if(!f) return;
+  const isVideo=f.type.startsWith("video/"),isImage=f.type.startsWith("image/");
+  if(!isVideo&&!isImage){fileMeta.textContent="이미지 또는 영상 파일만 걸 수 있습니다";return;}
+  if(pending&&pending.src.startsWith("blob:")) URL.revokeObjectURL(pending.src);
+  const url=URL.createObjectURL(f);
+  pending={kind:isVideo?"video":"image",src:url,name:f.name,size:f.size};
+  drop.style.display="none";
+  if(isVideo){stage.classList.remove("on");stageV.style.display="block";
+    stageV.src=url; stageV.play().catch(()=>{});}
+  else {stageV.style.display="none"; stage.src=url; stage.classList.add("on");}
+  fileMeta.innerHTML='<span>'+f.name.slice(0,28)+'</span><span>'+
+    (isVideo?"영상":"이미지")+' · '+(f.size/1048576).toFixed(1)+'MB</span>';
+  if(!wkTitle.value) wkTitle.value=f.name.replace(/\.[^.]+$/,"").slice(0,20);
+}
+drop.addEventListener("click",()=>fileInput.click());
+fileInput.addEventListener("change",e=>acceptFile(e.target.files[0]));
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{if(e.dataTransfer.files[0])acceptFile(e.dataTransfer.files[0]);});
+document.getElementById("wkm").addEventListener("dragover",e=>e.preventDefault());
+document.getElementById("wkm").addEventListener("drop",e=>{
+  e.preventDefault(); if(e.dataTransfer.files[0]){setTab("file");acceptFile(e.dataTransfer.files[0]);}});
+
+function openWorkModal(slot){
+  if(!current||!canManage(current)) return;
+  const existing=current.works.find(w=>w.slot===slot);
+  wkSlotIndex=slot;
+  document.getElementById("wkHead").textContent=existing?"작품 바꾸기":"작품 걸기";
+  document.getElementById("wkSlot").textContent=
+    (slot+1)+"번 자리 · "+current.name+"님의 전시장 · 남은 자리 "+
+    (SLOTS.length-current.works.length)+"곳";
+  clearPending();
+  wkTitle.value=existing?existing.title:"";
+  wkNote.value=existing&&existing.note!=="설명 없음"?existing.note:"";
+  hueInput.value=String(existing&&existing.hue?existing.hue:HUES[Math.floor(Math.random()*HUES.length)]);
+  hueVal.textContent=hueInput.value;
+  wkMotion=existing&&existing.motion?existing.motion:"drift"; selectIn("motion",wkMotion);
+  sizeR.value=String(existing&&existing.scale?existing.scale:1);
+  sizeVal.textContent=Math.round(parseFloat(sizeR.value)*100)+"%";
+  document.getElementById("wkClear").style.display=existing?"":"none";
+  document.getElementById("wkActs").className=existing?"acts three":"acts";
+  setTab("file"); prevT=0;
+  openModal("wkm"); setTimeout(()=>wkTitle.focus(),60);
+}
+function closeWorkModal(){
+  closeModal("wkm");
+  if(prevRaf){cancelAnimationFrame(prevRaf);prevRaf=null;}
+  stageV.pause();
+}
+document.querySelectorAll("[data-motion]").forEach(b=>
+  b.addEventListener("click",()=>{wkMotion=b.dataset.motion;selectIn("motion",wkMotion);}));
+hueInput.addEventListener("input",()=>{hueVal.textContent=hueInput.value;});
+
+/* 크기 슬라이더 — 이미 걸린 작품이면 방 안에서 바로 반영됩니다 */
+const sizeR=document.getElementById("sizeR"),sizeVal=document.getElementById("sizeVal");
+function setSlotScale(slot,sc){
+  const e=panels.find(p=>p.work.slot===slot);
+  if(!e) return;
+  e.work.scale=Math.max(SCALE_MIN,Math.min(SCALE_MAX,sc));
+  applySize(e);
+  return e.work.scale;
+}
+sizeR.addEventListener("input",()=>{
+  sizeVal.textContent=Math.round(parseFloat(sizeR.value)*100)+"%";
+  setSlotScale(wkSlotIndex,parseFloat(sizeR.value));
+});
+document.getElementById("wkCancel").addEventListener("click",()=>{clearPending();closeWorkModal();});
+document.getElementById("wkClear").addEventListener("click",async()=>{
+  if(!canManage(current)) return;
+  const slot=wkSlotIndex, g=current;
+
+  // 서버가 붙어 있으면 먼저 DB 에서 내립니다. 화면만 지우면 새로고침할 때
+  // 되살아나서, 학생 눈에는 내리기가 고장난 것으로 보입니다.
+  if(SERVER){
+    const btn=document.getElementById("wkClear");
+    const label=btn.textContent; btn.disabled=true; btn.textContent="내리는 중…";
+    try{
+      const r=await fetch("/api/works?handle="+encodeURIComponent(g.handle)+"&slot="+slot,
+                          {method:"DELETE"});
+      if(!r.ok){
+        const d=await r.json().catch(()=>null);
+        throw new Error(d&&d.error?d.error:"HTTP "+r.status);
+      }
+    }catch(e){
+      btn.disabled=false; btn.textContent=label;
+      flash("내리지 못했습니다 — "+e.message);
+      return;                                  // 실패했으면 화면도 그대로 둡니다
+    }
+    btn.disabled=false; btn.textContent=label;
+  }
+
+  const i=g.works.findIndex(w=>w.slot===slot);
+  if(i>=0){
+    const w=g.works[i];
+    if(w.src&&w.src.startsWith("blob:")) URL.revokeObjectURL(w.src);
+    g.works.splice(i,1);
+  }
+  buildRoomContents(g); clearPending(); closeWorkModal();
+});
+document.getElementById("wkSave").addEventListener("click",()=>{
+  if(!canManage(current)) return;
+  const t=wkTitle.value.trim(); if(!t){wkTitle.focus();return;}
+  if(wkTab==="file"&&!pending){fileMeta.textContent="파일을 먼저 선택해주세요";return;}
+  const i=current.works.findIndex(w=>w.slot===wkSlotIndex);
+  if(i>=0){
+    const old=current.works[i];
+    if(old.src&&old.src.startsWith("blob:")) URL.revokeObjectURL(old.src);
+    current.works.splice(i,1);
+  }
+  const base={id:++uid,slot:wkSlotIndex,title:t,note:wkNote.value.trim()||"설명 없음",
+    scale:parseFloat(sizeR.value)};
+  if(wkTab==="file"){current.works.push({...base,kind:pending.kind,src:pending.src,hue:200});pending=null;}
+  else current.works.push({...base,kind:"demo",hue:parseInt(hueInput.value,10),motion:wkMotion});
+  buildRoomContents(current); clearPending(); closeWorkModal();
+});
+document.getElementById("addWorkBtn").addEventListener("click",()=>{
+  if(!canManage(current)) return;
+  // 서버가 붙어 있으면 걸기는 스튜디오에서 합니다. 여기서 건 것은
+  // 브라우저 메모리에만 남아 새로고침하면 사라지는데, 학생 눈에는
+  // 저장이 고장난 것으로 보입니다.
+  if(SERVER){
+    flash("작품은 생성 스튜디오에서 겁니다");
+    setTimeout(()=>window.open("studio-ai.html","_blank","noopener"),700);
+    return;
+  }
+  const filled=new Set(current.works.map(w=>w.slot));
+  const free=SLOTS.map((_,i)=>i).filter(i=>!filled.has(i));
+  if(!free.length){flash("빈 자리가 없습니다");return;}
+  openWorkModal(free[0]);
+});
+
+/* ---------- 백업 ----------
+   내려받는 것은 exhibition.json 입니다. 백업과 "전시 당일 오프라인
+   패키지"가 같은 형식이라, 받은 파일을 전시장 옆에 두면 그대로 열립니다.
+
+   다만 이 파일 안의 src 는 아직 인터넷 주소입니다. 영상까지 손에 쥐려면
+   `npm run backup` 을 쓰세요 — 그쪽이 파일을 전부 내려받아 폴더로 만듭니다. */
+async function backup(scope){
+  try{
+    const r=await fetch("/api/backup?scope="+scope,{cache:"no-store"});
+    if(!r.ok){
+      const d=await r.json().catch(()=>null);
+      throw new Error(d&&d.error?d.error:"HTTP "+r.status);
+    }
+    const blob=await r.blob();
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="exhibition-"+scope+"-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    flash(scope==="all"?"전체 목록을 내려받았습니다":"내 전시 목록을 내려받았습니다");
+  }catch(e){
+    flash("백업하지 못했습니다 — "+e.message);
+  }
+}
+document.getElementById("backupMineBtn").addEventListener("click",()=>backup("mine"));
+document.getElementById("backupAllBtn").addEventListener("click",()=>backup("all"));
+
+/* ---------- 방명록 (누구나) ---------- */
+const gbText=document.getElementById("gbText");
+const gbErr=document.getElementById("gbErr");
+function openGuestbook(){
+  if(!current) return;
+  document.getElementById("gbSub").textContent=
+    current.name+"님의 전시장 · "+session.name+"으로 남깁니다";
+  gbText.value=""; gbErr.style.display="none";
+  openModal("gbm"); setTimeout(()=>gbText.focus(),60);
+}
+document.getElementById("gbCancel").addEventListener("click",()=>closeModal("gbm"));
+
+/* 남긴 글을 서버에 저장합니다.
+
+   예전에는 current.guestbook 에 밀어넣기만 했습니다. 화면에는 바로 걸렸지만
+   브라우저 메모리에만 있어서 새로고침하면 사라졌는데, 학생 눈에는 글이
+   안 써진 게 아니라 누가 지운 것으로 보입니다.
+
+   서버가 받아준 뒤에 벽에 겁니다. 먼저 걸어놓고 나중에 물리면, 방금 쓴
+   글이 눈앞에서 사라지는 더 나쁜 장면이 됩니다.
+
+   서버 없이 파일만 열었을 때(OFFLINE.md)는 저장할 곳이 없습니다. 그때는
+   예전처럼 화면에만 걸어둡니다 — 그쪽은 관람 전용이라 그걸로 충분합니다. */
+const gbSaveBtn=document.getElementById("gbSave");
+gbSaveBtn.addEventListener("click",async()=>{
+  const m=gbText.value.trim();
+  if(!m){gbText.focus();return;}
+  if(!current) return;
+  gbErr.style.display="none";
+
+  if(!SERVER){
+    current.guestbook.push({name:session.name,msg:m});
+    drawGuestbook(); closeModal("gbm"); return;
+  }
+
+  gbSaveBtn.disabled=true; gbSaveBtn.textContent="남기는 중…";
+  try{
+    const r=await fetch("/api/guestbook",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({handle:current.handle,name:session.name,
+                           body:session.body,message:m}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+    current.guestbook.push(d.entry||{name:session.name,msg:m});
+    drawGuestbook(); renderGrid();          // 로비 카드의 방명록 수도 함께
+    closeModal("gbm"); flash("방명록에 남겼습니다");
+  }catch(e){
+    gbErr.textContent="남기지 못했습니다 — "+e.message;
+    gbErr.style.display="";
+  }
+  gbSaveBtn.disabled=false; gbSaveBtn.textContent="남기기";
+});
+let flashTimer=null;
+function flash(msg,ms){
+  ctxHint.textContent=msg; ctxHint.classList.add("on");
+  clearTimeout(flashTimer); flashTimer=setTimeout(()=>ctxHint.classList.remove("on"),ms||1600);
+}
+
+/* ---------- 조작 ---------- */
+const keys={}; let dragging=false,dragDist=0,lastTouch=null,forward=false;
+const mouseNDC=new THREE.Vector2(0,0); let pointerInWindow=false;
+const typing=()=>["INPUT","TEXTAREA"].includes(document.activeElement&&document.activeElement.tagName);
+const modalOpen=()=>!!document.querySelector(".modal.on");
+addEventListener("keydown",e=>{
+  if(typing()) return;
+  keys[e.code]=true;
+  if(!running||modalOpen()) return;
+  if(e.code==="KeyV") setView(viewMode==="first"?"third":"first");
+  if(e.code==="KeyG"&&nearBoard) openGuestbook();
+  if(e.code==="KeyE"&&hoverSlot!=null&&canManage(current)) openWorkModal(hoverSlot);
+  if(e.code==="KeyR"&&carrying) rotateCarried(e.shiftKey?-ROT_STEP:ROT_STEP);
+  if((e.code==="BracketLeft"||e.code==="BracketRight")&&hoverSlot!=null&&canManage(current)){
+    const p=panels.find(x=>x.work.slot===hoverSlot);
+    if(p){
+      const sc=setSlotScale(hoverSlot,(p.work.scale||1)+(e.code==="BracketRight"?0.05:-0.05));
+      flash("크기 "+Math.round(sc*100)+"%");
+    }
+  }
+  if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+});
+addEventListener("keyup",e=>{keys[e.code]=false;});
+function look(dx,dy){
+  player.yaw-=dx*0.0024;
+  player.pitch=Math.max(-1.05,Math.min(1.05,player.pitch-dy*0.0024));
+}
+const cvs=renderer.domElement;
+cvs.addEventListener("mousedown",()=>{dragging=true;dragDist=0;});
+addEventListener("mouseup",()=>{dragging=false;});
+cvs.addEventListener("mousemove",e=>{
+  pointerInWindow=true;
+  mouseNDC.x=(e.clientX/innerWidth)*2-1;
+  mouseNDC.y=-(e.clientY/innerHeight)*2+1;
+  if(!running) return;
+  if(document.pointerLockElement===cvs) look(e.movementX,e.movementY);
+  else if(dragging){dragDist+=Math.abs(e.movementX||0)+Math.abs(e.movementY||0);
+    look(e.movementX||0,e.movementY||0);}
+});
+/* 클릭 = 재생/정지. 편집은 E 키와 빈 자리 클릭으로 분리했습니다. */
+function togglePlay(p){
+  p.playing=!p.playing;
+  p.last=clock.elapsedTime;
+  if(p.video){
+    if(p.playing){p.video.preload="auto";p.video.play().catch(()=>{});}
+    else p.video.pause();
+  }
+  if(p.playing){
+    // 동시 재생 상한 — 가장 먼 것부터 내립니다
+    const on=panels.filter(x=>x.playing).sort((a,b)=>b.gain-a.gain);
+    on.slice(MAX_PLAYING).forEach(x=>{x.playing=false; if(x.video)x.video.pause();});
+  }
+  flash(p.playing?"재생":"정지");
+}
+let clickTimer=null;
+cvs.addEventListener("dblclick",()=>{
+  if(!running||modalOpen()||dragDist>6) return;
+  if(carrying||placing||removing) return;
+  clearTimeout(clickTimer); clickTimer=null;   // 미뤄둔 돌리기를 물립니다
+  if(hoverFurn!=null&&canManage(current)) pickUpFurniture(hoverFurn);
+});
+/* 들고 있을 때는 휠로 잘게 돌립니다. 키보드가 없는 노트북에서도 방향을
+   맞출 수 있어야 합니다 — 패널의 ↺ ↻ 단추가 같은 일을 합니다. */
+cvs.addEventListener("wheel",e=>{
+  if(!carrying) return;
+  e.preventDefault();
+  rotateCarried(e.deltaY>0?ROT_FINE:-ROT_FINE);
+},{passive:false});
+cvs.addEventListener("click",e=>{
+  if(!running||modalOpen()||dragDist>6) return;
+
+  // 가구를 들고 있으면 클릭은 "여기 내려놓기" 입니다.
+  if(carrying){ dropCarried(); return; }
+  // 놓기 모드에서는 바닥 클릭이 이동이 아니라 놓기입니다.
+  if(placing){ placeFurniture(e); return; }
+  if(hoverFurn!=null&&canManage(current)){
+    if(removing){ removeFurniture(hoverFurn); return; }
+    /* 한 번이면 그 자리에서 돌리고, 두 번이면 들어서 옮깁니다. 두 번째가
+       오는지 잠깐 기다렸다가 돌립니다 — 안 그러면 더블클릭할 때마다
+       90° 돌아간 뒤에 들리게 됩니다. */
+    const i=hoverFurn;
+    clearTimeout(clickTimer);
+    clickTimer=setTimeout(()=>{clickTimer=null; rotateFurniture(i,ROT_STEP);},DOUBLE_MS);
+    return;
+  }
+
+  if(hoverDoor){exitThroughDoor();return;}
+  if(hoverSlot!=null){
+    const p=panels.find(x=>x.work.slot===hoverSlot);
+    if(p&&p.work.kind!=="image"){togglePlay(p);return;}
+    if(canManage(current)) openWorkModal(hoverSlot);
+    return;
+  }
+  walkTo(e);      // 작품도 문도 아니면 바닥입니다
+});
+
+/* ============================================================
+   바닥을 클릭해 그 자리로 걸어가기
+   ------------------------------------------------------------
+   키보드가 없는 노트북 터치패드나 태블릿에서도 전시장을 도는 길이
+   있어야 합니다. W A S D 를 없애지 않고 나란히 둡니다 — 키를 누르는
+   순간 자동 이동은 조용히 놓습니다(아래 tick).
+
+   걸어가는 것은 새 이동 코드가 아니라 기존 물리 그대로입니다.
+   목적지 쪽으로 dir 을 만들어 넣어줄 뿐이라, 벽에 부딪히는 처리도
+   가속·감속도 손으로 걸을 때와 똑같습니다.
+   ============================================================ */
+function walkTo(ev){
+  // 포인터가 잠겨 있으면 화면 한가운데(조준점)가 곧 마우스입니다.
+  const locked=document.pointerLockElement===cvs;
+  ray.setFromCamera(locked?{x:0,y:0}
+    :{x:(ev.clientX/innerWidth)*2-1, y:-(ev.clientY/innerHeight)*2+1}, camera);
+
+  // 가벽도 함께 쏘고 "먼저 맞은 것이 바닥일 때" 만 받습니다.
+  // 바닥 평면은 가벽 밑으로도 이어져 있어서, 이 검사가 없으면 가벽에
+  // 가려 보이지도 않는 자리가 찍힙니다.
+  const hit=ray.intersectObjects([fl,...partMeshes],false)[0];
+  if(!hit||hit.object!==fl) return;
+  setGoal(hit.point.x,hit.point.z);
+}
+
+function setGoal(x,z){
+  x=Math.max(-LIMX,Math.min(LIMX,x));
+  z=Math.max(-LIMZ,Math.min(LIMZ,z));
+  // 가벽 속을 찍었으면 가장 가까운 바깥으로 내보냅니다
+  const out=pushOut({x,z}); x=out.x; z=out.z;
+
+  goal={path:pathTo(x,z), at:[x,z], best:Infinity, stall:0};
+  entryT=0;                       // 들어오는 연출 중이었다면 건너뜁니다
+  mark.position.set(x,0.02,z);
+}
+
+/* 목적지가 가벽 건너편이면 곧장 가지 못합니다. 벽에 부딪혀 비비다
+   멈추는 대신, 가벽 끝을 도는 지점 하나를 먼저 들릅니다. */
+function pathTo(x,z){
+  const p=partCrossed(player.pos.x,player.pos.z,x,z);
+  if(!p) return [[x,z]];
+  // 가벽 끝에서 조금 더 나간 지점을 들렀다 갑니다. 가까운 끝을 고릅니다.
+  const end=p.d/2+0.9;
+  const near=Math.abs(player.pos.z-(p.z+end))+Math.abs(z-(p.z+end));
+  const far =Math.abs(player.pos.z-(p.z-end))+Math.abs(z-(p.z-end));
+  return [[p.x, p.z+(near<=far?end:-end)],[x,z]];
+}
+/* 선분이 어느 가벽을 지나는지. 24 점만 찍어봅니다 — 정확한 교차 판정이
+   필요할 만큼 빠듯한 계산이 아니고, 클릭할 때 한 번만 돕니다.
+   가벽이 여럿이면 처음 만난 것만 돌아갑니다. 그 뒤에 또 막히면 다음
+   걸음에서 다시 길을 잡습니다 — 한 번에 미로를 풀지는 않습니다. */
+function partCrossed(x0,z0,x1,z1){
+  for(let i=1;i<24;i++){
+    const t=i/24, p=partAt(x0+(x1-x0)*t, z0+(z1-z0)*t);
+    if(p) return p;
+  }
+  return null;
+}
+document.addEventListener("pointerlockchange",updateHint);
+cvs.addEventListener("touchstart",e=>{lastTouch=e.touches[0];},{passive:true});
+cvs.addEventListener("touchmove",e=>{
+  if(!lastTouch||!running) return;
+  const t=e.touches[0];
+  look((t.clientX-lastTouch.clientX)*2.2,(t.clientY-lastTouch.clientY)*2.2);
+  lastTouch=t;
+},{passive:true});
+cvs.addEventListener("touchend",()=>{lastTouch=null;});
+const moveBtn=document.getElementById("move");
+["touchstart","mousedown"].forEach(ev=>moveBtn.addEventListener(ev,e=>{e.preventDefault();forward=true;}));
+["touchend","mouseup","touchcancel"].forEach(ev=>moveBtn.addEventListener(ev,()=>{forward=false;}));
+
+/* ---------- 패널 ---------- */
+const panel=document.getElementById("panel");
+document.getElementById("gear").addEventListener("click",()=>{
+  panel.classList.toggle("on");
+  if(panel.classList.contains("on")&&document.pointerLockElement) document.exitPointerLock();
+});
+document.getElementById("back").addEventListener("click",()=>{
+  if(current) exitThroughDoor(); else location.hash="#/";
+});
+function setView(m){viewMode=m;avatar.visible=m==="third";selectIn("view",m);}
+document.querySelectorAll("[data-view]").forEach(b=>
+  b.addEventListener("click",()=>setView(b.dataset.view)));
+document.querySelectorAll("[data-body]").forEach(b=>b.addEventListener("click",()=>{
+  session.body=b.dataset.body; buildAvatar(session.body); drawNameTag(session.name);
+  selectIn("body",session.body); selectIn("pfbody",session.body);
+  if(viewMode==="first") setView("third");
+}));
+const onColor=()=>{
+  applyTheme(wallInput.value,floorInput.value);
+  if(current&&canManage(current)){current.theme.wall=wallInput.value;current.theme.floor=floorInput.value;}
+  markRoomTheme();
+};
+wallInput.addEventListener("input",onColor);
+floorInput.addEventListener("input",onColor);
+
+/* ---------- 전시실 분위기 ----------
+   벽·바닥 두 색을 한 번에 정하는 프리셋입니다. 새 전시장 만들기 창에
+   있던 것과 같은 네 가지(THEMES)를 여기서도 씁니다 — 표를 새로 만들지
+   않았습니다. 두 벌이 되면 한쪽만 고쳐지고, 만들 때와 들어와서 본 색이
+   달라집니다.
+
+   아래 색 고르개로 가는 길과 다른 길이 아닙니다. 프리셋은 고르개에 값을
+   넣어줄 뿐이고, 적용·기억은 onColor 하나가 맡습니다. */
+function setRoomTheme(name){
+  const t=THEMES[name]; if(!t) return;
+  wallInput.value=t.wall; floorInput.value=t.floor;
+  onColor();
+}
+/* 지금 색이 어느 프리셋과 같은지 짚어줍니다. 고르개로 직접 섞은 색이면
+   아무것도 선택되지 않습니다 — 실제로 그 어느 것도 아니기 때문입니다. */
+function markRoomTheme(){
+  const w=wallInput.value.toLowerCase(), f=floorInput.value.toLowerCase();
+  const hit=Object.keys(THEMES).find(k=>
+    THEMES[k].wall.toLowerCase()===w && THEMES[k].floor.toLowerCase()===f);
+  document.querySelectorAll("[data-rmtheme]").forEach(b=>
+    b.classList.toggle("sel", b.dataset.rmtheme===hit));
+}
+document.querySelectorAll("[data-rmtheme]").forEach(b=>
+  b.addEventListener("click",()=>setRoomTheme(b.dataset.rmtheme)));
+
+/* ---------- 대표 이미지 ----------
+   로비 카드에 걸리는 그림입니다. 고르지 않으면 지금처럼 전시실을 그린
+   그림이 나옵니다.
+
+   보내기 전에 브라우저에서 줄입니다. 학생 휴대폰 사진은 장당 3~5MB 인데
+   카드에 걸리는 크기는 가로 300px 남짓입니다. 원본을 그대로 올리면
+   Supabase 무료 저장 1GB 가 카드 그림으로 먼저 찹니다. */
+const coverPrev=document.getElementById("coverPrev");
+const coverMsg=document.getElementById("coverMsg");
+const coverFile=document.getElementById("coverFile");
+const coverClearBtn=document.getElementById("coverClear");
+
+function showCover(){
+  const url=current&&current.theme&&current.theme.cover;
+  coverPrev.src=url||"";
+  coverPrev.classList.toggle("on",!!url);
+  coverClearBtn.style.display=url?"":"none";
+}
+
+/** 긴 변을 800px 로 줄여 JPEG 으로 다시 씁니다. 카드에 쓰기에 충분하고,
+ *  보통 50~150KB 로 떨어집니다. */
+function shrink(file){
+  return new Promise((done,fail)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const long=Math.max(img.width,img.height), k=Math.min(1,800/long);
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      c.toBlob(b=>b?done(b):fail(new Error("그림을 바꾸지 못했습니다")),"image/jpeg",0.82);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=()=>fail(new Error("그림을 읽지 못했습니다"));
+    img.src=URL.createObjectURL(file);
+  });
+}
+
+/* 올리기와 지우기는 여기 하나뿐입니다. 꾸미기 창과 로비 카드가 같은 길을
+   쓰지 않으면 한쪽만 고쳐지고 다른 쪽이 조용히 뒤처집니다. GALLERIES 안의
+   같은 객체를 고치므로, 두 화면의 미리보기도 함께 맞습니다. */
+async function putCover(g,file){
+  const small=await shrink(file);
+  const fd=new FormData();
+  fd.append("handle",g.handle);
+  fd.append("image",small,"cover.jpg");
+  const r=await fetch("/api/galleries/cover",{method:"POST",body:fd});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+  g.theme.cover=d.cover;
+}
+async function dropCover(g){
+  const r=await fetch("/api/galleries/cover?handle="+encodeURIComponent(g.handle),
+                      {method:"DELETE"});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+  delete g.theme.cover;
+}
+
+document.getElementById("coverPick").addEventListener("click",()=>coverFile.click());
+
+coverFile.addEventListener("change",async()=>{
+  const f=coverFile.files&&coverFile.files[0];
+  coverFile.value="";                      // 같은 파일을 다시 골라도 열리게
+  if(!f||!current) return;
+  coverMsg.className="small"; coverMsg.textContent="줄여서 올리는 중…";
+  try{
+    await putCover(current,f);
+    showCover(); renderGrid();             // 로비 카드에 바로 반영
+    coverMsg.textContent="바꿨습니다. 로비 카드에 이 그림이 걸립니다.";
+    flash("대표 이미지를 바꿨습니다");
+  }catch(e){
+    coverMsg.className="small warn"; coverMsg.textContent=e.message;
+  }
+});
+
+coverClearBtn.addEventListener("click",async()=>{
+  if(!current) return;
+  coverClearBtn.disabled=true;
+  coverMsg.className="small"; coverMsg.textContent="지우는 중…";
+  try{
+    await dropCover(current);
+    showCover(); renderGrid();
+    coverMsg.textContent="지웠습니다. 전시실을 그린 그림으로 돌아갑니다.";
+  }catch(e){
+    coverMsg.className="small warn"; coverMsg.textContent=e.message;
+  }
+  coverClearBtn.disabled=false;
+});
+
+/* ---------- 대표 이미지 — 로비에서 ----------
+   지금까지는 전시장에 들어가 꾸미기 창을 열어야만 바꿀 수 있었습니다.
+   카드에 걸리는 그림인데 정작 카드에서는 손댈 수 없었던 셈입니다.
+   카드 위 "대표 이미지" 버튼이 이 창을 엽니다. */
+const CV_HELP="로비 카드에 걸리는 그림입니다. 고르지 않거나 지우면 "+
+  "전시실을 그린 그림이 나옵니다.";
+let cvTarget=null;
+const cvPrev=document.getElementById("cvPrev");
+const cvMsg=document.getElementById("cvMsg");
+const cvFile=document.getElementById("cvFile");
+const cvActs=document.getElementById("cvActs");
+const cvClear=document.getElementById("cvClear");
+const cvPick=document.getElementById("cvPick");
+
+function cvShow(){
+  const url=cvTarget&&cvTarget.theme&&cvTarget.theme.cover;
+  cvPrev.src=url||"";
+  cvPrev.classList.toggle("on",!!url);
+  // 지울 것이 있을 때만 셋으로 벌립니다. 빈 칸을 남겨두면 창이 어긋납니다.
+  cvClear.style.display=url?"":"none";
+  cvActs.classList.toggle("three",!!url);
+}
+function cvSay(text,bad){
+  cvMsg.className=bad?"warn":"note";
+  cvMsg.textContent=text;
+}
+function openCover(g){
+  if(!canManage(g)) return;
+  cvTarget=g;
+  document.getElementById("cvWho").textContent=g.name+"님의 «"+g.title+"»";
+  cvSay(CV_HELP); cvShow();
+  openModal("cvm");
+}
+document.getElementById("cvCancel").addEventListener("click",()=>{
+  cvTarget=null; closeModal("cvm");
+});
+cvPick.addEventListener("click",()=>cvFile.click());
+
+cvFile.addEventListener("change",async()=>{
+  const f=cvFile.files&&cvFile.files[0];
+  cvFile.value="";                         // 같은 파일을 다시 골라도 열리게
+  const g=cvTarget;
+  if(!f||!g) return;
+  cvPick.disabled=true; cvClear.disabled=true; cvSay("줄여서 올리는 중…");
+  try{
+    await putCover(g,f);
+    cvShow(); renderGrid();
+    if(current===g) showCover();           // 방 안 꾸미기 창도 같이
+    cvSay("바꿨습니다. 카드에 이 그림이 걸립니다.");
+    flash("대표 이미지를 바꿨습니다");
+  }catch(e){ cvSay(e.message,true); }
+  cvPick.disabled=false; cvClear.disabled=false;
+});
+
+cvClear.addEventListener("click",async()=>{
+  const g=cvTarget;
+  if(!g) return;
+  cvPick.disabled=true; cvClear.disabled=true; cvSay("지우는 중…");
+  try{
+    await dropCover(g);
+    cvShow(); renderGrid();
+    if(current===g) showCover();
+    cvSay("지웠습니다. 전시실을 그린 그림으로 돌아갑니다.");
+  }catch(e){ cvSay(e.message,true); }
+  cvPick.disabled=false; cvClear.disabled=false;
+});
+
+/* ---------- 가구 놓기 ----------
+   바닥 클릭이 원래는 "그 자리로 걸어가기" 입니다. 놓기 모드에서만 그 클릭이
+   "그 자리에 놓기" 로 바뀝니다. 모드가 켜져 있는 동안 화면 아래에 무엇을
+   놓는 중인지 계속 적어둡니다 — 모드가 있는 화면에서 제일 위험한 것은
+   사용자가 지금 어느 모드인지 모르는 상태입니다. */
+const furnPickBox=document.getElementById("furnPick");
+const furnMsg=document.getElementById("furnMsg");
+const furnRemoveBtn=document.getElementById("furnRemove");
+
+FURNITURE_KEYS.forEach(key=>{
+  const b=document.createElement("button");
+  b.className="opt"; b.dataset.furn=key; b.textContent=FURNITURE[key].name;
+  b.addEventListener("click",()=>startPlacing(key));
+  furnPickBox.appendChild(b);
+});
+
+function showFurniture(){
+  document.getElementById("furnCount").textContent=layout.length+"/"+MAX_FURNITURE;
+  selectIn("furn",placing||"");
+  furnRemoveBtn.textContent=removing?"치우기 — 켜짐":"치울 것 고르기";
+  // 돌리기 단추는 들고 있을 때만 씁니다. 들지 않은 것은 클릭으로 돌립니다.
+  document.getElementById("furnTurn").style.display=carrying?"":"none";
+  furnMsg.className="small";
+  furnMsg.textContent=carrying
+    ? "클릭해서 내려놓습니다 · 지금 "+
+      Math.round((layout[carrying.i]?layout[carrying.i].r:0)*180/Math.PI)+"° · "+
+      "R 또는 휠로 돌리기 · ESC 제자리로"
+    :placing?"바닥을 클릭해 놓습니다. ESC 로 그만둡니다."
+    :removing?"치울 가구를 클릭하세요."
+    :"종류를 고르고 바닥을 클릭합니다. 놓인 가구는 클릭하면 돌아가고, "+
+     "더블클릭하면 들어서 옮깁니다.";
+}
+function startPlacing(key){
+  if(!canManage(current)) return;
+  if(layout.length>=MAX_FURNITURE){
+    furnMsg.className="small warn";
+    furnMsg.textContent="가구는 "+MAX_FURNITURE+"개까지입니다. 하나를 치운 뒤 놓으세요.";
+    return;
+  }
+  placing=(placing===key)?null:key; removing=false;
+  hintKey=""; showFurniture();
+}
+document.getElementById("furnTurnL").addEventListener("click",()=>rotateCarried(-ROT_STEP));
+document.getElementById("furnTurnR").addEventListener("click",()=>rotateCarried(ROT_STEP));
+furnRemoveBtn.addEventListener("click",()=>{
+  if(!canManage(current)) return;
+  removing=!removing; placing=null; hintKey=""; showFurniture();
+});
+
+/** 바닥에서 찍은 자리에 놓습니다. 벽·가벽·다른 가구를 피해 자리를 잡고,
+ *  방 가운데를 바라보게 돌려둡니다 — 벤치는 벽을 등지고 앉는 물건이라
+ *  대개 이 방향이 맞고, 아니면 클릭해서 돌리면 됩니다. */
+function placeFurniture(ev){
+  const def=FURNITURE[placing]; if(!def||!canManage(current)) return;
+  const locked=document.pointerLockElement===cvs;
+  ray.setFromCamera(locked?{x:0,y:0}
+    :{x:(ev.clientX/innerWidth)*2-1,y:-(ev.clientY/innerHeight)*2+1},camera);
+  const hit=ray.intersectObjects([fl,...partMeshes],false)[0];
+  if(!hit||hit.object!==fl){flash("바닥을 클릭해주세요");return;}
+
+  let x=Math.max(-LIMX+def.r,Math.min(LIMX-def.r,hit.point.x));
+  let z=Math.max(-LIMZ+def.r,Math.min(LIMZ-def.r,hit.point.z));
+  if(partAt(x,z)){flash("가벽에는 놓을 수 없습니다");return;}
+  if(furnAt(x,z)){flash("다른 가구와 겹칩니다");return;}
+
+  layout=layout.concat([{t:placing,x:round3(x),z:round3(z),
+                         r:round3(Math.atan2(-x,-z))}]);
+  placing=null; hintKey="";
+  applyFurniture(layout); saveLayout("놓았습니다");
+}
+/* 들고 놓기.
+
+   드래그로 끌지 않은 이유가 둘 있습니다. 하나, 이 화면에서 끄는 동작은
+   이미 "둘러보기" 입니다 — 가구 위에서 시점을 돌리려다 소파가 딸려옵니다.
+   둘, 문으로 들어오면 포인터가 잠겨 커서가 사라집니다. 그 상태가 전시장을
+   도는 기본 상태인데 거기서는 드래그라는 동작 자체가 없습니다.
+   집어서 조준점을 따라오게 하면 두 문제가 함께 사라지고, 옮기는 동안
+   미리보기가 보이는 드래그의 장점은 그대로 남습니다. */
+function pickUpFurniture(i){
+  const it=layout[i]; if(!it||!canManage(current)) return;
+  carrying={i,from:{x:it.x,z:it.z,r:it.r}};
+  placing=null; removing=false; hintKey=""; showFurniture();
+  flash(FURNITURE[it.t].name+eul(FURNITURE[it.t].name)+" 들었습니다");
+}
+/** 들고 있는 것을 그 자리로 옮깁니다. 벽 안으로 자르기만 하고 겹침은
+ *  내려놓을 때 봅니다 — 옮기는 도중에 튕겨나가면 겨냥하기가 어렵습니다. */
+function moveCarried(x,z){
+  const it=layout[carrying.i], def=it&&FURNITURE[it.t]; if(!def) return;
+  it.x=round3(Math.max(-LIMX+def.r,Math.min(LIMX-def.r,x)));
+  it.z=round3(Math.max(-LIMZ+def.r,Math.min(LIMZ-def.r,z)));
+  const g=furnMeshes[carrying.i], pk=furnPicks[carrying.i];
+  if(g) g.position.set(it.x,0.07,it.z);      // 들고 있는 동안 조금 떠 있습니다
+  if(pk) pk.position.set(it.x,0.57,it.z);
+}
+function dropCarried(){
+  const it=layout[carrying.i]; if(!it){carrying=null;return;}
+  if(partAt(it.x,it.z)){flash("가벽 위에는 내려놓을 수 없습니다");return;}
+  if(furnAt(it.x,it.z)){flash("다른 가구와 겹칩니다");return;}
+  const g=furnMeshes[carrying.i], pk=furnPicks[carrying.i];
+  if(g) g.position.y=0;
+  if(pk) pk.position.y=0.5;
+  const moved=it.x!==carrying.from.x||it.z!==carrying.from.z||it.r!==carrying.from.r;
+  carrying=null; hintKey="";
+  if(moved) saveLayout("옮겼습니다"); else showFurniture();
+}
+/** 집기 전 자리로 되돌립니다. 저장은 하지 않습니다 — 바뀐 것이 없습니다. */
+function cancelCarry(){
+  const it=layout[carrying.i], f=carrying.from;
+  if(it){
+    it.x=f.x; it.z=f.z; it.r=f.r;
+    const g=furnMeshes[carrying.i], pk=furnPicks[carrying.i];
+    if(g){g.position.set(f.x,0,f.z); g.rotation.y=f.r;}
+    if(pk) pk.position.set(f.x,0.5,f.z);
+  }
+  carrying=null; hintKey=""; showFurniture();
+}
+function rotateCarried(step){
+  if(!carrying) return;
+  turnPiece(carrying.i,step||ROT_STEP);
+  showFurniture();
+}
+/** 놓여 있는 가구를 그 자리에서 돌립니다. 들지 않고도 방향만 고칩니다. */
+function rotateFurniture(i,step){
+  if(!layout[i]||!canManage(current)) return;
+  turnPiece(i,step||ROT_STEP);
+  saveLayout(null);
+}
+function turnPiece(i,step){
+  const it=layout[i]; if(!it) return;
+  it.r=round3((it.r+step+Math.PI*2)%(Math.PI*2));
+  const g=furnMeshes[i]; if(g) g.rotation.y=it.r;
+}
+/** 받침이 있으면 "을", 없으면 "를". 학생이 읽는 글이라 조사가 틀리면
+ *  눈에 먼저 걸립니다. */
+const eul=w=>{
+  const c=w.charCodeAt(w.length-1);
+  return (c>=0xac00&&c<=0xd7a3&&(c-0xac00)%28)?"을":"를";
+};
+function removeFurniture(i){
+  if(!layout[i]) return;
+  layout=layout.filter((v,n)=>n!==i);
+  removing=false; hintKey="";
+  applyFurniture(layout); saveLayout("치웠습니다");
+}
+document.getElementById("furnClear").addEventListener("click",()=>{
+  if(!canManage(current)||!layout.length) return;
+  layout=[]; placing=null; removing=false; hintKey="";
+  applyFurniture(layout); saveLayout("모두 치웠습니다");
+});
+const round3=n=>Math.round(n*1000)/1000;
+
+/** 화면이 바뀐 다음에 보냅니다. 저장이 실패하면 되돌리지 않고 알리기만
+ *  합니다 — 학생이 방금 놓은 것이 눈앞에서 사라지는 편이 더 당황스럽고,
+ *  새로고침하면 어차피 서버 것이 옵니다. */
+/* 화면은 곧바로 바꾸고 서버로는 몰아서 한 번만 보냅니다. 방향을 네 번
+   눌러 한 바퀴 돌리면 요청도 네 번 나가는데, 마지막 한 번이면 됩니다. */
+let saveTimer=null,savePending=null;
+function saveLayout(msg){
+  showFurniture();
+  if(current) current.layout=layout;
+  if(msg) savePending=msg;
+  clearTimeout(saveTimer);
+  // 보낼 곳은 지금 정합니다. 400ms 사이에 로비로 나가면 current 가 없습니다.
+  const handle=current&&current.handle, body=layout;
+  if(!handle) return;
+  saveTimer=setTimeout(()=>{const m=savePending; savePending=null; sendLayout(handle,body,m);},400);
+}
+async function sendLayout(handle,body,msg){
+  try{
+    const r=await fetch("/api/galleries/layout",{
+      method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({handle,layout:body}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+    if(msg) flash(msg);
+  }catch(e){
+    furnMsg.className="small warn";
+    furnMsg.textContent="저장하지 못했습니다 — "+e.message;
+  }
+}
+
+/* ---------- 전시관 고르기 ----------
+   벽 색과 달리 이것은 방의 구조가 바뀝니다. 그래서 "저장" 을 따로 누르게
+   두지 않고 고르는 즉시 보냅니다 — 자리가 모자라 거절될 수 있는 일이라,
+   눌렀는데 아무 일도 없는 것처럼 보이면 안 됩니다. */
+const roomPick=document.getElementById("roomPick");
+const roomMsg=document.getElementById("roomMsg");
+
+/* 전시관이 하나뿐이면 고르기를 만들지 않습니다. 단추가 하나인 고르기는
+   고르는 곳처럼 보이지만 고를 것이 없습니다.
+   ROOMS 에 방을 하나 더 적으면 이 줄이 다시 참이 되어 고르기가 저절로
+   돌아옵니다 — 아래 chooseRoom 과 서버의 room 처리는 그대로 둡니다. */
+const MANY_ROOMS=Object.keys(ROOMS).length>1;
+
+if(MANY_ROOMS){
+  Object.keys(ROOMS).forEach(key=>{
+    const b=document.createElement("button");
+    b.className="opt"; b.dataset.room=key; b.textContent=ROOMS[key].name;
+    b.addEventListener("click",()=>chooseRoom(key));
+    roomPick.appendChild(b);
+  });
+}
+
+function showRoomPick(){
+  if(!current) return;
+  const key=(current.theme&&current.theme.room)||DEFAULT_ROOM;
+  const room=ROOMS[key]||ROOMS[DEFAULT_ROOM];
+  if(MANY_ROOMS) selectIn("room",ROOMS[key]?key:DEFAULT_ROOM);
+  roomMsg.className="small";
+  // 고를 수 없을 때는 어느 방에 있는지라도 알려줍니다.
+  roomMsg.textContent=(MANY_ROOMS?"":room.name+" · ")+
+    room.note+" · 지금 "+current.works.length+"점";
+}
+
+async function chooseRoom(key){
+  if(!current||!canManage(current)) return;
+  const now=(current.theme&&current.theme.room)||DEFAULT_ROOM;
+  if(key===now){showRoomPick();return;}
+
+  roomPick.querySelectorAll("button").forEach(b=>b.disabled=true);
+  roomMsg.className="small"; roomMsg.textContent="바꾸는 중…";
+  try{
+    const r=await fetch("/api/galleries",{
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({handle:current.handle, room:key,
+        theme:{wall:wallInput.value,floor:floorInput.value}}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+
+    current.theme=d.theme||{...current.theme,room:key};
+    // 방이 바뀌었으니 벽부터 다시 세우고 작품을 새 자리에 겁니다.
+    applyRoom(roomOf(current));
+    buildRoomContents(current);
+    player.pos.set(0,0,ROOM.d/2-0.75); vel.set(0,0,0); goal=null;
+    showRoomPick(); renderGrid();
+    flash(ROOMS[key].name+"으로 바꿨습니다");
+  }catch(e){
+    roomMsg.className="small warn"; roomMsg.textContent=e.message;
+  }
+  roomPick.querySelectorAll("button").forEach(b=>b.disabled=false);
+}
+
+/* 지금 화면의 색을 이 전시장에 남깁니다.
+   여기까지 오면 색은 이미 current.theme 에 들어 있습니다(onColor). 화면과
+   저장되는 값이 갈라지지 않도록, 보내는 것도 그 값 그대로 씁니다. */
+const themeSaveBtn=document.getElementById("themeSave");
+const themeSaveMsg=document.getElementById("themeSaveMsg");
+themeSaveBtn.addEventListener("click",async()=>{
+  if(!current) return;
+  themeSaveBtn.disabled=true; themeSaveBtn.textContent="저장하는 중…";
+  themeSaveMsg.className="small"; themeSaveMsg.textContent="";
+  try{
+    const r=await fetch("/api/galleries",{
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({handle:current.handle,
+        theme:{wall:wallInput.value,floor:floorInput.value}}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+    themeSaveMsg.textContent="저장했습니다. 다음에 들어와도 이 색입니다.";
+    flash("전시 설정을 저장했습니다");
+  }catch(e){
+    themeSaveMsg.className="small warn"; themeSaveMsg.textContent=e.message;
+  }
+  themeSaveBtn.disabled=false; themeSaveBtn.textContent="전시 설정 저장";
+});
+document.querySelectorAll("[data-frame]").forEach(b=>b.addEventListener("click",()=>{
+  framesOn=b.dataset.frame==="on"; frames.forEach(f=>f.visible=framesOn);
+  selectIn("frame",b.dataset.frame);
+}));
+const radiusInput=document.getElementById("radius"),radiusVal=document.getElementById("radiusVal");
+radiusInput.addEventListener("input",()=>{
+  PLAY_RADIUS=parseFloat(radiusInput.value);
+  radiusVal.textContent=PLAY_RADIUS.toFixed(1)+"m";
+});
+if(document.fonts&&document.fonts.ready)
+  document.fonts.ready.then(()=>{drawNameTag(session.name);drawGuestbook();drawEmpty();});
+drawEmpty();
+
+/* ---------- 루프 ---------- */
+const clock=new THREE.Clock();
+const labelEl=document.getElementById("label");
+const wtEl=document.getElementById("wt"),waEl=document.getElementById("wa");
+const wnEl=document.getElementById("wn"),fillEl=document.getElementById("fill");
+const eye=new THREE.Vector3(),ray=new THREE.Raycaster();
+let reportedId=null,reportedGain=0,nearBoard=false,hoverSlot=null,hoverDoor=false,hintKey="";
+/* 가구 배치. placing 은 지금 손에 든 종류이고, 없으면 놓기 모드가 아닙니다.
+   removing 은 다음 클릭 한 번만 치우는 모드입니다 — 계속 켜두면 앉으려다
+   치워버리게 됩니다. */
+let hoverFurn=null, placing=null, removing=false;
+/* 들고 있는 가구. i 는 layout 의 번호, from 은 집기 전 자리입니다 —
+   ESC 로 무르려면 어디서 집었는지 알아야 합니다. */
+let carrying=null;
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt=Math.min(clock.getDelta(),0.05),now=clock.elapsedTime;
+  if(!running) return;
+  const dir=new THREE.Vector3();
+  if(!modalOpen()){
+    if(keys.KeyW||keys.ArrowUp||forward) dir.z-=1;
+    if(keys.KeyS||keys.ArrowDown) dir.z+=1;
+    if(keys.KeyA||keys.ArrowLeft) dir.x-=1;
+    if(keys.KeyD||keys.ArrowRight) dir.x+=1;
+  }
+
+  /* 클릭으로 정한 곳까지 걸어가기.
+     직접 걷기 시작하면 그 즉시 놓습니다 — 손이 이깁니다. */
+  let accel=26;                       // 손으로 걸을 때의 가속. 아래에서만 줄입니다.
+  if(dir.lengthSq()>0) goal=null;
+  if(goal&&!modalOpen()){
+    const [gx,gz]=goal.path[0];
+    const dx=gx-player.pos.x, dz=gz-player.pos.z, dist=Math.hypot(dx,dz);
+    const last=goal.path.length===1;
+    if(dist<(last?0.34:0.6)){
+      goal.path.shift();
+      if(!goal.path.length) goal=null;      // 도착
+      else {goal.best=Infinity; goal.stall=0;}
+    } else {
+      // dir 은 몸 기준입니다(뒤에서 yaw 만큼 다시 돌립니다). 세계 기준
+      // 방향을 -yaw 로 미리 돌려 넣으면, 고개를 돌리는 중에도 걸음은
+      // 목적지 쪽을 유지합니다.
+      dir.set(dx/dist,0,dz/dist).applyAxisAngle(new THREE.Vector3(0,1,0),-player.yaw);
+      // 가는 쪽을 보게 천천히 돌립니다. 옆으로 미끄러져 가면 멀미가 납니다.
+      let diff=Math.atan2(-dx,-dz)-player.yaw;
+      while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
+      player.yaw+=diff*Math.min(1,dt*3.2);
+      // 더 가까워지지 못한 채 시간만 가면 무언가에 걸린 것입니다.
+      // 벽에 대고 계속 비비는 것보다 놓아주는 편이 낫습니다.
+      /* 다 와서 그대로 밀면 목적지를 지나쳐 섭니다. 마지막 한 걸음
+         전부터 가속을 거둬 관성만으로 굴러가 서게 합니다. 0.9 는
+         지금 감속값에서 최고 속도가 잦아드는 거리입니다. */
+      if(last&&dist<0.9) accel*=Math.max(0.08,dist/0.9);
+      if(dist<goal.best-0.02){goal.best=dist; goal.stall=0;}
+      else goal.stall+=dt;
+      if(goal.stall>0.9) goal=null;
+    }
+  }
+  // 목적지 고리 — 걷는 동안 보이고, 도착하면 사라집니다
+  mark.material.opacity+=((goal?0.42:0)-mark.material.opacity)*Math.min(1,dt*6);
+  if(entryT>0){
+    if(dir.lengthSq()>0) entryT=0;              // 직접 움직이면 진입 연출을 넘깁니다
+    else {
+      entryT=Math.max(0,entryT-dt);
+      const k=1-entryT/ENTRY_DUR, e=1-Math.pow(1-k,3);
+      player.pos.z=6.25-e*2.45;
+      vel.set(0,0,0);
+    }
+  }
+  if(dir.lengthSq()>0){
+    dir.normalize().applyAxisAngle(new THREE.Vector3(0,1,0),player.yaw);
+    vel.addScaledVector(dir,accel*dt);
+  }
+  vel.multiplyScalar(Math.pow(0.0022,dt));
+  player.pos.addScaledVector(vel,dt);
+  const lx=LIMX,lz=LIMZ;
+  player.pos.x=Math.max(-lx,Math.min(lx,player.pos.x));
+  player.pos.z=Math.max(-lz,Math.min(lz,player.pos.z));
+  pushOut(player.pos);
+  player.pos.y=0;
+
+  const speed=Math.min(vel.length(),6);
+  if(viewMode==="third"){
+    avatar.position.copy(player.pos);
+    const face=speed>0.35?Math.atan2(vel.x,vel.z):player.yaw+Math.PI;
+    let diff=face-avatar.rotation.y;
+    while(diff>Math.PI)diff-=Math.PI*2; while(diff<-Math.PI)diff+=Math.PI*2;
+    avatar.rotation.y+=diff*Math.min(1,dt*9);
+    player.phase+=speed*dt*2.6;
+    const sw=Math.sin(player.phase)*Math.min(speed/3.2,1)*0.55;
+    poseAvatar(sw, Math.abs(Math.sin(player.phase))*0.016*Math.min(speed/3,1));
+  }
+  eye.set(player.pos.x,EYE,player.pos.z);
+  if(viewMode==="first"){
+    camera.rotation.order="YXZ"; camera.position.copy(eye);
+    camera.rotation.set(player.pitch,player.yaw,0);
+  } else {
+    const dist=3.4,target=new THREE.Vector3(player.pos.x,1.24,player.pos.z);
+    const off=new THREE.Vector3(
+      Math.sin(player.yaw)*dist*Math.cos(player.pitch),
+      1.05+Math.sin(player.pitch)*dist,
+      Math.cos(player.yaw)*dist*Math.cos(player.pitch));
+    const cp=target.clone().add(off);
+    cp.x=Math.max(-lx+0.2,Math.min(lx-0.2,cp.x));
+    cp.z=Math.max(-lz+0.2,Math.min(lz-0.2,cp.z));
+    cp.y=Math.max(0.5,Math.min(ROOM.h-0.3,cp.y));
+    camera.position.lerp(cp,Math.min(1,dt*12));
+    camera.lookAt(target);
+  }
+
+  const scored=[];
+  for(const p of panels){
+    const d=eye.distanceTo(p.group.position);
+    const facing=eye.clone().sub(p.group.position).dot(p.normal)>0;
+    const tg=facing?Math.max(0,Math.min(1,(PLAY_RADIUS-d)/(PLAY_RADIUS-FULL_RADIUS))):0;
+    p.gain+=(tg-p.gain)*Math.min(1,dt*4);
+    p.halo.material.opacity=p.gain*0.5*glowScale;
+    p.spill.material.opacity=p.gain*0.34*glowScale;
+    if(p.work.kind==="demo"){
+      if(p.playing&&now-p.last>1/24){
+        p.t+=now-p.last; p.last=now;
+        drawFrame(p.ctx,320,180,p.t,p.work.hue,p.work.motion);
+        p.tex.needsUpdate=true;
+      } else if(!p.playing) p.last=now;
+    }
+    scored.push(p);
+  }
+  scored.sort((a,b)=>b.gain-a.gain);
+  /* 재생은 클릭으로만 시작합니다. 멀어지면 자동으로 멈추고 포스터로 돌아갑니다. */
+  let audioTaken=false;
+  scored.forEach(p=>{
+    if(p.playing&&p.gain<=0.02) p.playing=false;
+    if(!p.video) return;
+    if(p.playing&&p.video.paused){p.video.preload="auto";p.video.play().catch(()=>{});}
+    else if(!p.playing&&!p.video.paused) p.video.pause();
+    if(audioReady){
+      p.video.muted=false;
+      if(p.playing&&!audioTaken){p.video.volume=Math.max(0,Math.min(1,p.gain));audioTaken=true;}
+      else p.video.volume=0;
+    }
+  });
+  const best=scored[0];
+  if(best){
+    /* 가까운 작품의 빛이 관람객에게도 물듭니다. 색을 통째로 갈아끼우지
+       않고 각 재질의 제 색에서 조금씩 끌어옵니다 — 그래야 옷 색이
+       사라지지 않으면서도 작품 앞에 선 사람이 그 빛 속에 있게 됩니다. */
+    const k=best.gain*0.30;
+    for(const key in MAT) MAT[key].color.copy(MAT[key].userData.base).lerp(best.color,k);
+  }
+  const id=best&&best.gain>0.04?best.work.id:null,gain=best?best.gain:0;
+  if(id!==reportedId){
+    reportedId=id;
+    if(id){
+      wtEl.textContent=best.work.title; waEl.textContent=current.name;
+      wnEl.textContent=best.work.note; labelEl.classList.add("on");
+    } else labelEl.classList.remove("on");
+  }
+  if(Math.abs(gain-reportedGain)>0.03){
+    reportedGain=gain; fillEl.style.width=Math.round(gain*100)+"%";
+  }
+
+  const manage=canManage(current);
+  let newHover=null,newDoor=false,newFurn=null;
+  {
+    const locked=document.pointerLockElement===cvs;
+    ray.setFromCamera(locked||!pointerInWindow?{x:0,y:0}:mouseNDC,camera);
+    // 가구는 주인과 선생님에게만 잡힙니다. 관람객에게는 그냥 물건입니다.
+    const targets=manage?pickables.concat(furnPicks):pickables;
+    const hit=ray.intersectObjects(targets,false).find(h=>h.distance<11);
+    if(hit&&hit.object.userData.door) newDoor=true;
+    else if(hit&&hit.object.userData.furn!=null) newFurn=hit.object.userData.furn;
+    else if(hit){
+      const s=hit.object.userData.slot;
+      if(s!=null&&(panels.some(p=>p.work.slot===s)||manage)) newHover=s;
+    }
+  }
+  hoverFurn=newFurn;
+  /* 들고 있는 가구는 조준점을 따라옵니다. 마우스를 끄는 것이 아니라
+     보는 곳으로 따라오게 한 이유 — 문으로 들어오면 포인터가 잠겨서
+     커서가 사라집니다. 그때도 한가운데 조준점은 그대로 있습니다. */
+  if(carrying){
+    const locked=document.pointerLockElement===cvs;
+    ray.setFromCamera(locked||!pointerInWindow?{x:0,y:0}:mouseNDC,camera);
+    const fh=ray.intersectObjects([fl,...partMeshes],false)[0];
+    if(fh&&fh.object===fl) moveCarried(fh.point.x,fh.point.z);
+  }
+  if(newHover!==hoverSlot||newDoor!==hoverDoor){
+    hoverSlot=newHover; hoverDoor=newDoor;
+    if(hoverDoor){
+      highlight.geometry.dispose();
+      highlight.geometry=new THREE.PlaneGeometry(2.64,3.32);
+      highlight.position.set(0,1.56,ROOM.d/2-0.12);
+      highlight.rotation.set(0,Math.PI,0);
+    } else if(hoverSlot!=null){
+      const entry=panels.find(p=>p.work.slot===hoverSlot)||empties.find(e=>e.slot===hoverSlot);
+      if(entry){
+        const [hw,hh]=entry.hlSize;
+        highlight.geometry.dispose(); highlight.geometry=new THREE.PlaneGeometry(hw,hh);
+        highlight.position.copy(entry.group.position).addScaledVector(entry.normal,0.06);
+        highlight.rotation.copy(entry.group.rotation);
+      }
+    }
+  }
+  const aiming=hoverDoor||hoverSlot!=null;
+  highlight.material.opacity+=((aiming?0.3:0)-highlight.material.opacity)*Math.min(1,dt*10);
+
+  nearBoard=eye.distanceTo(gbBoard.position)<4.6&&player.pos.z>2;
+  const hovered=hoverSlot==null?null:panels.find(p=>p.work.slot===hoverSlot);
+  const key=carrying?"carry":(placing?"place:"+placing:(hoverFurn!=null?"furn:"+(removing?"del":"take")
+    :(hoverDoor?"door":(hoverSlot!=null
+    ? "s"+hoverSlot+(hovered?(hovered.playing?":on":":off"):":empty")+(manage?":m":"")
+    : (nearBoard?"gb":"")))));
+  if(key!==hintKey){
+    hintKey=key;
+    if(carrying){
+      ctxHint.textContent="클릭 — 여기 내려놓기 · R·휠 돌리기 · ESC 제자리로";
+      ctxHint.classList.add("on");
+    } else if(placing){
+      ctxHint.textContent="바닥을 클릭해 "+FURNITURE[placing].name+" 놓기 · ESC 취소";
+      ctxHint.classList.add("on");
+    } else if(hoverFurn!=null){
+      ctxHint.textContent=removing?"클릭 — 치우기":"클릭 — 돌리기 · 더블클릭 — 옮기기";
+      ctxHint.classList.add("on");
+    } else if(hoverDoor){
+      ctxHint.textContent="클릭 — 문을 열고 나가기"; ctxHint.classList.add("on");
+    } else if(hoverSlot!=null){
+      const edit=manage?" · E 바꾸기 · [ ] 크기":"";
+      if(!hovered) ctxHint.textContent="클릭 — "+(hoverSlot+1)+"번 자리에 작품 걸기";
+      else if(hovered.work.kind==="image")
+        ctxHint.textContent=manage?(hoverSlot+1)+"번 자리 · E 바꾸기 · [ ] 크기":hovered.work.title;
+      else ctxHint.textContent=(hovered.playing?"클릭 — 정지":"클릭 — 재생")+edit;
+      ctxHint.classList.add("on");
+    } else if(nearBoard){
+      ctxHint.textContent="G — 방명록 남기기"; ctxHint.classList.add("on");
+    } else ctxHint.classList.remove("on");
+  }
+  renderer.render(scene,camera);
+}
+tick();
+
+/* ============================================================
+   목록 불러오기
+   ------------------------------------------------------------
+   출처를 이 순서로 찾습니다.
+
+     1) /api/galleries      서버가 붙어 있을 때. 학생이 스튜디오에서
+                            건 작품이 여기로 옵니다.
+     2) ./exhibition.json   서버 없이 여는 전시 (OFFLINE.md)
+     3) 내장 예시           둘 다 없을 때
+
+   ※ file:// 로 직접 열면 브라우저가 fetch 를 막습니다.
+      폴더에서 `npx serve .` 로 띄우세요.
+   ============================================================ */
+
+/* 두 출처가 같은 모양이라 넣는 코드는 하나면 됩니다. */
+function applyGalleries(list, fallbackOwner){
+  GALLERIES.length=0;
+  list.forEach(g=>{
+    const th = typeof g.theme==="string" ? (THEMES[g.theme]||THEMES.night)
+             : (g.theme&&g.theme.wall ? g.theme : THEMES.night);
+    const theme={...th};
+    /* 전시관 이름은 theme 안(서버가 보내는 자리)이나 전시장 바로 아래
+       어느 쪽에 적어도 받습니다. 손으로 쓰는 exhibition.json 에서는
+       theme 가 "night" 같은 이름 하나라 안에 적을 자리가 없습니다. */
+    const room=(g.theme&&g.theme.room)||g.room;
+    if(room) theme.room=room;
+    /* 자리 수만큼만 받습니다. 예전에는 10 이 박혀 있어서, 큰 전시실의
+       스무 점 중 뒤쪽 열 점이 화면에 닿기도 전에 잘려나갔습니다. */
+    const cap=roomOf({theme}).slots.length;
+    GALLERIES.push({
+      handle:g.handle, name:g.name, title:g.title,
+      mine:!!g.mine,
+      layout:Array.isArray(g.layout)?g.layout:[],
+      ownerEmail:(g.ownerEmail||fallbackOwner||"").toLowerCase(),
+      theme,
+      works:(g.works||[]).slice(0,cap).map((w,i)=>({
+        id:++uid,
+        slot:Number.isInteger(w.slot)?w.slot:i,
+        kind:w.kind||(/\.(mp4|webm|mov|m4v)$/i.test(w.src||"")?"video":"image"),
+        title:w.title||"제목 없음",
+        note:w.note||"설명 없음",
+        src:w.src, scale:w.scale||1, hue:200,
+      })),
+      guestbook:Array.isArray(g.guestbook)?g.guestbook:[],
+    });
+  });
+}
+
+async function loadFromServer(){
+  if(!SERVER) return false;
+  try{
+    const r=await fetch("/api/galleries",{cache:"no-store"});
+    if(!r.ok) return false;
+    const d=await r.json();
+    if(!Array.isArray(d.galleries)) return false;
+    // 아직 아무도 안 걸었으면 빈 목록입니다. 그래도 서버가 정답이므로
+    // exhibition.json 으로 되돌아가지 않습니다. 섞이면 더 헷갈립니다.
+    applyGalleries(d.galleries, "");
+    return true;
+  }catch(e){ return false; }
+}
+
+async function loadManifest(){
+  if(await loadFromServer()) return;
+  try{
+    const r=await fetch("./exhibition.json",{cache:"no-store"});
+    if(!r.ok) throw 0;
+    const d=await r.json();
+    if(!Array.isArray(d.galleries)||!d.galleries.length) throw 0;
+
+    if(Array.isArray(d.adminEmails)&&d.adminEmails.length){
+      ADMIN_EMAILS.length=0;
+      d.adminEmails.forEach(e=>ADMIN_EMAILS.push(String(e).toLowerCase()));
+    }
+    applyGalleries(d.galleries, d.ownerEmail);
+  }catch(e){
+    // 목록 파일이 없으면 내장 예시로 진행합니다
+  }
+}
+
+/* 시작 순서가 중요합니다.
+   loadSession 이 SERVER 를 정해야 loadManifest 가 어디서 읽을지 압니다. */
+(async function boot(){
+  await loadSession();
+
+  // 서버가 없으면 로그인이라는 개념 자체를 감춥니다. 눌러도 안 되는
+  // 버튼을 남겨두면 고장난 것처럼 보입니다.
+  if(!SERVER){
+    document.getElementById("btnAuth").style.display="none";
+    document.getElementById("panelLoginBtn").style.display="none";
+    const t=document.getElementById("pfToLogin"); if(t) t.style.display="none";
+    // 홈(/)은 Next 가 만드는 화면입니다. 서버 없이 이 파일만 열었을 때는
+    // 없는 주소라 같이 감춥니다. 스튜디오 링크는 남깁니다 — 같은 폴더의
+    // 정적 파일이라 오프라인에서도 열립니다(OFFLINE.md).
+    const h=document.getElementById("btnHome"); if(h) h.style.display="none";
+  }
+
+  await loadManifest();
+  if(session.email) drawNameTag(session.name);
+  route();
+})();
+</script>
