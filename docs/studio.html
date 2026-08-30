@@ -1,0 +1,639 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>움직임 스튜디오 · 이미지를 영상으로</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0c}
+  body{font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e8e6e1;display:flex}
+  .serif{font-family:'Noto Serif KR',serif}
+  button{font-family:inherit;cursor:pointer}
+
+  /* 좌: 미리보기 */
+  main{flex:1;display:flex;flex-direction:column;min-width:0;padding:26px 26px 22px}
+  .head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:20px}
+  .head .eyebrow{font-size:9.5px;letter-spacing:.32em;color:#6e6b65;text-transform:uppercase}
+  .head h1{font-size:26px;font-weight:300;letter-spacing:.06em;margin-top:11px}
+  .head .meta{font-size:10px;color:#5c5a55;letter-spacing:.1em;text-align:right;line-height:1.9}
+
+  .stageWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+    border:1px solid #1c1c23;background:#08080a;position:relative;overflow:hidden}
+  #stage{max-width:100%;max-height:100%;display:none}
+  #stage.on{display:block}
+  #maskCv{position:absolute;pointer-events:none;opacity:0;transition:opacity .25s;
+    mix-blend-mode:screen}
+  #maskCv.on{opacity:.42;pointer-events:auto;cursor:crosshair}
+
+  #drop{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:14px;border:1px dashed #2c2c36;margin:16px;transition:.2s}
+  #drop.hide{display:none}
+  #drop.over{border-color:#8a8780;background:rgba(255,255,255,.03)}
+  #drop .big{font-size:13px;color:#c8c4bb;letter-spacing:.1em}
+  #drop .small{font-size:10.5px;color:#5c5a55;letter-spacing:.06em;line-height:1.9;text-align:center}
+
+  .track{margin-top:16px;height:2px;background:#1c1c23;position:relative}
+  #playhead{position:absolute;top:0;left:0;height:100%;width:0;background:#c8c4bb}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;
+    font-size:10px;color:#5c5a55;letter-spacing:.1em}
+
+  /* 우: 조작 */
+  aside{width:312px;border-left:1px solid #1c1c23;background:#0b0b0e;padding:26px 24px;
+    overflow-y:auto;flex-shrink:0}
+  .grp{margin-bottom:24px}
+  .grp h3{font-size:9px;letter-spacing:.26em;color:#6e6b65;text-transform:uppercase;
+    margin-bottom:11px;font-weight:400}
+  .grp h3 .val{float:right;color:#8a8780;letter-spacing:.1em;text-transform:none}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .opt{padding:9px 4px;border:1px solid #26262e;background:transparent;color:#8a8780;
+    font-size:10.5px;letter-spacing:.06em;transition:.2s}
+  .opt:hover{border-color:#4a4a54;color:#c8c4bb}
+  .opt.sel{border-color:#8a8780;color:#e8e6e1;background:rgba(255,255,255,.05)}
+  .tip{font-size:10px;color:#5c5a55;letter-spacing:.04em;line-height:1.85;margin-top:9px}
+  .divider{height:1px;background:#1c1c23;margin:0 0 24px}
+
+  input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:20px}
+  input[type=range]::-webkit-slider-runnable-track{height:1px;background:#3a3a44}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;
+    background:#c8c4bb;margin-top:-4px;border-radius:50%}
+  input[type=range]::-moz-range-track{height:1px;background:#3a3a44}
+  input[type=range]::-moz-range-thumb{width:9px;height:9px;background:#c8c4bb;border:none;border-radius:50%}
+
+  .act{width:100%;padding:13px;background:transparent;color:#e8e6e1;border:1px solid #3a3a42;
+    font-size:11.5px;letter-spacing:.2em;transition:.25s;margin-top:8px}
+  .act:hover{border-color:#8a8780;background:rgba(255,255,255,.05)}
+  .act[disabled]{opacity:.32;cursor:not-allowed}
+  .act[disabled]:hover{border-color:#3a3a42;background:transparent}
+  .sub{width:100%;padding:10px;background:transparent;color:#8a8780;border:1px solid #26262e;
+    font-size:10.5px;letter-spacing:.14em;margin-top:6px}
+  .sub:hover{border-color:#4a4a54;color:#c8c4bb}
+  #status{font-size:10px;color:#8a8780;letter-spacing:.08em;line-height:1.8;margin-top:12px;
+    min-height:16px}
+  #status.rec{color:#c99a8e}
+
+  /* ============ 밝은 톤 ============ */
+  html,body{background:#f4f4f5}
+  body{color:#141417}
+  main{background:#fff}
+  aside{background:#f4f4f5;border-left-color:#e2e2e6}
+  .head .eyebrow{color:#8e8e95}
+  .head .meta{color:#8e8e95}
+  .grp h3{color:#8e8e95}
+  .grp h3 .val{color:#6b6b72}
+  .tip{color:#8e8e95}
+  .divider{background:#e2e2e6}
+
+  /* 작품이 어두운 경우가 많아 미리보기 뒤는 중간 회색으로 둡니다 */
+  .stageWrap{border-color:#e2e2e6;background:#e6e6e8}
+  #drop{border-color:#cfcfd5}
+  #drop:hover,#drop.over{border-color:#8e8e95;background:rgba(20,20,23,.03)}
+  #drop .big{color:#3a3a40}
+  #drop .small{color:#97979d}
+  .track{background:#dcdce0}
+  #playhead{background:#55555c}
+  .foot{color:#97979d}
+
+  .opt{border-color:#dcdce0;color:#6b6b72}
+  .opt:hover{border-color:#b4b4ba;color:#141417}
+  .opt.sel{border-color:#55555c;color:#141417;background:rgba(20,20,23,.05)}
+  input[type=range]::-webkit-slider-runnable-track{background:#cfcfd5}
+  input[type=range]::-webkit-slider-thumb{background:#55555c}
+  input[type=range]::-moz-range-track{background:#cfcfd5}
+  input[type=range]::-moz-range-thumb{background:#55555c}
+
+  .act{border-color:#c9c9cf;color:#141417}
+  .act:hover{border-color:#55555c;background:rgba(20,20,23,.04)}
+  .sub{border-color:#dcdce0;color:#6b6b72}
+  .sub:hover{border-color:#8e8e95;color:#141417}
+  #status{color:#6b6b72}
+  #status.rec{color:#9a4b3d}
+
+  /* ============ 가독성 정리 ============ */
+  body{font-size:13px;color:#16181d}
+  .head h1{font-size:27px;color:#16181d;letter-spacing:.02em}
+  .head .eyebrow{font-size:10.5px;letter-spacing:.18em;color:#737a85}
+  .head .meta{font-size:11.5px;letter-spacing:0;color:#4c515b;line-height:1.7}
+  .grp h3{font-size:11.5px;letter-spacing:.08em;color:#4c515b;
+    text-transform:none;margin-bottom:10px}
+  .grp h3 .val{font-size:11.5px;letter-spacing:.01em;color:#737a85}
+  .tip{font-size:12px;line-height:1.75;color:#6b7280;letter-spacing:0}
+
+  .opt{font-size:12px;letter-spacing:.01em;padding:10px 6px;border-color:#d3d6dc;color:#4c515b}
+  .opt:hover{border-color:#8b929d;color:#16181d;background:#f6f7f8}
+  .opt.sel{background:#16181d;border-color:#16181d;color:#fff}
+
+  .act{background:#16181d;border-color:#16181d;color:#fff;
+    font-size:13px;letter-spacing:.06em;padding:15px;font-weight:500}
+  .act:hover{background:#000;border-color:#000}
+  .act[disabled]{background:#e6e8eb;border-color:#e6e8eb;color:#a3a9b4;opacity:1}
+  .act[disabled]:hover{background:#e6e8eb;border-color:#e6e8eb}
+  .sub{font-size:12px;letter-spacing:.01em;padding:12px;border-color:#d3d6dc;color:#16181d}
+  .sub:hover{border-color:#16181d;background:#f6f7f8}
+  button:focus-visible{outline:2px solid #16181d;outline-offset:2px}
+
+  #drop{border-color:#c3c8d0}
+  #drop .big{font-size:13px;letter-spacing:.01em;color:#16181d}
+  #drop .small{font-size:11.5px;letter-spacing:0;color:#737a85;line-height:1.75}
+  .foot{font-size:11.5px;letter-spacing:0;color:#737a85}
+  #status{font-size:12px;letter-spacing:0;line-height:1.7;color:#4c515b}
+  #status.rec{color:#a03a28}
+</style>
+
+<main>
+  <div class="head">
+    <div>
+      <div class="eyebrow">Motion Studio</div>
+      <h1 class="serif">이미지를 움직이게</h1>
+    </div>
+    <div class="meta" id="srcMeta"></div>
+  </div>
+
+  <div class="stageWrap">
+    <canvas id="stage"></canvas>
+    <canvas id="maskCv"></canvas>
+    <div id="drop">
+      <div class="big">이미지를 끌어다 놓거나 클릭해서 선택</div>
+      <div class="small">JPG · PNG · WEBP<br>가로 1280px 이하로 자동 축소됩니다</div>
+    </div>
+  </div>
+
+  <div class="track"><div id="playhead"></div></div>
+  <div class="foot">
+    <span id="tLabel">0.0s</span>
+    <span id="loopNote">끊김 없이 반복되도록 만들어집니다</span>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*" style="display:none" />
+  <input type="file" id="depthInput" accept="image/*" style="display:none" />
+</main>
+
+<aside>
+  <div class="grp">
+    <h3>움직임</h3>
+    <div class="row3">
+      <button class="opt sel" data-mode="ken">밀기</button>
+      <button class="opt" data-mode="depth">깊이</button>
+      <button class="opt" data-mode="flow">일렁임</button>
+    </div>
+    <div class="tip" id="modeTip"></div>
+  </div>
+
+  <!-- 밀기 -->
+  <div class="grp pane" id="paneKen">
+    <h3>방향</h3>
+    <div class="row3">
+      <button class="opt sel" data-ken="in">밀어 들어가기</button>
+      <button class="opt" data-ken="out">물러나기</button>
+      <button class="opt" data-ken="pan">가로지르기</button>
+    </div>
+    <h3 style="margin-top:20px">세기 <span class="val" id="kenVal">18%</span></h3>
+    <input type="range" id="kenAmt" min="4" max="45" step="1" value="18" />
+  </div>
+
+  <!-- 깊이 -->
+  <div class="grp pane" id="paneDepth" style="display:none">
+    <h3>깊이 <span class="val" id="depthSrc">자동 추정</span></h3>
+    <button class="sub" id="depthLoad">깊이맵 이미지 불러오기</button>
+    <button class="sub" id="depthClear">자동 추정으로 되돌리기</button>
+    <div class="tip">자동 추정은 화면 가운데가 가깝다고 가정한 근사값입니다.
+      정확한 결과가 필요하면 Depth Anything 같은 도구로 뽑은 흑백 깊이맵을 넣으세요.
+      흰색이 가까움입니다.</div>
+    <h3 style="margin-top:20px">시차 <span class="val" id="pxVal">2.2%</span></h3>
+    <input type="range" id="pxAmt" min="0.4" max="6" step="0.1" value="2.2" />
+    <h3 style="margin-top:16px">궤도</h3>
+    <div class="row">
+      <button class="opt sel" data-orb="round">돌기</button>
+      <button class="opt" data-orb="side">좌우</button>
+    </div>
+  </div>
+
+  <!-- 일렁임 -->
+  <div class="grp pane" id="paneFlow" style="display:none">
+    <h3>세기 <span class="val" id="flowVal">1.2%</span></h3>
+    <input type="range" id="flowAmt" min="0.2" max="4" step="0.1" value="1.2" />
+    <h3 style="margin-top:16px">결 크기 <span class="val" id="scaleVal">6</span></h3>
+    <input type="range" id="flowScale" min="2" max="16" step="0.5" value="6" />
+    <h3 style="margin-top:20px">움직일 영역</h3>
+    <div class="row">
+      <button class="opt sel" data-mask="all">전체</button>
+      <button class="opt" data-mask="paint">칠한 곳만</button>
+    </div>
+    <div id="brushBox" style="display:none">
+      <h3 style="margin-top:16px">붓 굵기 <span class="val" id="brushVal">70</span></h3>
+      <input type="range" id="brushSize" min="20" max="200" step="5" value="70" />
+      <div class="row" style="margin-top:8px">
+        <button class="opt sel" data-brush="paint">칠하기</button>
+        <button class="opt" data-brush="erase">지우기</button>
+      </div>
+      <button class="sub" id="maskClear">모두 지우기</button>
+      <div class="tip">물, 연기, 구름, 머리카락처럼 움직여도 어색하지 않은 곳만 칠하세요.
+        나머지가 정지해 있을수록 효과가 강해집니다.</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="grp">
+    <h3>마무리</h3>
+    <div class="row">
+      <button class="opt sel" data-grain="on">필름 그레인</button>
+      <button class="opt sel" data-vig="on">비네트</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h3>길이 <span class="val" id="durVal">6.0초</span></h3>
+    <input type="range" id="dur" min="3" max="12" step="0.5" value="6" />
+  </div>
+
+  <div class="grp">
+    <button class="act" id="exportBtn" disabled>영상으로 내보내기</button>
+    <button class="sub" id="newImg">다른 이미지 열기</button>
+    <div id="status"></div>
+  </div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   움직임 스튜디오 — 정지 이미지를 반복 재생용 짧은 영상으로
+   ------------------------------------------------------------
+   생성 모델을 쓰지 않습니다. 원본 픽셀을 그대로 두고 카메라와
+   좌표만 움직이므로 형태가 뭉개지지 않습니다.
+
+   밀기   : 확대·이동 (켄 번스)
+   깊이   : 깊이맵으로 앞뒤 레이어를 다른 속도로 (2.5D 패럴랙스)
+   일렁임 : 칠한 영역만 주기적으로 흔들기 (시네마그래프)
+
+   모든 움직임은 주기 함수라 처음과 끝이 정확히 이어집니다.
+   전시장에서 loop 재생될 때 이음매가 보이지 않습니다.
+   ============================================================ */
+
+const MAXDIM=1280;
+const stage=document.getElementById("stage");
+const maskCv=document.getElementById("maskCv");
+const dropEl=document.getElementById("drop");
+const statusEl=document.getElementById("status");
+
+let renderer=null,scene=null,camera=null,mat=null;
+let imgTex=null,depthTex=null,maskTex=null;
+let W=0,H=0,srcName="";
+let mode="ken",kenDir="in",orbit="round",maskMode="all",brushMode="paint";
+let grain=true,vignette=true;
+let recording=false,recStart=0;
+
+/* ---------- 셰이더 ---------- */
+const VERT=`
+varying vec2 vUv;
+void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`;
+
+const FRAG=`
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex, uDepth, uMask;
+uniform float uT;           // 0..1 루프 위상
+uniform int   uMode;        // 0 밀기 / 1 깊이 / 2 일렁임
+uniform int   uKen;         // 0 in / 1 out / 2 pan
+uniform int   uOrbit;       // 0 round / 1 side
+uniform int   uUseMask;
+uniform float uKenAmt, uPx, uFlow, uScale, uAspect;
+uniform float uGrain, uVig;
+
+const float TAU = 6.28318530718;
+
+void main(){
+  vec2 uv = vUv;
+  float ph = uT * TAU;
+
+  if(uMode == 0){
+    // 켄 번스 — 왕복이라 끝에서 처음으로 자연스럽게 이어집니다
+    float k = 0.5 - 0.5*cos(ph);            // 0→1→0
+    float z = 1.0 + uKenAmt * (uKen == 1 ? (1.0-k) : k);
+    if(uKen == 2) z = 1.0 + uKenAmt*0.5;
+    vec2 c = vec2(0.5);
+    uv = (uv - c) / z + c;
+    if(uKen == 2) uv.x += (k - 0.5) * uKenAmt * 0.9;
+    else          uv.y -= (k - 0.5) * uKenAmt * 0.16;
+  }
+  else if(uMode == 1){
+    // 깊이 — 가까운 픽셀일수록 크게 흔들려 시차가 생깁니다
+    float d = texture2D(uDepth, vUv).r;
+    vec2 sw = uOrbit == 0
+      ? vec2(sin(ph), cos(ph) * 0.45)
+      : vec2(sin(ph), 0.0);
+    uv += (d - 0.5) * uPx * sw * vec2(1.0, uAspect);
+    uv = (uv - 0.5) / (1.0 + uPx*0.6) + 0.5;   // 가장자리가 비지 않도록 살짝 확대
+  }
+  else {
+    // 일렁임 — 주기 함수만 써서 완전히 반복 가능한 왜곡
+    float m = uUseMask == 1 ? texture2D(uMask, vUv).r : 1.0;
+    vec2 p = vUv * uScale;
+    vec2 w = vec2(
+      sin(p.y*1.7 + ph) + 0.5*sin(p.x*2.3 - ph*2.0),
+      cos(p.x*1.9 + ph) + 0.5*cos(p.y*2.1 + ph*2.0)
+    );
+    uv += w * uFlow * m;
+  }
+
+  uv = clamp(uv, 0.0005, 0.9995);
+  vec3 col = texture2D(uTex, uv).rgb;
+
+  if(uVig > 0.5){
+    vec2 q = (vUv - 0.5) * vec2(1.0, 1.0);
+    col *= 1.0 - 0.30 * dot(q,q) * 1.6;
+  }
+  if(uGrain > 0.5){
+    float n = fract(sin(dot(vUv*vec2(1.0,1.3) + uT, vec2(12.9898,78.233))) * 43758.5453);
+    col += (n - 0.5) * 0.028;
+  }
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+/* ---------- 자동 깊이 근사 ---------- */
+function autoDepth(w,h){
+  const c=document.createElement("canvas"); c.width=256; c.height=256;
+  const x=c.getContext("2d");
+  const g=x.createRadialGradient(128,140,10,128,140,175);
+  g.addColorStop(0,"#ffffff");        // 가운데가 가까움
+  g.addColorStop(0.55,"#8a8a8a");
+  g.addColorStop(1,"#101010");        // 가장자리가 멂
+  x.fillStyle=g; x.fillRect(0,0,256,256);
+  const t=new THREE.CanvasTexture(c);
+  t.minFilter=THREE.LinearFilter;
+  return t;
+}
+
+/* ---------- 마스크 ---------- */
+let maskCtx=null;
+function initMask(w,h){
+  maskCv.width=Math.round(w/2); maskCv.height=Math.round(h/2);
+  maskCtx=maskCv.getContext("2d");
+  maskCtx.fillStyle="#000"; maskCtx.fillRect(0,0,maskCv.width,maskCv.height);
+  if(maskTex) maskTex.dispose();
+  maskTex=new THREE.CanvasTexture(maskCv);
+  maskTex.minFilter=THREE.LinearFilter;
+  if(mat) mat.uniforms.uMask.value=maskTex;
+}
+function paintAt(ev){
+  if(!maskCtx) return;
+  const r=maskCv.getBoundingClientRect();
+  const x=(ev.clientX-r.left)/r.width*maskCv.width;
+  const y=(ev.clientY-r.top)/r.height*maskCv.height;
+  const rad=parseFloat(document.getElementById("brushSize").value)/2
+    *(maskCv.width/stage.clientWidth||1);
+  const g=maskCtx.createRadialGradient(x,y,0,x,y,rad);
+  if(brushMode==="paint"){
+    g.addColorStop(0,"rgba(255,255,255,0.9)"); g.addColorStop(1,"rgba(255,255,255,0)");
+    maskCtx.globalCompositeOperation="lighter";
+  } else {
+    maskCtx.globalCompositeOperation="destination-out";
+    g.addColorStop(0,"rgba(0,0,0,0.9)"); g.addColorStop(1,"rgba(0,0,0,0)");
+  }
+  maskCtx.fillStyle=g;
+  maskCtx.beginPath(); maskCtx.arc(x,y,rad,0,Math.PI*2); maskCtx.fill();
+  maskCtx.globalCompositeOperation="source-over";
+  if(brushMode==="erase"){                       // 지운 자리는 검정으로
+    maskCtx.save(); maskCtx.globalCompositeOperation="destination-over";
+    maskCtx.fillStyle="#000"; maskCtx.fillRect(0,0,maskCv.width,maskCv.height); maskCtx.restore();
+  }
+  maskTex.needsUpdate=true;
+}
+let painting=false;
+maskCv.addEventListener("pointerdown",e=>{painting=true;paintAt(e);});
+addEventListener("pointerup",()=>{painting=false;});
+maskCv.addEventListener("pointermove",e=>{if(painting)paintAt(e);});
+document.getElementById("maskClear").addEventListener("click",()=>{
+  if(!maskCtx) return;
+  maskCtx.fillStyle="#000"; maskCtx.fillRect(0,0,maskCv.width,maskCv.height);
+  maskTex.needsUpdate=true;
+});
+
+/* ---------- 이미지 적재 ---------- */
+function loadImage(file){
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.naturalWidth,h=img.naturalHeight;
+    const s=Math.min(1,MAXDIM/Math.max(w,h));
+    w=Math.round(w*s/2)*2; h=Math.round(h*s/2)*2;   // 인코더가 짝수 크기를 좋아합니다
+    const c=document.createElement("canvas"); c.width=w; c.height=h;
+    c.getContext("2d").drawImage(img,0,0,w,h);
+    URL.revokeObjectURL(url);
+    W=w; H=h; srcName=file.name.replace(/\.[^.]+$/,"");
+    setupScene(c);
+    document.getElementById("srcMeta").innerHTML=
+      file.name.slice(0,26)+"<br>"+w+" × "+h;
+    dropEl.classList.add("hide");
+    stage.classList.add("on");
+    document.getElementById("exportBtn").disabled=false;
+    status("");
+  };
+  img.src=url;
+}
+
+function setupScene(canvasSrc){
+  if(!renderer){
+    renderer=new THREE.WebGLRenderer({canvas:stage,antialias:false,preserveDrawingBuffer:true});
+    scene=new THREE.Scene();
+    camera=new THREE.Camera();
+  }
+  renderer.setPixelRatio(1);
+  renderer.setSize(W,H,false);
+  stage.style.width="auto"; stage.style.height="auto";
+  stage.style.maxWidth="100%"; stage.style.maxHeight="100%";
+
+  if(imgTex) imgTex.dispose();
+  imgTex=new THREE.CanvasTexture(canvasSrc);
+  imgTex.minFilter=THREE.LinearFilter;
+  imgTex.wrapS=imgTex.wrapT=THREE.ClampToEdgeWrapping;
+
+  if(!depthTex) depthTex=autoDepth(W,H);
+  initMask(W,H);
+
+  if(mat){
+    mat.uniforms.uTex.value=imgTex;
+    mat.uniforms.uAspect.value=W/H;
+  } else {
+    mat=new THREE.ShaderMaterial({
+      vertexShader:VERT, fragmentShader:FRAG,
+      uniforms:{
+        uTex:{value:imgTex}, uDepth:{value:depthTex}, uMask:{value:maskTex},
+        uT:{value:0}, uMode:{value:0}, uKen:{value:0}, uOrbit:{value:0},
+        uUseMask:{value:0}, uKenAmt:{value:0.18}, uPx:{value:0.022},
+        uFlow:{value:0.012}, uScale:{value:6}, uAspect:{value:W/H},
+        uGrain:{value:1}, uVig:{value:1},
+      }
+    });
+    const quad=new THREE.Mesh(new THREE.PlaneBufferGeometry(2,2),mat);
+    quad.frustumCulled=false;
+    scene.add(quad);
+  }
+  syncMaskOverlay();
+}
+
+function syncMaskOverlay(){
+  // 마스크 캔버스를 미리보기 위에 정확히 겹칩니다
+  const r=stage.getBoundingClientRect(), p=stage.parentElement.getBoundingClientRect();
+  maskCv.style.left=(r.left-p.left)+"px";
+  maskCv.style.top=(r.top-p.top)+"px";
+  maskCv.style.width=r.width+"px";
+  maskCv.style.height=r.height+"px";
+}
+addEventListener("resize",syncMaskOverlay);
+
+/* ---------- 입력 ---------- */
+const fileInput=document.getElementById("fileInput");
+dropEl.addEventListener("click",()=>fileInput.click());
+document.getElementById("newImg").addEventListener("click",()=>fileInput.click());
+fileInput.addEventListener("change",e=>{if(e.target.files[0])loadImage(e.target.files[0]);});
+["dragenter","dragover"].forEach(ev=>addEventListener(ev,e=>{
+  e.preventDefault(); dropEl.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>addEventListener(ev,e=>{
+  e.preventDefault(); dropEl.classList.remove("over");}));
+addEventListener("drop",e=>{
+  e.preventDefault();
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type.startsWith("image/")) loadImage(f);
+});
+
+const depthInput=document.getElementById("depthInput");
+document.getElementById("depthLoad").addEventListener("click",()=>depthInput.click());
+depthInput.addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const url=URL.createObjectURL(f), img=new Image();
+  img.onload=()=>{
+    const c=document.createElement("canvas"); c.width=512; c.height=Math.round(512*H/W);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url);
+    if(depthTex) depthTex.dispose();
+    depthTex=new THREE.CanvasTexture(c); depthTex.minFilter=THREE.LinearFilter;
+    if(mat) mat.uniforms.uDepth.value=depthTex;
+    document.getElementById("depthSrc").textContent="불러온 깊이맵";
+  };
+  img.src=url;
+});
+document.getElementById("depthClear").addEventListener("click",()=>{
+  if(depthTex) depthTex.dispose();
+  depthTex=autoDepth(W,H);
+  if(mat) mat.uniforms.uDepth.value=depthTex;
+  document.getElementById("depthSrc").textContent="자동 추정";
+});
+
+/* ---------- 조작 ---------- */
+function sel(attr,v){
+  document.querySelectorAll("[data-"+attr+"]").forEach(b=>
+    b.classList.toggle("sel",b.dataset[attr]===v));
+}
+const TIPS={
+  ken:"원본을 그대로 두고 화면만 천천히 밀고 당깁니다. 어떤 이미지에도 안전하고, 인물 사진에 특히 잘 맞습니다.",
+  depth:"깊이맵으로 앞뒤를 갈라 다른 속도로 움직입니다. 풍경이나 공간감 있는 사진에서 강합니다.",
+  flow:"칠한 영역만 주기적으로 일렁입니다. 물·연기·구름처럼 흐르는 것이 있는 사진에 쓰세요.",
+};
+function setMode(m){
+  mode=m; sel("mode",m);
+  document.getElementById("paneKen").style.display=m==="ken"?"":"none";
+  document.getElementById("paneDepth").style.display=m==="depth"?"":"none";
+  document.getElementById("paneFlow").style.display=m==="flow"?"":"none";
+  document.getElementById("modeTip").textContent=TIPS[m];
+  maskCv.classList.toggle("on",m==="flow"&&maskMode==="paint");
+  if(mat) mat.uniforms.uMode.value=m==="ken"?0:m==="depth"?1:2;
+}
+document.querySelectorAll("[data-mode]").forEach(b=>
+  b.addEventListener("click",()=>setMode(b.dataset.mode)));
+document.querySelectorAll("[data-ken]").forEach(b=>b.addEventListener("click",()=>{
+  kenDir=b.dataset.ken; sel("ken",kenDir);
+  if(mat) mat.uniforms.uKen.value=kenDir==="in"?0:kenDir==="out"?1:2;
+}));
+document.querySelectorAll("[data-orb]").forEach(b=>b.addEventListener("click",()=>{
+  orbit=b.dataset.orb; sel("orb",orbit);
+  if(mat) mat.uniforms.uOrbit.value=orbit==="round"?0:1;
+}));
+document.querySelectorAll("[data-mask]").forEach(b=>b.addEventListener("click",()=>{
+  maskMode=b.dataset.mask; sel("mask",maskMode);
+  document.getElementById("brushBox").style.display=maskMode==="paint"?"":"none";
+  maskCv.classList.toggle("on",mode==="flow"&&maskMode==="paint");
+  if(mat) mat.uniforms.uUseMask.value=maskMode==="paint"?1:0;
+  syncMaskOverlay();
+}));
+document.querySelectorAll("[data-brush]").forEach(b=>b.addEventListener("click",()=>{
+  brushMode=b.dataset.brush; sel("brush",brushMode);
+}));
+document.querySelectorAll("[data-grain]").forEach(b=>b.addEventListener("click",()=>{
+  grain=!grain; b.classList.toggle("sel",grain);
+  if(mat) mat.uniforms.uGrain.value=grain?1:0;
+}));
+document.querySelectorAll("[data-vig]").forEach(b=>b.addEventListener("click",()=>{
+  vignette=!vignette; b.classList.toggle("sel",vignette);
+  if(mat) mat.uniforms.uVig.value=vignette?1:0;
+}));
+
+const bind=(id,label,fmt,apply)=>{
+  const el=document.getElementById(id),lb=document.getElementById(label);
+  const upd=()=>{lb.textContent=fmt(parseFloat(el.value)); apply(parseFloat(el.value));};
+  el.addEventListener("input",upd); upd();
+};
+bind("kenAmt","kenVal",v=>v+"%",v=>{if(mat)mat.uniforms.uKenAmt.value=v/100;});
+bind("pxAmt","pxVal",v=>v.toFixed(1)+"%",v=>{if(mat)mat.uniforms.uPx.value=v/100;});
+bind("flowAmt","flowVal",v=>v.toFixed(1)+"%",v=>{if(mat)mat.uniforms.uFlow.value=v/100;});
+bind("flowScale","scaleVal",v=>String(v),v=>{if(mat)mat.uniforms.uScale.value=v;});
+bind("brushSize","brushVal",v=>String(v),()=>{});
+bind("dur","durVal",v=>v.toFixed(1)+"초",()=>{});
+setMode("ken");
+
+/* ---------- 루프 ---------- */
+const playhead=document.getElementById("playhead"),tLabel=document.getElementById("tLabel");
+const clock=new THREE.Clock();
+function tick(){
+  requestAnimationFrame(tick);
+  if(!renderer||!mat) return;
+  const dur=parseFloat(document.getElementById("dur").value);
+  const t=recording
+    ? Math.min((performance.now()-recStart)/1000,dur)
+    : clock.getElapsedTime()%dur;
+  mat.uniforms.uT.value=t/dur;
+  renderer.render(scene,camera);
+  playhead.style.width=(t/dur*100)+"%";
+  tLabel.textContent=t.toFixed(1)+"s";
+}
+tick();
+
+/* ---------- 내보내기 ---------- */
+function status(msg,rec){
+  statusEl.textContent=msg;
+  statusEl.classList.toggle("rec",!!rec);
+}
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  if(recording||!renderer) return;
+  const dur=parseFloat(document.getElementById("dur").value);
+  const types=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+  const mime=types.find(t=>MediaRecorder.isTypeSupported(t));
+  if(!mime){status("이 브라우저는 영상 저장을 지원하지 않습니다. 크롬을 써보세요.");return;}
+
+  const stream=stage.captureStream(30);
+  const chunks=[];
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6000000});
+  rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  rec.onstop=()=>{
+    const blob=new Blob(chunks,{type:"video/webm"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=(srcName||"motion")+"-"+mode+".webm";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    recording=false;
+    clock.start();
+    status("저장했습니다 · "+(blob.size/1048576).toFixed(1)+"MB · 전시장에 그대로 올리면 됩니다");
+    document.getElementById("exportBtn").disabled=false;
+  };
+
+  recording=true; recStart=performance.now();
+  document.getElementById("exportBtn").disabled=true;
+  status("녹화 중… "+dur.toFixed(1)+"초",true);
+  rec.start();
+  // 한 바퀴를 정확히 돌고 멈춥니다 — 그래야 이음매가 없습니다
+  setTimeout(()=>rec.stop(),dur*1000+120);
+});
+</script>

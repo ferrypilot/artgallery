@@ -1,0 +1,784 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>생성형 AI 영상전 · 가상 전시장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#08080a}
+  #root{position:relative;width:100vw;height:100vh;background:#08080a;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e8e6e1}
+  canvas{display:block}
+  .serif{font-family:'Noto Serif KR',serif}
+
+  #root.light #mark,#root.light #hint{color:#807d76}
+  #root.light #wt{color:#1a1a1e}
+  #root.light #wa{color:#4a4740}
+  #root.light #wn{color:#6e6b65}
+  #root.light .rule{background:#a8a49c}
+  #root.light .bar{background:rgba(0,0,0,.14)}
+  #root.light #fill{background:#2a2a30}
+
+  /* ---- 입장 화면 ---- */
+  #gate{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:#08080a;text-align:center;padding:24px;color:#e8e6e1}
+  #gate.hide{display:none}
+  .eyebrow{font-size:11px;letter-spacing:.34em;color:#7d7a73;text-transform:uppercase;margin-bottom:26px}
+  .title{font-size:clamp(30px,5.4vw,52px);font-weight:300;letter-spacing:.06em;line-height:1.34}
+  .sub{font-size:13px;color:#8a8780;line-height:1.95;margin-top:20px;max-width:360px}
+  .signin{margin-top:36px;width:min(320px,84vw);text-align:left}
+  .signin h4{font-size:9px;letter-spacing:.26em;color:#6e6b65;text-transform:uppercase;
+    margin-bottom:10px;font-weight:400}
+  .btn{margin-top:30px;padding:13px 34px;background:transparent;color:#e8e6e1;cursor:pointer;
+    border:1px solid #3a3a42;font-family:inherit;font-size:12px;letter-spacing:.24em;
+    transition:border-color .25s,background .25s}
+  .btn:hover{border-color:#8a8780;background:rgba(255,255,255,.05)}
+  .btn:focus-visible{outline:2px solid #8a8780;outline-offset:3px}
+
+  #mark{position:absolute;top:22px;left:24px;z-index:10;font-size:10px;letter-spacing:.26em;
+    color:#5c5a55;text-transform:uppercase;pointer-events:none}
+  #hint{position:absolute;bottom:22px;right:24px;z-index:10;font-size:10px;letter-spacing:.1em;
+    color:#5c5a55;text-align:right;line-height:2;pointer-events:none}
+
+  #label{position:absolute;bottom:22px;left:24px;z-index:10;max-width:min(360px,72vw);
+    pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s}
+  #label.on{opacity:1;transform:translateY(0)}
+  .rule{width:26px;height:1px;background:#4a4a52;margin-bottom:14px}
+  #wt{font-size:20px;font-weight:500;letter-spacing:.03em}
+  #wa{font-size:12px;color:#a8a49c;margin-top:5px;letter-spacing:.06em}
+  #wn{font-size:11px;color:#6e6b65;margin-top:12px;line-height:1.7}
+  .meter{display:flex;align-items:center;gap:9px;margin-top:14px}
+  .meter span{font-size:9px;letter-spacing:.2em;color:#5c5a55}
+  .bar{width:78px;height:2px;background:#232329}
+  #fill{height:100%;width:0%;background:#c8c4bb;transition:width .18s linear}
+
+  /* ---- 설정 패널 ---- */
+  #gear{position:absolute;top:18px;right:22px;z-index:22;padding:9px 16px;cursor:pointer;
+    border:1px solid rgba(140,138,130,.4);background:rgba(10,10,13,.6);color:#c8c4bb;
+    font-family:inherit;font-size:10px;letter-spacing:.22em;backdrop-filter:blur(6px)}
+  #gear:hover{border-color:#8a8780}
+
+  #panel{position:absolute;top:0;right:0;bottom:0;width:274px;z-index:21;
+    background:rgba(9,9,12,.94);border-left:1px solid #22222a;backdrop-filter:blur(12px);
+    padding:66px 24px 30px;overflow-y:auto;color:#e8e6e1;
+    transform:translateX(100%);transition:transform .34s cubic-bezier(.4,0,.2,1)}
+  #panel.on{transform:translateX(0)}
+  .grp{margin-bottom:24px}
+  .grp>h3{font-size:9px;letter-spacing:.26em;color:#6e6b65;text-transform:uppercase;
+    margin-bottom:11px;font-weight:400}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .opt{padding:9px 4px;border:1px solid #26262e;background:transparent;color:#8a8780;
+    cursor:pointer;font-family:inherit;font-size:10.5px;letter-spacing:.08em;transition:.2s}
+  .opt:hover{border-color:#4a4a54;color:#c8c4bb}
+  .opt.sel{border-color:#8a8780;color:#e8e6e1;background:rgba(255,255,255,.05)}
+  input[type=text]{width:100%;padding:9px 11px;border:1px solid #26262e;background:rgba(255,255,255,.03);
+    color:#e8e6e1;font-family:'Noto Serif KR',serif;font-size:13px;letter-spacing:.04em}
+  input[type=text]:focus{outline:none;border-color:#8a8780}
+  input[type=text]::placeholder{color:#4e4c48;font-family:'IBM Plex Mono',monospace;font-size:11px}
+  input[type=color]{width:100%;height:30px;padding:0;border:1px solid #26262e;background:none;cursor:pointer}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:none}
+  input[type=range]{width:100%;-webkit-appearance:none;background:transparent;height:18px;cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:1px;background:#3a3a44}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;
+    background:#c8c4bb;margin-top:-4px;border-radius:50%}
+  input[type=range]::-moz-range-track{height:1px;background:#3a3a44}
+  input[type=range]::-moz-range-thumb{width:9px;height:9px;background:#c8c4bb;border:none;border-radius:50%}
+  .val{float:right;color:#8a8780;font-size:9px;letter-spacing:.1em}
+  .divider{height:1px;background:#1c1c23;margin:0 0 24px}
+
+  #move{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);z-index:12;display:none;
+    padding:16px 32px;border:1px solid #34343c;background:rgba(12,12,15,.75);color:#c8c4bb;
+    font-family:inherit;font-size:11px;letter-spacing:.2em;user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  @media (hover:none){#move{display:block}}
+</style>
+
+<div id="root">
+  <div id="mark">생성형 AI 영상전 · 2026</div>
+
+  <div id="label">
+    <div class="rule"></div>
+    <div id="wt" class="serif"></div>
+    <div id="wa"></div>
+    <div id="wn"></div>
+    <div class="meter">
+      <span>소리</span>
+      <div class="bar"><div id="fill"></div></div>
+    </div>
+  </div>
+
+  <div id="hint">화면을 끌어 둘러보기 · W A S D 이동 · V 시점</div>
+  <button id="move">앞으로</button>
+  <button id="gear">전시 설정</button>
+
+  <aside id="panel">
+    <div class="grp">
+      <h3>관람자 이름</h3>
+      <input type="text" id="nameInput" maxlength="12" placeholder="이름을 입력하세요" />
+    </div>
+
+    <div class="grp">
+      <h3>캐릭터</h3>
+      <div class="row3">
+        <button class="opt" data-body="male">남</button>
+        <button class="opt" data-body="female">여</button>
+        <button class="opt sel" data-body="neutral">중립</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>시점</h3>
+      <div class="row">
+        <button class="opt sel" data-view="first">1인칭</button>
+        <button class="opt" data-view="third">3인칭</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="grp">
+      <h3>전시실 분위기</h3>
+      <div class="row">
+        <button class="opt sel" data-preset="night">심야</button>
+        <button class="opt" data-preset="white">백색 큐브</button>
+        <button class="opt" data-preset="concrete">콘크리트</button>
+        <button class="opt" data-preset="deep">심해</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>벽 색상</h3>
+      <input type="color" id="wallColor" value="#131318" />
+    </div>
+
+    <div class="grp">
+      <h3>바닥 색상</h3>
+      <input type="color" id="floorColor" value="#0a0a0c" />
+    </div>
+
+    <div class="grp">
+      <h3>액자</h3>
+      <div class="row">
+        <button class="opt sel" data-frame="on">표시</button>
+        <button class="opt" data-frame="off">숨김</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h3>재생 반경 <span class="val" id="radiusVal">7.5m</span></h3>
+      <input type="range" id="radius" min="3.5" max="13" step="0.5" value="7.5" />
+    </div>
+  </aside>
+
+  <div id="gate">
+    <div class="eyebrow">Generative Video Exhibition</div>
+    <h1 class="title serif">열 개의 방,<br />열 개의 움직임</h1>
+    <p class="sub">
+      어두운 전시장입니다. 작품에 가까이 다가가면 영상이 깨어나고,
+      멀어지면 다시 한 장의 정지 화면으로 돌아갑니다.
+    </p>
+
+    <div class="signin">
+      <h4>이름</h4>
+      <input type="text" id="gateName" maxlength="12" placeholder="전시장에서 표시될 이름" />
+      <h4 style="margin-top:20px">캐릭터</h4>
+      <div class="row3">
+        <button class="opt" data-gatebody="male">남</button>
+        <button class="opt" data-gatebody="female">여</button>
+        <button class="opt sel" data-gatebody="neutral">중립</button>
+      </div>
+    </div>
+
+    <button class="btn" id="enter">전시장 입장</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   생성형 AI 영상전 — 가상 전시장 프로토타입 v3
+   추가: 캐릭터 타입(남/여/중립) · 이름표 · 입장 시 방명록
+   ============================================================ */
+
+const ROOM = { w: 24, d: 14, h: 4.2 };
+let PLAY_RADIUS = 7.5;
+const FULL_RADIUS = 2.6;
+
+const WORKS = [
+  { id:1,  title:"느린 아침",   artist:"김서연", note:"창가 화분, 바람에 흔들리는 잎",   hue:190, motion:"drift",  wall:"L",  at:-4 },
+  { id:2,  title:"물결의 기억", artist:"박도윤", note:"호수 표면, 카메라 천천히 밀기",   hue:205, motion:"ripple", wall:"L",  at:0 },
+  { id:3,  title:"정오의 방",   artist:"이하늘", note:"빈 방에 드는 빛, 먼지가 떠다님",   hue:38,  motion:"wash",   wall:"L",  at:4 },
+  { id:4,  title:"궤도",       artist:"최은우", note:"회전하는 금속 구, 반사광",         hue:260, motion:"orbit",  wall:"R",  at:-4 },
+  { id:5,  title:"긴 복도",     artist:"정민재", note:"복도 끝으로 걸어가는 인물",       hue:20,  motion:"bands",  wall:"R",  at:0 },
+  { id:6,  title:"숨",         artist:"한지우", note:"안개가 피어오르는 숲, 새소리",     hue:145, motion:"drift",  wall:"R",  at:4 },
+  { id:7,  title:"붉은 신호",   artist:"오시현", note:"빗속 신호등, 번지는 불빛",         hue:5,   motion:"ripple", wall:"B",  at:-3.5 },
+  { id:8,  title:"종이비행기", artist:"윤채원", note:"교실 창밖으로 날아가는 종이",     hue:48,  motion:"orbit",  wall:"B",  at:3.5 },
+  { id:9,  title:"파랑",       artist:"강태오", note:"심해로 가라앉는 빛",               hue:220, motion:"wash",   wall:"P+", at:0 },
+  { id:10, title:"잔상",       artist:"임소율", note:"흔들리는 커튼, 반복되는 그림자",   hue:300, motion:"bands",  wall:"P-", at:0 },
+];
+
+/* ---------- 플레이스홀더 영상 ---------- */
+function drawFrame(ctx, w, h, t, hue, motion) {
+  ctx.fillStyle = `hsl(${hue}, 22%, 7%)`;
+  ctx.fillRect(0, 0, w, h);
+  if (motion === "drift") {
+    for (let i = 0; i < 7; i++) {
+      const x = ((Math.sin(t*0.21+i*1.7)*0.5+0.5)*w*1.2)-w*0.1;
+      const y = ((Math.cos(t*0.17+i*2.3)*0.5+0.5)*h*1.2)-h*0.1;
+      const r = (18+i*7)*(1+Math.sin(t*0.4+i)*0.15);
+      const g = ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0, `hsla(${hue+i*6}, 55%, 62%, 0.5)`);
+      g.addColorStop(1, `hsla(${hue}, 55%, 40%, 0)`);
+      ctx.fillStyle = g; ctx.fillRect(x-r,y-r,r*2,r*2);
+    }
+  } else if (motion === "ripple") {
+    for (let i = 0; i < 6; i++) {
+      const p = (t*0.28+i/6)%1;
+      ctx.beginPath(); ctx.arc(w/2, h/2, p*w*0.62, 0, Math.PI*2);
+      ctx.strokeStyle = `hsla(${hue}, 60%, 68%, ${(1-p)*0.55})`;
+      ctx.lineWidth = 1.5+(1-p)*3; ctx.stroke();
+    }
+  } else if (motion === "wash") {
+    const off = (t*0.09)%1;
+    const g = ctx.createLinearGradient(-w*off,0,w*(2-off),h);
+    g.addColorStop(0, `hsl(${hue}, 30%, 8%)`);
+    g.addColorStop(0.45, `hsl(${hue+14}, 52%, 46%)`);
+    g.addColorStop(1, `hsl(${hue}, 30%, 9%)`);
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  } else if (motion === "orbit") {
+    for (let i = 0; i < 26; i++) {
+      const a = t*0.5+(i/26)*Math.PI*2, rad = h*0.2+(i%5)*8;
+      ctx.beginPath();
+      ctx.arc(w/2+Math.cos(a)*rad*1.9, h/2+Math.sin(a)*rad, 1.6+(i%3), 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${hue+(i%7)*4}, 60%, 70%, ${0.35+(i%4)*0.12})`;
+      ctx.fill();
+    }
+  } else {
+    for (let i = 0; i < 9; i++) {
+      const y = ((t*14+i*26)%(h+40))-20;
+      ctx.fillStyle = `hsla(${hue+i*3}, 48%, ${34+(i%4)*9}%, 0.5)`;
+      ctx.fillRect(0, y, w, 5+Math.sin(t*0.7+i)*3.5);
+    }
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.028)";
+  for (let i = 0; i < 40; i++) ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1);
+}
+
+function radialTexture(hardness) {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(128,128,hardness,128,128,128);
+  g.addColorStop(0,"rgba(255,255,255,1)");
+  g.addColorStop(0.5,"rgba(255,255,255,0.30)");
+  g.addColorStop(1,"rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+}
+
+function makeWallTexture(hex) {
+  const base = new THREE.Color(hex), hsl = {}; base.getHSL(hsl);
+  const shade = (d) => "#" + new THREE.Color().setHSL(hsl.h, hsl.s, Math.max(0, Math.min(1, hsl.l+d))).getHexString();
+  const c = document.createElement("canvas"); c.width = 4; c.height = 256;
+  const x = c.getContext("2d");
+  const g = x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0, shade(-0.035)); g.addColorStop(0.55, shade(0.012)); g.addColorStop(1, shade(-0.018));
+  x.fillStyle = g; x.fillRect(0,0,4,256);
+  return new THREE.CanvasTexture(c);
+}
+
+const lum = (hex) => { const c = new THREE.Color(hex); return 0.2126*c.r+0.7152*c.g+0.0722*c.b; };
+const shift = (hex, d) => {
+  const c = new THREE.Color(hex), hsl = {}; c.getHSL(hsl);
+  return "#" + new THREE.Color().setHSL(hsl.h, hsl.s, Math.max(0, Math.min(1, hsl.l+d))).getHexString();
+};
+
+/* ---------- 씬 ---------- */
+const root = document.getElementById("root");
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#08080a");
+scene.fog = new THREE.Fog("#08080a", 9, 32);
+
+const camera = new THREE.PerspectiveCamera(66, innerWidth/innerHeight, 0.1, 140);
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+root.appendChild(renderer.domElement);
+renderer.domElement.style.position = "absolute";
+renderer.domElement.style.inset = "0";
+addEventListener("resize", () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+});
+
+const wallMat  = new THREE.MeshBasicMaterial({ map: makeWallTexture("#131318"), side: THREE.DoubleSide });
+const floorMat = new THREE.MeshBasicMaterial({ color:"#0a0a0c" });
+const ceilMat  = new THREE.MeshBasicMaterial({ color:"#050506" });
+const partMat  = new THREE.MeshBasicMaterial({ color:"#131318" });
+
+const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), floorMat);
+floorMesh.rotation.x = -Math.PI/2; scene.add(floorMesh);
+const ceilMesh = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), ceilMat);
+ceilMesh.rotation.x = Math.PI/2; ceilMesh.position.y = ROOM.h; scene.add(ceilMesh);
+
+[[ROOM.w,[0,ROOM.h/2,-ROOM.d/2],0],
+ [ROOM.w,[0,ROOM.h/2,ROOM.d/2],Math.PI],
+ [ROOM.d,[-ROOM.w/2,ROOM.h/2,0],Math.PI/2],
+ [ROOM.d,[ROOM.w/2,ROOM.h/2,0],-Math.PI/2]].forEach(([wide,p,ry]) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(wide, ROOM.h), wallMat);
+  m.position.set(p[0],p[1],p[2]); m.rotation.y = ry; scene.add(m);
+});
+
+const part = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.2, 5.2), partMat);
+part.position.set(0, 1.6, 0); scene.add(part);
+
+/* ---------- 작품 ---------- */
+const glowTex = radialTexture(6);
+const panels = [], frames = [];
+
+WORKS.forEach(w => {
+  const isP = w.wall === "P+" || w.wall === "P-";
+  const pw = isP ? 1.9 : 2.5, ph = pw*(9/16);
+  let pos, ry;
+  if (w.wall === "L")       { pos = [-ROOM.w/2+0.02, 1.78, w.at]; ry =  Math.PI/2; }
+  else if (w.wall === "R")  { pos = [ ROOM.w/2-0.02, 1.78, w.at]; ry = -Math.PI/2; }
+  else if (w.wall === "B")  { pos = [w.at, 1.78, -ROOM.d/2+0.02]; ry = 0; }
+  else if (w.wall === "P+") { pos = [ 0.26, 1.72, w.at]; ry =  Math.PI/2; }
+  else                      { pos = [-0.26, 1.72, w.at]; ry = -Math.PI/2; }
+
+  const group = new THREE.Group();
+  group.position.set(pos[0], pos[1], pos[2]);
+  group.rotation.y = ry; scene.add(group);
+  const color = new THREE.Color().setHSL(w.hue/360, 0.6, 0.5);
+
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(pw*2.6, ph*3.4),
+    new THREE.MeshBasicMaterial({ map:glowTex, transparent:true, blending:THREE.AdditiveBlending,
+      depthWrite:false, opacity:0, color }));
+  halo.position.z = 0.012; group.add(halo);
+
+  const frame = new THREE.Mesh(new THREE.PlaneGeometry(pw+0.09, ph+0.09),
+    new THREE.MeshBasicMaterial({ color:"#26262c" }));
+  frame.position.z = 0.02; group.add(frame); frames.push(frame);
+
+  const cv = document.createElement("canvas"); cv.width = 320; cv.height = 180;
+  const ctx = cv.getContext("2d");
+  drawFrame(ctx, 320, 180, 0, w.hue, w.motion);
+  const tex = new THREE.CanvasTexture(cv);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshBasicMaterial({ map:tex }));
+  screen.position.z = 0.026; group.add(screen);
+
+  const n = new THREE.Vector3(0,0,1).applyQuaternion(group.quaternion);
+  const spill = new THREE.Mesh(new THREE.PlaneGeometry(pw*2.4, pw*2.4),
+    new THREE.MeshBasicMaterial({ map:glowTex, transparent:true, blending:THREE.AdditiveBlending,
+      depthWrite:false, opacity:0, color: color.clone() }));
+  spill.rotation.x = -Math.PI/2;
+  spill.position.set(pos[0]+n.x*1.5, 0.015, pos[2]+n.z*1.5);
+  scene.add(spill);
+
+  panels.push({ work:w, group, ctx, tex, halo, spill, normal:n, gain:0, t:0, last:0, color });
+});
+
+/* ============================================================
+   관람자 아바타
+   조명이 없는 씬이라, 아바타는 가장 가까운 작품의 색을 입습니다.
+   체형은 실루엣만으로 구분되도록 어깨/골반 비율과 머리 모양을 씁니다.
+   ============================================================ */
+const BODY = {
+  male:    { scale:1.00, shoulder:0.186, hip:0.148, torso:0.62, armX:0.226, armR:0.050, legX:0.090, legR:0.072, hair:"short", skirt:false },
+  female:  { scale:0.95, shoulder:0.148, hip:0.182, torso:0.58, armX:0.184, armR:0.042, legX:0.074, legR:0.062, hair:"long",  skirt:true  },
+  neutral: { scale:0.98, shoulder:0.168, hip:0.164, torso:0.60, armX:0.206, armR:0.046, legX:0.083, legR:0.067, hair:"mid",   skirt:false },
+};
+
+const avatar = new THREE.Group();
+avatar.visible = false;
+scene.add(avatar);
+
+const skinMat = new THREE.MeshBasicMaterial({ color:"#3a3a44" });
+const hairMat = new THREE.MeshBasicMaterial({ color:"#22222a" });
+const baseTone = new THREE.Color("#3a3a44");
+const rig = { armL:null, armR:null, legL:null, legR:null, torso:null };
+
+const shadowTex = radialTexture(2);
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95),
+  new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, opacity:0.5, color:"#000000", depthWrite:false }));
+shadow.rotation.x = -Math.PI/2; shadow.position.y = 0.012;
+
+/* 이름표 — 스프라이트라 항상 카메라를 향합니다 */
+const tagCanvas = document.createElement("canvas");
+tagCanvas.width = 512; tagCanvas.height = 140;
+const tagTex = new THREE.CanvasTexture(tagCanvas);
+const nameTag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent:true, depthWrite:false }));
+nameTag.scale.set(1.35, 0.37, 1);
+nameTag.visible = false;
+
+let visitorName = "";
+function drawNameTag(text) {
+  const c = tagCanvas, x = c.getContext("2d");
+  x.clearRect(0, 0, c.width, c.height);
+  if (!text) { tagTex.needsUpdate = true; nameTag.visible = false; return; }
+
+  x.font = '500 46px "Noto Serif KR", sans-serif';
+  x.textAlign = "center"; x.textBaseline = "middle";
+  const tw = Math.min(x.measureText(text).width, 400);
+  const pad = 34, bw = tw + pad*2, bh = 76, bx = (c.width-bw)/2, by = (c.height-bh)/2;
+
+  x.fillStyle = "rgba(10,10,13,0.72)";
+  x.fillRect(bx, by, bw, bh);
+  x.strokeStyle = "rgba(200,196,187,0.34)"; x.lineWidth = 1.5;
+  x.strokeRect(bx+0.75, by+0.75, bw-1.5, bh-1.5);
+  // 왼쪽 짧은 선 — 작품 라벨과 같은 표기 규칙
+  x.fillStyle = "rgba(200,196,187,0.55)";
+  x.fillRect(bx+16, c.height/2-0.5, 12, 1);
+
+  x.fillStyle = "#e8e6e1";
+  x.fillText(text, c.width/2 + 10, c.height/2 + 2, 400);
+  tagTex.needsUpdate = true;
+  nameTag.visible = true;
+}
+
+/* 아바타 조립 */
+let bodyType = "neutral";
+function buildAvatar(type) {
+  bodyType = type;
+  const b = BODY[type];
+
+  // 이전 부품 정리
+  for (let i = avatar.children.length - 1; i >= 0; i--) {
+    const ch = avatar.children[i];
+    avatar.remove(ch);
+    ch.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  }
+
+  const hipY = 0.78, torsoTop = hipY + b.torso;
+  const headR = 0.113, headY = torsoTop + 0.155;
+
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(b.shoulder, b.hip, b.torso, 16), skinMat);
+  torso.position.y = hipY + b.torso/2; avatar.add(torso); rig.torso = torso;
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.068, 0.09, 10), skinMat);
+  neck.position.y = torsoTop + 0.035; avatar.add(neck);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 18, 14), skinMat);
+  head.position.y = headY; avatar.add(head);
+
+  // 머리 모양 — 실루엣 구분의 핵심
+  const cap = new THREE.Mesh(
+    new THREE.SphereGeometry(headR*1.07, 18, 12, 0, Math.PI*2, 0, Math.PI*0.62), hairMat);
+  cap.position.y = headY + 0.008; avatar.add(cap);
+
+  if (b.hair === "long") {
+    const back = new THREE.Mesh(new THREE.CylinderGeometry(headR*0.98, headR*1.12, 0.36, 14), hairMat);
+    back.position.set(0, headY - 0.20, -0.034); avatar.add(back);
+  } else if (b.hair === "mid") {
+    const back = new THREE.Mesh(new THREE.CylinderGeometry(headR*0.94, headR*1.0, 0.15, 14), hairMat);
+    back.position.set(0, headY - 0.115, -0.028); avatar.add(back);
+  }
+
+  if (b.skirt) {
+    const skirt = new THREE.Mesh(
+      new THREE.CylinderGeometry(b.hip*0.96, b.hip*1.82, 0.30, 16, 1, true), skinMat);
+    skirt.material.side = THREE.DoubleSide;
+    skirt.position.y = hipY - 0.06; avatar.add(skirt);
+  }
+
+  const mkLimb = (r1, r2, len, x, y) => {
+    const pivot = new THREE.Group(); pivot.position.set(x, y, 0);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, 10), skinMat);
+    m.position.y = -len/2; pivot.add(m); avatar.add(pivot);
+    return pivot;
+  };
+  rig.armL = mkLimb(b.armR, b.armR*0.82, 0.54, -b.armX, torsoTop - 0.06);
+  rig.armR = mkLimb(b.armR, b.armR*0.82, 0.54,  b.armX, torsoTop - 0.06);
+  rig.legL = mkLimb(b.legR, b.legR*0.8,  0.76, -b.legX, hipY);
+  rig.legR = mkLimb(b.legR, b.legR*0.8,  0.76,  b.legX, hipY);
+
+  avatar.add(shadow);
+  nameTag.position.y = headY + 0.34;
+  avatar.add(nameTag);
+  avatar.scale.setScalar(b.scale);
+}
+buildAvatar("neutral");
+
+/* ---------- 상태 ---------- */
+const player = { pos: new THREE.Vector3(0, 0, 6), yaw: Math.PI, pitch: 0, phase: 0 };
+const vel = new THREE.Vector3();
+let viewMode = "first";
+const EYE = 1.62;
+
+/* ---------- 테마 ---------- */
+const PRESETS = {
+  night:    { wall:"#131318", floor:"#0a0a0c" },
+  white:    { wall:"#e8e6e1", floor:"#d2cfc8" },
+  concrete: { wall:"#55534e", floor:"#3a3835" },
+  deep:     { wall:"#10202e", floor:"#0a141c" },
+};
+let glowScale = 1;
+
+function applyTheme(wallHex, floorHex) {
+  const light = lum(wallHex) > 0.42;
+  wallMat.map.dispose();
+  wallMat.map = makeWallTexture(wallHex);
+  wallMat.needsUpdate = true;
+
+  floorMat.color.set(floorHex);
+  ceilMat.color.set(shift(wallHex, light ? 0.03 : -0.025));
+  partMat.color.set(shift(wallHex, light ? -0.04 : 0.006));
+
+  const bg = shift(wallHex, light ? -0.04 : -0.03);
+  scene.background.set(bg); scene.fog.color.set(bg);
+
+  glowScale = light ? 0.34 : 1;
+  frames.forEach(f => f.material.color.set(light ? shift(wallHex, -0.55) : shift(wallHex, 0.09)));
+  baseTone.set(light ? "#2f2f36" : "#3a3a44");
+  shadow.material.opacity = light ? 0.28 : 0.5;
+  root.classList.toggle("light", light);
+}
+applyTheme(PRESETS.night.wall, PRESETS.night.floor);
+
+/* ---------- 조작 ---------- */
+const keys = {};
+let dragging = false, lastTouch = null, forward = false;
+const typing = () => ["INPUT","TEXTAREA"].includes(document.activeElement?.tagName);
+
+addEventListener("keydown", e => {
+  if (typing()) return;                       // 이름 입력 중에는 이동 금지
+  keys[e.code] = true;
+  if (e.code === "KeyV") setView(viewMode === "first" ? "third" : "first");
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+});
+addEventListener("keyup", e => { keys[e.code] = false; });
+
+function look(dx, dy) {
+  player.yaw -= dx * 0.0024;
+  player.pitch = Math.max(-1.05, Math.min(1.05, player.pitch - dy * 0.0024));
+}
+const cvs = renderer.domElement;
+cvs.addEventListener("mousedown", () => { dragging = true; });
+addEventListener("mouseup", () => { dragging = false; });
+cvs.addEventListener("mousemove", e => {
+  if (document.pointerLockElement === cvs) look(e.movementX, e.movementY);
+  else if (dragging) look(e.movementX || 0, e.movementY || 0);
+});
+document.addEventListener("pointerlockchange", () => {
+  document.getElementById("hint").textContent =
+    document.pointerLockElement === cvs
+      ? "W A S D 이동 · 마우스 시선 · V 시점 · ESC 커서"
+      : "화면을 끌어 둘러보기 · W A S D 이동 · V 시점";
+});
+cvs.addEventListener("touchstart", e => { lastTouch = e.touches[0]; }, { passive:true });
+cvs.addEventListener("touchmove", e => {
+  if (!lastTouch) return;
+  const t = e.touches[0];
+  look((t.clientX-lastTouch.clientX)*2.2, (t.clientY-lastTouch.clientY)*2.2);
+  lastTouch = t;
+}, { passive:true });
+cvs.addEventListener("touchend", () => { lastTouch = null; });
+
+const moveBtn = document.getElementById("move");
+["touchstart","mousedown"].forEach(ev => moveBtn.addEventListener(ev, e => { e.preventDefault(); forward = true; }));
+["touchend","mouseup","touchcancel"].forEach(ev => moveBtn.addEventListener(ev, () => { forward = false; }));
+
+/* ---------- UI ---------- */
+const panel = document.getElementById("panel");
+const nameInput = document.getElementById("nameInput");
+const gateName = document.getElementById("gateName");
+
+document.getElementById("gear").addEventListener("click", () => {
+  panel.classList.toggle("on");
+  if (panel.classList.contains("on") && document.pointerLockElement) document.exitPointerLock();
+});
+
+function selectIn(attr, value) {
+  document.querySelectorAll(`[data-${attr}]`).forEach(b =>
+    b.classList.toggle("sel", b.dataset[attr] === value));
+}
+
+function setView(mode) {
+  viewMode = mode;
+  avatar.visible = mode === "third";
+  selectIn("view", mode);
+}
+document.querySelectorAll("[data-view]").forEach(b =>
+  b.addEventListener("click", () => setView(b.dataset.view)));
+
+function setBody(type) {
+  buildAvatar(type);
+  drawNameTag(visitorName);
+  selectIn("body", type); selectIn("gatebody", type);
+  // 바꾼 결과가 보이도록 3인칭으로 넘겨줍니다
+  if (viewMode === "first" && !document.getElementById("gate").classList.contains("hide")===false) {}
+  if (viewMode === "first" && document.getElementById("gate").classList.contains("hide")) setView("third");
+}
+document.querySelectorAll("[data-body]").forEach(b =>
+  b.addEventListener("click", () => setBody(b.dataset.body)));
+document.querySelectorAll("[data-gatebody]").forEach(b =>
+  b.addEventListener("click", () => { buildAvatar(b.dataset.body); selectIn("gatebody", b.dataset.body); selectIn("body", b.dataset.body); }));
+
+function setName(v) {
+  visitorName = (v || "").trim();
+  drawNameTag(visitorName);
+}
+nameInput.addEventListener("input", () => {
+  setName(nameInput.value);
+  gateName.value = nameInput.value;
+  if (viewMode === "first") setView("third");
+});
+gateName.addEventListener("input", () => {
+  setName(gateName.value);
+  nameInput.value = gateName.value;
+});
+
+document.getElementById("enter").addEventListener("click", () => {
+  setName(gateName.value);
+  document.getElementById("gate").classList.add("hide");
+  if (cvs.requestPointerLock) { try { cvs.requestPointerLock(); } catch (e) {} }
+});
+gateName.addEventListener("keydown", e => { if (e.code === "Enter") document.getElementById("enter").click(); });
+
+const wallInput = document.getElementById("wallColor");
+const floorInput = document.getElementById("floorColor");
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+  const p = PRESETS[b.dataset.preset];
+  wallInput.value = p.wall; floorInput.value = p.floor;
+  applyTheme(p.wall, p.floor); selectIn("preset", b.dataset.preset);
+}));
+const onColor = () => { applyTheme(wallInput.value, floorInput.value); selectIn("preset", "__none__"); };
+wallInput.addEventListener("input", onColor);
+floorInput.addEventListener("input", onColor);
+
+document.querySelectorAll("[data-frame]").forEach(b => b.addEventListener("click", () => {
+  frames.forEach(f => f.visible = b.dataset.frame === "on");
+  selectIn("frame", b.dataset.frame);
+}));
+
+const radiusInput = document.getElementById("radius"), radiusVal = document.getElementById("radiusVal");
+radiusInput.addEventListener("input", () => {
+  PLAY_RADIUS = parseFloat(radiusInput.value);
+  radiusVal.textContent = PLAY_RADIUS.toFixed(1) + "m";
+});
+
+// 폰트가 로드된 뒤 이름표를 다시 그립니다
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawNameTag(visitorName));
+
+/* ---------- 루프 ---------- */
+const clock = new THREE.Clock();
+const labelEl = document.getElementById("label");
+const wtEl = document.getElementById("wt"), waEl = document.getElementById("wa");
+const wnEl = document.getElementById("wn"), fillEl = document.getElementById("fill");
+const eye = new THREE.Vector3();
+let reportedId = null, reportedGain = 0;
+
+function tick() {
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const now = clock.elapsedTime;
+
+  const dir = new THREE.Vector3();
+  if (keys.KeyW || keys.ArrowUp || forward) dir.z -= 1;
+  if (keys.KeyS || keys.ArrowDown) dir.z += 1;
+  if (keys.KeyA || keys.ArrowLeft) dir.x -= 1;
+  if (keys.KeyD || keys.ArrowRight) dir.x += 1;
+  if (dir.lengthSq() > 0) {
+    dir.normalize().applyAxisAngle(new THREE.Vector3(0,1,0), player.yaw);
+    vel.addScaledVector(dir, 26*dt);
+  }
+  vel.multiplyScalar(Math.pow(0.0022, dt));
+  player.pos.addScaledVector(vel, dt);
+
+  const lx = ROOM.w/2-0.7, lz = ROOM.d/2-0.7;
+  player.pos.x = Math.max(-lx, Math.min(lx, player.pos.x));
+  player.pos.z = Math.max(-lz, Math.min(lz, player.pos.z));
+  if (Math.abs(player.pos.x) < 0.95 && Math.abs(player.pos.z) < 3.1) {
+    player.pos.x = player.pos.x >= 0 ? 0.95 : -0.95;
+  }
+  player.pos.y = 0;
+
+  const speed = Math.min(vel.length(), 6);
+  if (viewMode === "third") {
+    avatar.position.copy(player.pos);
+    const face = speed > 0.35 ? Math.atan2(vel.x, vel.z) : player.yaw + Math.PI;
+    let diff = face - avatar.rotation.y;
+    while (diff > Math.PI) diff -= Math.PI*2;
+    while (diff < -Math.PI) diff += Math.PI*2;
+    avatar.rotation.y += diff * Math.min(1, dt*9);
+
+    player.phase += speed * dt * 2.6;
+    const sw = Math.sin(player.phase) * Math.min(speed/3.2, 1) * 0.55;
+    if (rig.legL) {
+      rig.legL.rotation.x =  sw;      rig.legR.rotation.x = -sw;
+      rig.armR.rotation.x =  sw*0.65; rig.armL.rotation.x = -sw*0.65;
+      rig.torso.position.y = (0.78 + BODY[bodyType].torso/2)
+        + Math.abs(Math.sin(player.phase)) * 0.014 * Math.min(speed/3, 1);
+    }
+    // 이름표는 아바타 회전과 무관하게 항상 카메라를 향합니다
+    nameTag.rotation.z = 0;
+  }
+
+  eye.set(player.pos.x, EYE, player.pos.z);
+  if (viewMode === "first") {
+    camera.rotation.order = "YXZ";
+    camera.position.copy(eye);
+    camera.rotation.set(player.pitch, player.yaw, 0);
+  } else {
+    const dist = 3.4, target = new THREE.Vector3(player.pos.x, 1.24, player.pos.z);
+    const off = new THREE.Vector3(
+      Math.sin(player.yaw)*dist*Math.cos(player.pitch),
+      1.05 + Math.sin(player.pitch)*dist,
+      Math.cos(player.yaw)*dist*Math.cos(player.pitch)
+    );
+    const cp = target.clone().add(off);
+    cp.x = Math.max(-lx+0.2, Math.min(lx-0.2, cp.x));
+    cp.z = Math.max(-lz+0.2, Math.min(lz-0.2, cp.z));
+    cp.y = Math.max(0.5, Math.min(ROOM.h-0.3, cp.y));
+    camera.position.lerp(cp, Math.min(1, dt*12));
+    camera.lookAt(target);
+  }
+
+  /* 근접 판정 — 기준은 항상 관람자 위치 */
+  let best = null;
+  for (const p of panels) {
+    const d = eye.distanceTo(p.group.position);
+    const facing = eye.clone().sub(p.group.position).dot(p.normal) > 0;
+    const target = facing ? Math.max(0, Math.min(1, (PLAY_RADIUS-d)/(PLAY_RADIUS-FULL_RADIUS))) : 0;
+    p.gain += (target - p.gain) * Math.min(1, dt*4);
+    if (!best || p.gain > best.gain) best = p;
+
+    p.halo.material.opacity  = p.gain * 0.5 * glowScale;
+    p.spill.material.opacity = p.gain * 0.34 * glowScale;
+
+    if (p.gain > 0.03 && now - p.last > 1/24) {
+      p.t += now - p.last; p.last = now;
+      drawFrame(p.ctx, 320, 180, p.t, p.work.hue, p.work.motion);
+      p.tex.needsUpdate = true;
+    } else if (p.gain <= 0.03) p.last = now;
+  }
+
+  if (best) {
+    skinMat.color.copy(baseTone).lerp(best.color, best.gain*0.62);
+    hairMat.color.copy(baseTone).multiplyScalar(0.55).lerp(best.color, best.gain*0.34);
+  }
+
+  const id = best && best.gain > 0.04 ? best.work.id : null;
+  const gain = best ? best.gain : 0;
+  if (id !== reportedId) {
+    reportedId = id;
+    if (id) {
+      wtEl.textContent = best.work.title;
+      waEl.textContent = best.work.artist;
+      wnEl.textContent = best.work.note;
+      labelEl.classList.add("on");
+    } else labelEl.classList.remove("on");
+  }
+  if (Math.abs(gain - reportedGain) > 0.03) {
+    reportedGain = gain;
+    fillEl.style.width = Math.round(gain*100) + "%";
+  }
+
+  renderer.render(scene, camera);
+}
+tick();
+</script>

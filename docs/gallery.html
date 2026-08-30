@@ -1,0 +1,389 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>생성형 AI 영상전 · 가상 전시장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#08080a}
+  #root{position:relative;width:100vw;height:100vh;background:#08080a;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;color:#e8e6e1}
+  canvas{display:block}
+  .serif{font-family:'Noto Serif KR',serif}
+
+  #gate{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:#08080a;text-align:center;padding:24px}
+  #gate.hide{display:none}
+  .eyebrow{font-size:11px;letter-spacing:.34em;color:#7d7a73;text-transform:uppercase;margin-bottom:26px}
+  .title{font-size:clamp(30px,5.4vw,52px);font-weight:300;letter-spacing:.06em;line-height:1.34}
+  .sub{font-size:13px;color:#8a8780;line-height:1.95;margin-top:22px;max-width:350px}
+  .btn{margin-top:38px;padding:13px 34px;background:transparent;color:#e8e6e1;cursor:pointer;
+    border:1px solid #3a3a42;font-family:inherit;font-size:12px;letter-spacing:.24em;
+    transition:border-color .25s,background .25s}
+  .btn:hover{border-color:#8a8780;background:rgba(255,255,255,.05)}
+  .btn:focus-visible{outline:2px solid #8a8780;outline-offset:3px}
+
+  #mark{position:absolute;top:22px;left:24px;z-index:10;font-size:10px;letter-spacing:.26em;
+    color:#5c5a55;text-transform:uppercase;pointer-events:none}
+  #hint{position:absolute;bottom:22px;right:24px;z-index:10;font-size:10px;letter-spacing:.1em;
+    color:#5c5a55;text-align:right;line-height:2;pointer-events:none}
+
+  #label{position:absolute;bottom:22px;left:24px;z-index:10;max-width:min(360px,72vw);
+    pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s}
+  #label.on{opacity:1;transform:translateY(0)}
+  .rule{width:26px;height:1px;background:#4a4a52;margin-bottom:14px}
+  #wt{font-size:20px;font-weight:500;letter-spacing:.03em}
+  #wa{font-size:12px;color:#a8a49c;margin-top:5px;letter-spacing:.06em}
+  #wn{font-size:11px;color:#6e6b65;margin-top:12px;line-height:1.7}
+  .meter{display:flex;align-items:center;gap:9px;margin-top:14px}
+  .meter span{font-size:9px;letter-spacing:.2em;color:#5c5a55}
+  .bar{width:78px;height:2px;background:#232329}
+  #fill{height:100%;width:0%;background:#c8c4bb;transition:width .18s linear}
+
+  #move{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);z-index:12;display:none;
+    padding:16px 32px;border:1px solid #34343c;background:rgba(12,12,15,.75);color:#c8c4bb;
+    font-family:inherit;font-size:11px;letter-spacing:.2em;user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  @media (hover:none){#move{display:block}}
+</style>
+
+<div id="root">
+  <div id="mark">생성형 AI 영상전 · 2026</div>
+
+  <div id="label">
+    <div class="rule"></div>
+    <div id="wt" class="serif"></div>
+    <div id="wa"></div>
+    <div id="wn"></div>
+    <div class="meter">
+      <span>소리</span>
+      <div class="bar"><div id="fill"></div></div>
+    </div>
+  </div>
+
+  <div id="hint">화면을 끌어 둘러보기 · W A S D 이동</div>
+  <button id="move">앞으로</button>
+
+  <div id="gate">
+    <div class="eyebrow">Generative Video Exhibition</div>
+    <h1 class="title serif">열 개의 방,<br />열 개의 움직임</h1>
+    <p class="sub">
+      어두운 전시장입니다. 작품에 가까이 다가가면 영상이 깨어나고,
+      멀어지면 다시 한 장의 정지 화면으로 돌아갑니다.
+      소리는 가장 가까운 한 작품에서만 납니다.
+    </p>
+    <button class="btn" id="enter">전시장 입장</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   생성형 AI 영상전 — 가상 전시장 프로토타입
+   영상은 캔버스로 그린 플레이스홀더입니다.
+   실제 학생 영상 연결은 Gallery.jsx (R3F 버전) 참고.
+   ============================================================ */
+
+const ROOM = { w: 24, d: 14, h: 4.2 };
+const PLAY_RADIUS = 7.5;   // 이 안에 들어오면 재생
+const FULL_RADIUS  = 2.6;  // 이 안이면 소리 100%
+
+const WORKS = [
+  { id:1,  title:"느린 아침",   artist:"김서연", note:"창가 화분, 바람에 흔들리는 잎",   hue:190, motion:"drift",  wall:"L",  at:-4 },
+  { id:2,  title:"물결의 기억", artist:"박도윤", note:"호수 표면, 카메라 천천히 밀기",   hue:205, motion:"ripple", wall:"L",  at:0 },
+  { id:3,  title:"정오의 방",   artist:"이하늘", note:"빈 방에 드는 빛, 먼지가 떠다님",   hue:38,  motion:"wash",   wall:"L",  at:4 },
+  { id:4,  title:"궤도",       artist:"최은우", note:"회전하는 금속 구, 반사광",         hue:260, motion:"orbit",  wall:"R",  at:-4 },
+  { id:5,  title:"긴 복도",     artist:"정민재", note:"복도 끝으로 걸어가는 인물",       hue:20,  motion:"bands",  wall:"R",  at:0 },
+  { id:6,  title:"숨",         artist:"한지우", note:"안개가 피어오르는 숲, 새소리",     hue:145, motion:"drift",  wall:"R",  at:4 },
+  { id:7,  title:"붉은 신호",   artist:"오시현", note:"빗속 신호등, 번지는 불빛",         hue:5,   motion:"ripple", wall:"B",  at:-3.5 },
+  { id:8,  title:"종이비행기", artist:"윤채원", note:"교실 창밖으로 날아가는 종이",     hue:48,  motion:"orbit",  wall:"B",  at:3.5 },
+  { id:9,  title:"파랑",       artist:"강태오", note:"심해로 가라앉는 빛",               hue:220, motion:"wash",   wall:"P+", at:0 },
+  { id:10, title:"잔상",       artist:"임소율", note:"흔들리는 커튼, 반복되는 그림자",   hue:300, motion:"bands",  wall:"P-", at:0 },
+];
+
+/* ---------- 플레이스홀더 영상 ---------- */
+function drawFrame(ctx, w, h, t, hue, motion) {
+  ctx.fillStyle = `hsl(${hue}, 22%, 7%)`;
+  ctx.fillRect(0, 0, w, h);
+
+  if (motion === "drift") {
+    for (let i = 0; i < 7; i++) {
+      const x = ((Math.sin(t*0.21 + i*1.7)*0.5+0.5) * w*1.2) - w*0.1;
+      const y = ((Math.cos(t*0.17 + i*2.3)*0.5+0.5) * h*1.2) - h*0.1;
+      const r = (18 + i*7) * (1 + Math.sin(t*0.4 + i)*0.15);
+      const g = ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0, `hsla(${hue+i*6}, 55%, 62%, 0.5)`);
+      g.addColorStop(1, `hsla(${hue}, 55%, 40%, 0)`);
+      ctx.fillStyle = g; ctx.fillRect(x-r, y-r, r*2, r*2);
+    }
+  } else if (motion === "ripple") {
+    const cx = w/2, cy = h/2;
+    for (let i = 0; i < 6; i++) {
+      const p = (t*0.28 + i/6) % 1;
+      ctx.beginPath(); ctx.arc(cx, cy, p*w*0.62, 0, Math.PI*2);
+      ctx.strokeStyle = `hsla(${hue}, 60%, 68%, ${(1-p)*0.55})`;
+      ctx.lineWidth = 1.5 + (1-p)*3; ctx.stroke();
+    }
+  } else if (motion === "wash") {
+    const off = (t*0.09) % 1;
+    const g = ctx.createLinearGradient(-w*off, 0, w*(2-off), h);
+    g.addColorStop(0, `hsl(${hue}, 30%, 8%)`);
+    g.addColorStop(0.45, `hsl(${hue+14}, 52%, 46%)`);
+    g.addColorStop(1, `hsl(${hue}, 30%, 9%)`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  } else if (motion === "orbit") {
+    const cx = w/2, cy = h/2;
+    for (let i = 0; i < 26; i++) {
+      const a = t*0.5 + (i/26)*Math.PI*2;
+      const rad = h*0.2 + (i%5)*8;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a)*rad*1.9, cy + Math.sin(a)*rad, 1.6 + (i%3), 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${hue + (i%7)*4}, 60%, 70%, ${0.35 + (i%4)*0.12})`;
+      ctx.fill();
+    }
+  } else {
+    for (let i = 0; i < 9; i++) {
+      const y = ((t*14 + i*26) % (h+40)) - 20;
+      ctx.fillStyle = `hsla(${hue+i*3}, 48%, ${34 + (i%4)*9}%, 0.5)`;
+      ctx.fillRect(0, y, w, 5 + Math.sin(t*0.7+i)*3.5);
+    }
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.028)";
+  for (let i = 0; i < 40; i++) ctx.fillRect(Math.random()*w, Math.random()*h, 1, 1);
+}
+
+function radialTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const x = c.getContext("2d");
+  const g = x.createRadialGradient(128,128,6,128,128,128);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.5, "rgba(255,255,255,0.30)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+}
+function wallTexture() {
+  const c = document.createElement("canvas"); c.width = 4; c.height = 256;
+  const x = c.getContext("2d");
+  const g = x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0, "#0a0a0d"); g.addColorStop(0.55, "#141419"); g.addColorStop(1, "#0d0d11");
+  x.fillStyle = g; x.fillRect(0,0,4,256);
+  return new THREE.CanvasTexture(c);
+}
+
+/* ---------- 씬 ---------- */
+const root = document.getElementById("root");
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#08080a");
+scene.fog = new THREE.Fog("#08080a", 9, 30);
+
+const camera = new THREE.PerspectiveCamera(66, innerWidth/innerHeight, 0.1, 120);
+camera.position.set(0, 1.62, 6);
+camera.rotation.order = "YXZ";
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+root.appendChild(renderer.domElement);
+renderer.domElement.style.position = "absolute";
+renderer.domElement.style.inset = "0";
+
+addEventListener("resize", () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+/* 공간 */
+const wallMat = new THREE.MeshBasicMaterial({ map: wallTexture(), side: THREE.DoubleSide });
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), new THREE.MeshBasicMaterial({ color:"#0a0a0c" }));
+floor.rotation.x = -Math.PI/2; scene.add(floor);
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), new THREE.MeshBasicMaterial({ color:"#050506" }));
+ceil.rotation.x = Math.PI/2; ceil.position.y = ROOM.h; scene.add(ceil);
+
+[[ROOM.w,[0,ROOM.h/2,-ROOM.d/2],0],
+ [ROOM.w,[0,ROOM.h/2,ROOM.d/2],Math.PI],
+ [ROOM.d,[-ROOM.w/2,ROOM.h/2,0],Math.PI/2],
+ [ROOM.d,[ROOM.w/2,ROOM.h/2,0],-Math.PI/2]].forEach(([wide,p,ry]) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(wide, ROOM.h), wallMat);
+  m.position.set(p[0],p[1],p[2]); m.rotation.y = ry; scene.add(m);
+});
+
+// 가운데 가벽 — 한 번에 다 보이지 않게 동선을 꺾어줍니다
+const part = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.2, 5.2), new THREE.MeshBasicMaterial({ color:"#131318" }));
+part.position.set(0, 1.6, 0); scene.add(part);
+
+/* 작품 */
+const glowTex = radialTexture();
+const panels = [];
+
+WORKS.forEach(w => {
+  const isP = w.wall === "P+" || w.wall === "P-";
+  const pw = isP ? 1.9 : 2.5, ph = pw * (9/16);
+  let pos, ry;
+  if (w.wall === "L")       { pos = [-ROOM.w/2 + 0.02, 1.78, w.at]; ry =  Math.PI/2; }
+  else if (w.wall === "R")  { pos = [ ROOM.w/2 - 0.02, 1.78, w.at]; ry = -Math.PI/2; }
+  else if (w.wall === "B")  { pos = [w.at, 1.78, -ROOM.d/2 + 0.02]; ry = 0; }
+  else if (w.wall === "P+") { pos = [ 0.26, 1.72, w.at]; ry =  Math.PI/2; }
+  else                      { pos = [-0.26, 1.72, w.at]; ry = -Math.PI/2; }
+
+  const group = new THREE.Group();
+  group.position.set(pos[0], pos[1], pos[2]);
+  group.rotation.y = ry;
+  scene.add(group);
+
+  const color = new THREE.Color().setHSL(w.hue/360, 0.6, 0.5);
+
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(pw*2.6, ph*3.4),
+    new THREE.MeshBasicMaterial({ map:glowTex, transparent:true, blending:THREE.AdditiveBlending,
+      depthWrite:false, opacity:0, color }));
+  halo.position.z = 0.012; group.add(halo);
+
+  const frame = new THREE.Mesh(new THREE.PlaneGeometry(pw+0.09, ph+0.09),
+    new THREE.MeshBasicMaterial({ color:"#26262c" }));
+  frame.position.z = 0.02; group.add(frame);
+
+  const cv = document.createElement("canvas"); cv.width = 320; cv.height = 180;
+  const ctx = cv.getContext("2d");
+  drawFrame(ctx, 320, 180, 0, w.hue, w.motion);   // 정지 상태 = 포스터 프레임
+  const tex = new THREE.CanvasTexture(cv);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshBasicMaterial({ map:tex }));
+  screen.position.z = 0.026; group.add(screen);
+
+  const n = new THREE.Vector3(0,0,1).applyQuaternion(group.quaternion);
+  const spill = new THREE.Mesh(new THREE.PlaneGeometry(pw*2.4, pw*2.4),
+    new THREE.MeshBasicMaterial({ map:glowTex, transparent:true, blending:THREE.AdditiveBlending,
+      depthWrite:false, opacity:0, color: color.clone().multiplyScalar(0.9) }));
+  spill.rotation.x = -Math.PI/2;
+  spill.position.set(pos[0] + n.x*1.5, 0.015, pos[2] + n.z*1.5);
+  scene.add(spill);
+
+  panels.push({ work:w, group, ctx, tex, halo, spill, normal:n, gain:0, t:0, last:0 });
+});
+
+/* 조작 */
+const keys = {};
+let yaw = Math.PI, pitch = 0, dragging = false, lastTouch = null, forward = false;
+addEventListener("keydown", e => { keys[e.code] = true;
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault(); });
+addEventListener("keyup", e => { keys[e.code] = false; });
+
+function look(dx, dy) {
+  yaw -= dx * 0.0024;
+  pitch = Math.max(-1.1, Math.min(1.1, pitch - dy * 0.0024));
+}
+const cvs = renderer.domElement;
+cvs.addEventListener("mousedown", () => { dragging = true; });
+addEventListener("mouseup", () => { dragging = false; });
+cvs.addEventListener("mousemove", e => {
+  if (document.pointerLockElement === cvs) look(e.movementX, e.movementY);
+  else if (dragging) look(e.movementX || 0, e.movementY || 0);
+});
+document.addEventListener("pointerlockchange", () => {
+  document.getElementById("hint").textContent =
+    document.pointerLockElement === cvs
+      ? "W A S D 이동 · 마우스 시선 · ESC 커서"
+      : "화면을 끌어 둘러보기 · W A S D 이동";
+});
+cvs.addEventListener("touchstart", e => { lastTouch = e.touches[0]; }, { passive:true });
+cvs.addEventListener("touchmove", e => {
+  if (!lastTouch) return;
+  const t = e.touches[0];
+  look((t.clientX - lastTouch.clientX)*2.2, (t.clientY - lastTouch.clientY)*2.2);
+  lastTouch = t;
+}, { passive:true });
+cvs.addEventListener("touchend", () => { lastTouch = null; });
+
+const moveBtn = document.getElementById("move");
+["touchstart","mousedown"].forEach(ev => moveBtn.addEventListener(ev, e => { e.preventDefault(); forward = true; }));
+["touchend","mouseup","touchcancel"].forEach(ev => moveBtn.addEventListener(ev, () => { forward = false; }));
+
+document.getElementById("enter").addEventListener("click", () => {
+  document.getElementById("gate").classList.add("hide");
+  if (cvs.requestPointerLock) { try { cvs.requestPointerLock(); } catch (e) {} }
+});
+
+/* 루프 */
+const clock = new THREE.Clock();
+const vel = new THREE.Vector3();
+const labelEl = document.getElementById("label");
+const wtEl = document.getElementById("wt"), waEl = document.getElementById("wa");
+const wnEl = document.getElementById("wn"), fillEl = document.getElementById("fill");
+let reportedId = null, reportedGain = 0;
+
+function tick() {
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const now = clock.elapsedTime;
+
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
+
+  const dir = new THREE.Vector3();
+  if (keys.KeyW || keys.ArrowUp || forward) dir.z -= 1;
+  if (keys.KeyS || keys.ArrowDown) dir.z += 1;
+  if (keys.KeyA || keys.ArrowLeft) dir.x -= 1;
+  if (keys.KeyD || keys.ArrowRight) dir.x += 1;
+  if (dir.lengthSq() > 0) {
+    dir.normalize().applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    vel.addScaledVector(dir, 26 * dt);
+  }
+  vel.multiplyScalar(Math.pow(0.0022, dt));
+  camera.position.addScaledVector(vel, dt);
+
+  const lx = ROOM.w/2 - 0.7, lz = ROOM.d/2 - 0.7;
+  camera.position.x = Math.max(-lx, Math.min(lx, camera.position.x));
+  camera.position.z = Math.max(-lz, Math.min(lz, camera.position.z));
+  if (Math.abs(camera.position.x) < 0.95 && Math.abs(camera.position.z) < 3.1) {
+    camera.position.x = camera.position.x >= 0 ? 0.95 : -0.95;
+  }
+  camera.position.y = 1.62;
+
+  // 근접 판정 — 이 전시장의 핵심 로직
+  let best = null;
+  for (const p of panels) {
+    const d = camera.position.distanceTo(p.group.position);
+    const facing = camera.position.clone().sub(p.group.position).dot(p.normal) > 0;
+    const target = facing ? Math.max(0, Math.min(1, (PLAY_RADIUS - d)/(PLAY_RADIUS - FULL_RADIUS))) : 0;
+    p.gain += (target - p.gain) * Math.min(1, dt*4);
+    if (!best || p.gain > best.gain) best = p;
+
+    p.halo.material.opacity  = p.gain * 0.5;
+    p.spill.material.opacity = p.gain * 0.34;
+
+    // 가까울 때만 프레임 갱신 = 포스터 → 재생
+    if (p.gain > 0.03 && now - p.last > 1/24) {
+      p.t += now - p.last; p.last = now;
+      drawFrame(p.ctx, 320, 180, p.t, p.work.hue, p.work.motion);
+      p.tex.needsUpdate = true;
+    } else if (p.gain <= 0.03) {
+      p.last = now;
+    }
+  }
+
+  // 소리는 가장 가까운 한 작품만
+  const id = best && best.gain > 0.04 ? best.work.id : null;
+  const gain = best ? best.gain : 0;
+  if (id !== reportedId) {
+    reportedId = id;
+    if (id) {
+      wtEl.textContent = best.work.title;
+      waEl.textContent = best.work.artist;
+      wnEl.textContent = best.work.note;
+      labelEl.classList.add("on");
+    } else {
+      labelEl.classList.remove("on");
+    }
+  }
+  if (Math.abs(gain - reportedGain) > 0.03) {
+    reportedGain = gain;
+    fillEl.style.width = Math.round(gain * 100) + "%";
+  }
+
+  renderer.render(scene, camera);
+}
+tick();
+</script>
