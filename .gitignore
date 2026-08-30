@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# 키가 들어 있습니다. 절대 커밋하지 마세요.
+.env.local
+
+# 학생 작품 원본. 용량이 큽니다.
+public/works/*
+!public/works/.gitkeep
+
+# npm run backup 결과물. 영상이 통째로 들어 있습니다.
+backup/
