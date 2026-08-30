@@ -2389,6 +2389,20 @@ document.getElementById("delGalleryBtn").addEventListener("click",()=>{if(curren
 const wkTitle=document.getElementById("wkTitle"),wkNote=document.getElementById("wkNote");
 const hueInput=document.getElementById("hue"),hueVal=document.getElementById("hueVal");
 const prev=document.getElementById("prev"),prevCtx=prev.getContext("2d");
+
+/** 샘플 탭의 움직이는 무늬를 그림 한 장으로 굳힙니다.
+
+    이 무늬는 프로그램이 매 프레임 그리는 것이라 파일이 없습니다. 서버에는
+    파일이 있어야 걸리므로, 한 순간을 1280×720 으로 크게 다시 그려 올립니다.
+    움직임은 사라지고 정지 그림이 됩니다 — 그래도 화면에만 남아 다음날
+    사라지는 것보다 낫습니다. */
+function genToBlob(){
+  return new Promise((done,fail)=>{
+    const c=document.createElement("canvas"); c.width=1280; c.height=720;
+    drawFrame(c.getContext("2d"),1280,720,prevT,parseInt(hueInput.value,10),wkMotion);
+    c.toBlob(b=>b?done(b):fail(new Error("그림을 만들지 못했습니다")),"image/jpeg",0.88);
+  });
+}
 const drop=document.getElementById("drop"),fileInput=document.getElementById("fileInput");
 const stage=document.getElementById("stage"),stageV=document.getElementById("stageV");
 const fileMeta=document.getElementById("fileMeta");
@@ -2420,7 +2434,7 @@ function acceptFile(f){
   if(!isVideo&&!isImage){fileMeta.textContent="이미지 또는 영상 파일만 걸 수 있습니다";return;}
   if(pending&&pending.src.startsWith("blob:")) URL.revokeObjectURL(pending.src);
   const url=URL.createObjectURL(f);
-  pending={kind:isVideo?"video":"image",src:url,name:f.name,size:f.size};
+  pending={kind:isVideo?"video":"image",src:url,name:f.name,size:f.size,file:f};
   drop.style.display="none";
   if(isVideo){stage.classList.remove("on");stageV.style.display="block";
     stageV.src=url; stageV.play().catch(()=>{});}
@@ -2442,22 +2456,6 @@ function openWorkModal(slot){
   if(!current||!canManage(current)) return;
   const existing=current.works.find(w=>w.slot===slot);
 
-  /* 서버가 붙어 있으면 빈 자리에는 여기서 걸지 않습니다.
-
-     이 창에서 거는 것은 브라우저 메모리에만 남습니다 — 걸 때 화면에는
-     보이지만 서버로 가지 않아서, 로비로 나왔다 오면 사라집니다. 학생 눈에는
-     저장이 고장난 것으로 보입니다.
-     아래 "빈 자리에 작품 걸기" 단추는 진작부터 이렇게 막고 있었는데, 방
-     안에서 빈 액자를 직접 클릭하거나 E 를 누르는 길은 그 검사를 지나쳐
-     이 창을 바로 열었습니다. 이제 세 길이 여기 한 곳에서 막힙니다.
-
-     서버 없이 파일만 열었을 때(OFFLINE.md)는 그대로 씁니다. 저장할 곳이
-     없는 화면이고, 그쪽은 exhibition.json 을 손으로 고치는 방식입니다. */
-  if(SERVER&&!existing){
-    flash("작품은 생성 스튜디오에서 겁니다");
-    setTimeout(()=>window.open("studio-ai.html","_blank","noopener"),700);
-    return;
-  }
   wkSlotIndex=slot;
   document.getElementById("wkHead").textContent=existing?"작품 바꾸기":"작품 걸기";
   document.getElementById("wkSlot").textContent=
@@ -2565,31 +2563,64 @@ document.getElementById("wkSave").addEventListener("click",async()=>{
   if(!canManage(current)) return;
   const t=wkTitle.value.trim(); if(!t){wkTitle.focus();return;}
 
-  /* 서버가 붙어 있으면 여기 오는 것은 "이미 걸린 작품의 이름표 고치기"
-     뿐입니다(빈 자리는 위에서 막았습니다). 영상은 바꾸지 않고 제목과
-     설명만 서버에 보냅니다 — 화면만 고치면 로비를 다녀올 때 옛 제목으로
-     돌아옵니다. */
+  /* 서버가 붙어 있으면 세 갈래입니다.
+
+       고른 파일이 있다   → 파일을 올리고 그 자리에 겁니다
+       샘플 탭이다        → 미리보기를 그림 한 장으로 굳혀 같은 길로 올립니다
+       둘 다 아니다       → 이미 걸린 것의 제목·설명·크기만 고칩니다
+
+     예전에는 이 창이 화면에만 걸어놓고 서버로 보내지 않았습니다. 그래서
+     로비를 다녀오면 사라졌습니다. 창을 없애는 대신 저장되게 고쳤습니다. */
   if(SERVER){
-    const w=current.works.find(x=>x.slot===wkSlotIndex);
-    if(!w){closeWorkModal();return;}
+    const existing=current.works.find(x=>x.slot===wkSlotIndex);
     const note=wkNote.value.trim();
     const btn=document.getElementById("wkSave"), label=btn.textContent;
-    btn.disabled=true; btn.textContent="저장하는 중…";
+
+    if(wkTab==="file"&&!pending&&!existing){
+      fileMeta.textContent="파일을 먼저 선택해주세요"; return;
+    }
+
+    btn.disabled=true; btn.textContent="거는 중…";
     try{
-      const scale=parseFloat(sizeR.value);
-      const r=await fetch("/api/works",{
-        method:"PATCH",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({handle:current.handle,slot:wkSlotIndex,title:t,note,scale}),
-      });
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
-      w.title=t; w.note=note||"설명 없음";
-      if(d.work&&d.work.scale!=null) w.scale=d.work.scale;
+      let blob=null, name="work.jpg";
+      if(wkTab==="file"&&pending){
+        // 학생 휴대폰 사진은 3~5MB 입니다. 벽에 4m 로 걸려도 1600px 면
+        // 넉넉하고, 그대로 올리면 서버가 받지 못합니다.
+        blob=pending.kind==="image" ? await shrink(pending.file,1600) : pending.file;
+        name=pending.name||("work."+(pending.kind==="image"?"jpg":"mp4"));
+      } else if(wkTab==="gen"){
+        blob=await genToBlob(); name="sample.jpg";
+      }
+
+      if(blob){
+        const fd=new FormData();
+        fd.append("handle",current.handle); fd.append("slot",String(wkSlotIndex));
+        fd.append("title",t); fd.append("note",note);
+        fd.append("scale",String(parseFloat(sizeR.value)));
+        fd.append("file",blob,name);
+        const r=await fetch("/api/works/upload",{method:"POST",body:fd});
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+        const i=current.works.findIndex(x=>x.slot===wkSlotIndex);
+        if(i>=0) current.works.splice(i,1);
+        current.works.push({id:++uid,hue:200,...d.work});
+        flash("걸었습니다");
+      } else {
+        const r=await fetch("/api/works",{
+          method:"PATCH",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({handle:current.handle,slot:wkSlotIndex,title:t,note,
+                               scale:parseFloat(sizeR.value)}),
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+        existing.title=t; existing.note=note||"설명 없음";
+        if(d.work&&d.work.scale!=null) existing.scale=d.work.scale;
+        flash("고쳤습니다");
+      }
       clearTimeout(scaleTimer);            // 창에서 보냈으니 예약된 것은 취소
-      buildRoomContents(current); clearPending(); closeWorkModal();
-      flash("고쳤습니다");
+      buildRoomContents(current); renderGrid(); clearPending(); closeWorkModal();
     }catch(e){
-      flash("고치지 못했습니다 — "+e.message);
+      flash("걸지 못했습니다 — "+e.message);
     }
     btn.disabled=false; btn.textContent=label;
     return;
@@ -3001,17 +3032,20 @@ function showCover(){
   coverClearBtn.style.display=url?"":"none";
 }
 
-/** 긴 변을 800px 로 줄여 JPEG 으로 다시 씁니다. 카드에 쓰기에 충분하고,
- *  보통 50~150KB 로 떨어집니다. */
-function shrink(file){
+/** 긴 변을 max px 로 줄여 JPEG 으로 다시 씁니다.
+ *  대표 이미지는 카드 크기라 800 이면 넉넉하고, 벽에 거는 작품은 최대
+ *  4m 로 커지므로 1600 을 씁니다. 그래도 보통 300~700KB 라, 서버리스가
+ *  받을 수 있는 크기 안에 들어옵니다. */
+function shrink(file,max){
+  max=max||800;
   return new Promise((done,fail)=>{
     const img=new Image();
     img.onload=()=>{
-      const long=Math.max(img.width,img.height), k=Math.min(1,800/long);
+      const long=Math.max(img.width,img.height), k=Math.min(1,max/long);
       const c=document.createElement("canvas");
       c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
       c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-      c.toBlob(b=>b?done(b):fail(new Error("그림을 바꾸지 못했습니다")),"image/jpeg",0.82);
+      c.toBlob(b=>b?done(b):fail(new Error("그림을 바꾸지 못했습니다")),"image/jpeg",0.86);
       URL.revokeObjectURL(img.src);
     };
     img.onerror=()=>fail(new Error("그림을 읽지 못했습니다"));
