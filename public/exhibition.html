@@ -1839,7 +1839,33 @@ function showLobby(){
   crossEl.classList.remove("on");
   if(document.pointerLockElement) document.exitPointerLock();
   renderGrid();
+  refreshGalleries();          // 들고 있던 목록이 낡았을 수 있습니다 — 아래 설명
 }
+
+/* 목록 다시 불러오기.
+
+   작품은 생성 스튜디오에서 겁니다. 그 화면은 다른 탭에서 열리기 때문에,
+   거기서 작품을 걸고 이 탭으로 돌아와도 이 탭이 들고 있는 목록은 탭을 처음
+   열었을 때의 것입니다. 로비로 나와도 그 낡은 목록을 다시 그릴 뿐이라
+   방금 건 작품이 없는 것처럼 보입니다 — 새로고침해야만 나타났습니다.
+
+   그래서 로비로 나올 때와, 다른 탭에 갔다가 이 탭이 다시 보일 때 서버에
+   다시 물어봅니다. 전시실 안에서는 하지 않습니다. 걸어다니는 도중에 방을
+   다시 세우면 보고 있던 영상이 끊깁니다.
+
+   실패하면 조용히 둡니다. 들고 있던 목록이 그대로 남으니 화면이 비지
+   않고, 다음 기회에 다시 시도합니다. */
+let refreshing=false;
+async function refreshGalleries(){
+  if(!SERVER||refreshing||current||modalOpen()) return;
+  refreshing=true;
+  try{ if(await loadFromServer()) renderGrid(); }
+  catch(e){ /* 그대로 둡니다 */ }
+  finally{ refreshing=false; }
+}
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden) refreshGalleries();
+});
 let pendingHandle=null, sizeTipShown=false, playTipShown=false;
 let entryT=0; const ENTRY_DUR=1.6;
 /* 클릭으로 정한 목적지. null 이면 손으로 걷는 중입니다. */
