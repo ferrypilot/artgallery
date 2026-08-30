@@ -1,99 +1,124 @@
 // app/api/works/upload/route.ts
 //
-// 전시실 안에서 파일을 골라 바로 거는 길.
+// 전시실 안에서 파일을 골라 바로 거는 길. 두 단계입니다.
 //
-//   POST multipart { handle, slot, title, note, file }
+//   POST   { handle, slot, ext }                  올릴 자리를 받습니다
+//   PUT    { handle, slot, path, title, note, … } 올린 파일을 그 자리에 겁니다
 //
-// 스튜디오는 "AI 로 만든 영상"을 겁니다. 이쪽은 학생이 손에 든 그림 파일을
-// 그대로 겁니다 — 사진으로 찍은 그림, 스캔한 그림, 직접 만든 짧은 영상.
-// 두 길이 다 필요합니다. 전시실에서 빈 액자를 눌렀을 때 스튜디오로
-// 보내버리면, 이미 파일을 들고 있는 학생에게는 돌아가는 길이 됩니다.
+// 왜 두 단계인가 — 파일이 서버를 거치지 않게 하려는 것입니다.
 //
-// 파일 크기는 4MB 로 자릅니다. 서버리스 환경이 요청 본문을 그보다 크게
-// 받지 못합니다. 이미지는 화면에서 미리 줄여 보내므로 걸릴 일이 거의 없고,
-// 큰 영상은 스튜디오 쪽이 맞습니다(그쪽은 xAI 가 직접 만들어 올립니다).
+// 처음에는 파일을 이 라우트로 통째로 받아 스토리지에 넘겼습니다. 그런데
+// 서버리스는 요청 본문을 4.5MB 남짓까지만 받습니다. 학생이 찍은 영상은
+// 그보다 크기 일쑤라, 다섯 개째까지 걸리다가 여섯 개째부터 막혔습니다.
+//
+// 그래서 서버는 "여기에 올려도 된다"는 서명만 내주고, 파일은 브라우저에서
+// Supabase 로 바로 올라갑니다. 서버를 지나지 않으니 그 한도가 사라집니다.
+// 권한 검사는 서명을 내줄 때 하고, 경로를 우리가 정하기 때문에 남의 폴더에
+// 올릴 수도 없습니다.
 
 import { supabaseServer } from "@/lib/supabase";
 import { loadViewer, json } from "@/lib/imagine";
 import { roomOf } from "@/lib/rooms";
 
 const HANDLE = /^[a-z0-9-]{2,20}$/;
-const MAX_MB = 4;
-
 const EXT: Record<string, string> = {
-  "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
-  "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
+  jpg: "image", jpeg: "image", png: "image", webp: "image", gif: "image",
+  mp4: "video", webm: "video", mov: "video",
 };
 
-export async function POST(request: Request) {
+/** 이 전시장의 이 자리에 걸 수 있는 사람인지 보고, 걸 자리를 돌려줍니다. */
+async function place(request: Request, body: any) {
   const v = await loadViewer();
-  if (!v) return json({ error: "로그인이 필요합니다" }, 401);
-  if (!v.approved) return json({ error: "사용이 중지된 계정입니다. 선생님께 문의하세요" }, 403);
-
-  const fd = await request.formData().catch(() => null);
-  if (!fd) return json({ error: "본문을 읽지 못했습니다" }, 400);
-
-  const handle = String(fd.get("handle") ?? "").trim().toLowerCase();
-  if (!HANDLE.test(handle)) return json({ error: "주소가 올바르지 않습니다" }, 400);
-
-  const title = String(fd.get("title") ?? "").trim().slice(0, 60);
-  if (!title) return json({ error: "제목을 적어주세요" }, 400);
-  const note = String(fd.get("note") ?? "").trim().slice(0, 200) || null;
-
-  const file = fd.get("file");
-  if (!(file instanceof File)) return json({ error: "파일이 필요합니다" }, 400);
-  const ext = EXT[file.type];
-  if (!ext) return json({ error: "이미지 또는 영상 파일만 걸 수 있습니다" }, 400);
-  if (file.size > MAX_MB * 1048576) {
-    return json({
-      error: `파일이 ${MAX_MB}MB 를 넘습니다. 영상은 생성 스튜디오에서 걸어주세요`,
-    }, 413);
+  if (!v) return { err: json({ error: "로그인이 필요합니다" }, 401) };
+  if (!v.approved) {
+    return { err: json({ error: "사용이 중지된 계정입니다. 선생님께 문의하세요" }, 403) };
   }
+
+  const handle = String(body.handle ?? "").trim().toLowerCase();
+  if (!HANDLE.test(handle)) return { err: json({ error: "주소가 올바르지 않습니다" }, 400) };
 
   const supabase = await supabaseServer();
-
   const { data: gallery } = await supabase
     .from("galleries").select("id, theme").eq("handle", handle).maybeSingle();
-  if (!gallery) return json({ error: "전시장을 찾을 수 없습니다" }, 404);
+  if (!gallery) return { err: json({ error: "전시장을 찾을 수 없습니다" }, 404) };
 
   const room = roomOf(gallery.theme);
-  const slot = Number(fd.get("slot"));
+  const slot = Number(body.slot);
   if (!Number.isInteger(slot) || slot < 0 || slot >= room.slots.length) {
-    return json({ error: `${room.name}의 자리는 0~${room.slots.length - 1} 입니다` }, 400);
+    return { err: json({ error: `${room.name}의 자리는 0~${room.slots.length - 1} 입니다` }, 400) };
   }
+  return { v, supabase, gallery, handle, slot };
+}
 
-  const scaleRaw = Number(fd.get("scale"));
-  const scale = Number.isFinite(scaleRaw)
-    ? Math.round(Math.max(0.6, Math.min(1.6, scaleRaw)) * 100) / 100 : 1;
+/** 1단계 — 올릴 자리와 서명을 내줍니다. */
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ error: "본문을 읽지 못했습니다" }, 400);
 
-  /* 파일 이름에 시각을 붙여 매번 새로 만듭니다. 같은 자리에 다시 걸 때
-     이름이 같으면 브라우저가 옛 그림을 계속 보여줍니다. 대신 갈아치운
-     옛 파일은 아래에서 지웁니다. */
-  const path = `${v.id}/works/${handle}-${slot}-${Date.now()}.${ext}`;
-  const { error: upErr } = await supabase.storage
-    .from("works").upload(path, file, { contentType: file.type, upsert: false });
-  if (upErr) return json({ error: `올리지 못했습니다: ${upErr.message}` }, 500);
+  const p = await place(request, body);
+  if ("err" in p) return p.err;
 
-  const media_url = supabase.storage.from("works").getPublicUrl(path).data.publicUrl;
-  const kind = file.type.startsWith("video/") ? "video" : "image";
+  const ext = String(body.ext ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!EXT[ext]) return json({ error: "이미지 또는 영상 파일만 걸 수 있습니다" }, 400);
+
+  /* 경로는 서버가 정합니다. 브라우저가 정하게 두면 남의 폴더 이름을 적어
+     보낼 수 있습니다. 시각을 붙여 매번 새 파일이 되게 합니다 — 같은 자리에
+     다시 걸 때 이름이 같으면 브라우저가 옛 그림을 계속 보여줍니다. */
+  const path = `${p.v.id}/works/${p.handle}-${p.slot}-${Date.now()}.${ext}`;
+  const { data, error } = await p.supabase.storage
+    .from("works").createSignedUploadUrl(path);
+  if (error) return json({ error: `올릴 자리를 만들지 못했습니다: ${error.message}` }, 500);
+
+  return json({ path, token: data.token, signedUrl: data.signedUrl, kind: EXT[ext] });
+}
+
+/** 2단계 — 올라간 파일을 그 자리에 겁니다. */
+export async function PUT(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ error: "본문을 읽지 못했습니다" }, 400);
+
+  const p = await place(request, body);
+  if ("err" in p) return p.err;
+
+  const path = String(body.path ?? "");
+  // 1단계에서 우리가 내준 자리인지 — 남의 폴더를 적어 보낼 수 없습니다.
+  if (!path.startsWith(`${p.v.id}/works/`)) {
+    return json({ error: "올린 자리가 올바르지 않습니다" }, 400);
+  }
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const kind = EXT[ext];
+  if (!kind) return json({ error: "이미지 또는 영상 파일만 걸 수 있습니다" }, 400);
+
+  const media_url = p.supabase.storage.from("works").getPublicUrl(path).data.publicUrl;
+
+  // 정말 올라갔는지 확인합니다. 안 올라간 주소를 걸면 빈 액자가 됩니다.
+  const head = await fetch(media_url, { method: "HEAD" });
+  if (!head.ok) return json({ error: "파일이 아직 올라오지 않았습니다" }, 409);
+
+  const title = String(body.title ?? "").trim().slice(0, 60);
+  if (!title) return json({ error: "제목을 적어주세요" }, 400);
+  const note = String(body.note ?? "").trim().slice(0, 200) || null;
+  const s = Number(body.scale);
+  const scale = Number.isFinite(s) ? Math.round(Math.max(0.6, Math.min(1.6, s)) * 100) / 100 : 1;
 
   // 그 자리에 걸려 있던 것은 내립니다. unique (gallery_id, slot) 이라
   // 비우지 않으면 새로 걸리지 않습니다.
-  const { data: old } = await supabase
-    .from("works").select("media_url").eq("gallery_id", gallery.id).eq("slot", slot);
+  const { data: old } = await p.supabase
+    .from("works").select("media_url").eq("gallery_id", p.gallery.id).eq("slot", p.slot);
   if (old && old.length) {
-    await supabase.from("works").delete().eq("gallery_id", gallery.id).eq("slot", slot);
+    await p.supabase.from("works").delete()
+      .eq("gallery_id", p.gallery.id).eq("slot", p.slot);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await p.supabase
     .from("works")
-    .insert({ gallery_id: gallery.id, slot, title, note, kind, media_url, scale })
+    .insert({ gallery_id: p.gallery.id, slot: p.slot, title, note, kind, media_url, scale })
     .select("slot, title, note, kind, media_url, scale")
     .single();
 
   if (error) {
     // 못 걸었으면 방금 올린 파일도 치웁니다. 아무도 안 보는 파일입니다.
-    await supabase.storage.from("works").remove([path]);
+    await p.supabase.storage.from("works").remove([path]);
     if (error.code === "42501" || error.message.includes("policy")) {
       return json({ error: "걸 권한이 없습니다" }, 403);
     }
@@ -105,7 +130,7 @@ export async function POST(request: Request) {
   for (const o of (old ?? [])) {
     const tail = String(o.media_url ?? "").split("?")[0]
       .split("/storage/v1/object/public/works/")[1];
-    if (tail) await supabase.storage.from("works").remove([decodeURIComponent(tail)]);
+    if (tail) await p.supabase.storage.from("works").remove([decodeURIComponent(tail)]);
   }
 
   return json({

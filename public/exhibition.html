@@ -2593,14 +2593,7 @@ document.getElementById("wkSave").addEventListener("click",async()=>{
       }
 
       if(blob){
-        const fd=new FormData();
-        fd.append("handle",current.handle); fd.append("slot",String(wkSlotIndex));
-        fd.append("title",t); fd.append("note",note);
-        fd.append("scale",String(parseFloat(sizeR.value)));
-        fd.append("file",blob,name);
-        const r=await fetch("/api/works/upload",{method:"POST",body:fd});
-        const d=await r.json().catch(()=>({}));
-        if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+        const d=await hangFile(blob,name,t,note,parseFloat(sizeR.value),btn);
         const i=current.works.findIndex(x=>x.slot===wkSlotIndex);
         if(i>=0) current.works.splice(i,1);
         current.works.push({id:++uid,hue:200,...d.work});
@@ -3030,6 +3023,47 @@ function showCover(){
   coverPrev.src=url||"";
   coverPrev.classList.toggle("on",!!url);
   coverClearBtn.style.display=url?"":"none";
+}
+
+/** 파일을 걸기. 서버를 거치지 않고 스토리지로 바로 올립니다.
+
+    예전에는 파일을 API 로 통째로 보냈는데, 서버리스가 요청 본문을 4.5MB
+    남짓까지만 받습니다. 학생이 찍은 영상은 그보다 크기 일쑤라 다섯 개째까지
+    걸리다가 여섯 개째부터 막혔습니다.
+
+    이제 세 걸음입니다.
+      1. 서버에서 "여기에 올려도 된다"는 서명을 받습니다 (권한 검사도 여기서)
+      2. 브라우저가 그 자리로 파일을 곧장 올립니다 — 서버를 지나지 않습니다
+      3. 올라간 것을 그 자리에 걸어달라고 서버에 알립니다
+
+    2번이 오래 걸릴 수 있어서 단추에 진행 상황을 적습니다. 아무 표시 없이
+    멈춰 있으면 학생은 고장난 줄 압니다. */
+async function hangFile(blob,name,title,note,scale,btn){
+  const ext=(name.split(".").pop()||"jpg").toLowerCase();
+  const base={handle:current.handle,slot:wkSlotIndex,title,note,scale};
+
+  if(btn) btn.textContent="올릴 자리 받는 중…";
+  let r=await fetch("/api/works/upload",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({...base,ext}),
+  });
+  let d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+
+  if(btn) btn.textContent="올리는 중… "+(blob.size/1048576).toFixed(1)+"MB";
+  const put=await fetch(d.signedUrl,{
+    method:"PUT",headers:{"Content-Type":blob.type||"application/octet-stream"},body:blob,
+  });
+  if(!put.ok) throw new Error("파일을 올리지 못했습니다 ("+put.status+")");
+
+  if(btn) btn.textContent="거는 중…";
+  r=await fetch("/api/works/upload",{
+    method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({...base,path:d.path}),
+  });
+  d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+  return d;
 }
 
 /** 긴 변을 max px 로 줄여 JPEG 으로 다시 씁니다.
