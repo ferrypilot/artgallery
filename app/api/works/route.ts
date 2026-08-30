@@ -220,7 +220,7 @@ function range(n: number) {
 }
 
 /**
- * 걸린 작품의 제목·설명 고치기.  PATCH { handle, slot, title, note }
+ * 걸린 작품의 제목·설명·크기 고치기.  PATCH { handle, slot, title, note, scale }
  *
  * 지금까지 전시실 안에서 제목을 바꾸면 화면에만 반영되고 서버에는 가지
  * 않았습니다. 로비로 나왔다 들어오면 옛 제목으로 돌아왔는데, 학생 눈에는
@@ -250,6 +250,16 @@ export async function PATCH(request: Request) {
   if (!title) return json({ error: "제목을 적어주세요" }, 400);
   const note = String(body.note ?? "").trim().slice(0, 200) || null;
 
+  /* 크기는 화면이 0.6~1.6 으로 자르지만 서버가 화면을 믿을 이유는 없습니다.
+     보내지 않으면 건드리지 않습니다 — 제목만 고칠 때 크기가 1 로
+     되돌아가면 안 됩니다. */
+  const patch: Record<string, unknown> = { title, note };
+  if (body.scale !== undefined) {
+    const scale = Number(body.scale);
+    if (!Number.isFinite(scale)) return json({ error: "크기가 올바르지 않습니다" }, 400);
+    patch.scale = Math.round(Math.max(0.6, Math.min(1.6, scale)) * 100) / 100;
+  }
+
   const supabase = await supabaseServer();
   const { data: gallery } = await supabase
     .from("galleries").select("id").eq("handle", handle).maybeSingle();
@@ -257,10 +267,10 @@ export async function PATCH(request: Request) {
 
   const { data, error } = await supabase
     .from("works")
-    .update({ title, note })
+    .update(patch)
     .eq("gallery_id", gallery.id)
     .eq("slot", slot)
-    .select("slot, title, note");
+    .select("slot, title, note, scale");
 
   if (error) return json({ error: error.message }, 500);
   // RLS 가 막으면 오류가 아니라 0행 수정으로 옵니다. 조용한 실패를 막습니다.

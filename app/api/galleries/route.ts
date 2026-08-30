@@ -201,7 +201,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("galleries")
     .select("handle, title, owner_name, theme, layout, owner_id, " +
-            "works(slot, title, note, kind, media_url), " +
+            "works(slot, title, note, kind, media_url, scale), " +
             "guestbook(id, visitor_name, message, created_at)")
     .order("created_at");
 
@@ -224,6 +224,7 @@ export async function GET() {
         title: w.title,
         note: w.note,
         kind: w.kind,
+        scale: w.scale ?? 1,
       })),
   }));
 

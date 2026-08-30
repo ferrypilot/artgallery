@@ -116,7 +116,7 @@ console.log(SVC ? "전원의 작업을 받습니다." :
 console.log("목록을 받는 중…");
 
 const select = "handle,title,owner_name,theme,layout," +
-  "works(slot,title,note,kind,media_url),guestbook(visitor_name,message,created_at)";
+  "works(slot,title,note,kind,media_url,scale),guestbook(visitor_name,message,created_at)";
 const rows = await get(`galleries?select=${encodeURIComponent(select)}&order=created_at`);
 if (!Array.isArray(rows)) die("전시장 목록의 모양이 예상과 다릅니다.");
 
@@ -275,7 +275,8 @@ const galleries = rows.map((g) => ({
     // 걸립니다. 빈 자리로 두는 편이 낫습니다.
     .filter((w) => w.media_url && ok.has(w.media_url))
     .map((w) => ({ slot: w.slot, src: place.get(w.media_url),
-                   title: w.title, note: w.note, kind: w.kind })),
+                   title: w.title, note: w.note, kind: w.kind,
+                   scale: w.scale ?? 1 })),
 }));
 
 /* ---------- archive.json ----------

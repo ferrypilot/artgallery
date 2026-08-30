@@ -77,6 +77,12 @@ create table if not exists works (
   unique (gallery_id, slot)          -- 한 자리에 한 점
 );
 
+-- 걸린 작품의 크기. 학생이 [ ] 로 키우고 줄인 것이 지금까지 화면에만
+-- 남았습니다. 1 이 기본이고 화면이 0.6~1.4 로 자릅니다 — 여기서는 손으로
+-- 고친 값이 들어와도 방이 깨지지 않을 만큼만 넓게 잡습니다.
+alter table works add column if not exists scale real not null default 1
+  check (scale between 0.3 and 3);
+
 -- 전시장에 놓은 가구. 배열 하나를 통째로 넣고 뺍니다 — 많아야 여덟 개라
 -- 표를 따로 만들 만한 양이 아니고, /api/galleries 와 백업이 이 칸을 함께
 -- 실어 나르면 오프라인 전시가 저절로 따라옵니다.
