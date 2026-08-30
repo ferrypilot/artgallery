@@ -240,6 +240,22 @@
   #cvPrev.on{display:block}
   #root.lobbyMode #cvPrev{border-color:#e2e2e6;background:#f0f0f1}
 
+  /* 방명록 관리 — 전시장 주인과 선생님에게만 보입니다. 부적절한 글을
+     내릴 길이 없으면 학생에게 열 수 없습니다. */
+  #gbList{margin-top:14px;max-height:196px;overflow-y:auto;border:1px solid #26262e}
+  .gbRow{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;
+    border-bottom:1px solid #1c1c23}
+  .gbRow:last-child{border-bottom:none}
+  .gbRow .t{flex:1;min-width:0;font-size:12.5px;line-height:1.6;color:#c8c4bb;
+    word-break:break-all}
+  .gbRow .n{display:block;font-size:11.5px;color:#8a8780;margin-top:4px}
+  /* 지우기는 되돌릴 수 없습니다. 한 번 눌러 묻고, 두 번째에 지웁니다 —
+     잘못 눌러 남의 글이 사라지는 일을 막습니다. */
+  .gbRow .x{flex:none;height:26px;padding:0 9px;line-height:1;border:1px solid #2c2c36;
+    background:transparent;color:#8a8780;font-size:12px;letter-spacing:0;transition:.2s}
+  .gbRow .x:hover{border-color:#7a4a44;color:#c08a80}
+  .gbRow .x.ask{border-color:#8e3a2c;color:#d09a90;font-weight:700}
+
   /* 저장이 실패했을 때. 조용히 넘어가면 학생은 저장된 줄 압니다. */
   .grp p.small.warn{color:#c08a80}
   #root.light .grp p.small.warn{color:#a03a28}
@@ -866,7 +882,11 @@
     <div class="box">
       <h2 class="serif">방명록</h2>
       <div class="note" id="gbSub"></div>
-      <div class="fl">한 줄 남기기</div>
+      <div id="gbListWrap" style="display:none">
+        <div class="fl">남은 글 <span class="val" id="gbCount"></span></div>
+        <div id="gbList"></div>
+      </div>
+      <div class="fl" style="margin-top:16px">한 줄 남기기</div>
       <textarea id="gbText" rows="3" maxlength="80" placeholder="작품을 보고 든 생각을 짧게"></textarea>
       <p class="warn" id="gbErr" style="display:none"></p>
       <div class="acts">
@@ -2522,6 +2542,7 @@ function openGuestbook(){
   document.getElementById("gbSub").textContent=
     current.name+"님의 전시장 · "+session.name+"으로 남깁니다";
   gbText.value=""; gbErr.style.display="none";
+  drawGuestbookList();
   openModal("gbm"); setTimeout(()=>gbText.focus(),60);
 }
 document.getElementById("gbCancel").addEventListener("click",()=>closeModal("gbm"));
@@ -2537,6 +2558,59 @@ document.getElementById("gbCancel").addEventListener("click",()=>closeModal("gbm
 
    서버 없이 파일만 열었을 때(OFFLINE.md)는 저장할 곳이 없습니다. 그때는
    예전처럼 화면에만 걸어둡니다 — 그쪽은 관람 전용이라 그걸로 충분합니다. */
+/* 남은 글 목록. 주인과 선생님에게만, 서버가 있을 때만 나옵니다.
+   관람객에게는 벽에 걸린 판이 전부입니다. */
+function drawGuestbookList(){
+  const wrap=document.getElementById("gbListWrap");
+  const list=document.getElementById("gbList");
+  const gb=current?current.guestbook:[];
+  const show=SERVER&&canManage(current)&&gb.length>0;
+  wrap.style.display=show?"":"none";
+  list.innerHTML="";
+  if(!show) return;
+  document.getElementById("gbCount").textContent=gb.length+"개";
+  // 최근 것이 위로 옵니다 — 지울 일이 생기는 것은 대개 방금 올라온 글입니다.
+  gb.slice().reverse().forEach(e=>{
+    const row=document.createElement("div"); row.className="gbRow";
+    const t=document.createElement("div"); t.className="t"; t.textContent=e.msg;
+    const n=document.createElement("span"); n.className="n"; n.textContent="— "+e.name;
+    t.appendChild(n); row.appendChild(t);
+    /* id 가 없는 것은 서버에 없는 글입니다(오프라인에서 남긴 것, 손으로 쓴
+       exhibition.json). 지울 대상이 없으니 단추도 달지 않습니다. */
+    if(e.id){
+      const x=document.createElement("button");
+      x.className="x"; x.textContent="지우기";
+      x.addEventListener("click",()=>{
+        if(!x.classList.contains("ask")){
+          // 첫 번째 누름은 묻기만 합니다. 다른 줄을 누르면 이 물음은 사라집니다.
+          list.querySelectorAll(".x.ask").forEach(o=>{o.classList.remove("ask");o.textContent="지우기";});
+          x.classList.add("ask"); x.textContent="정말?";
+          return;
+        }
+        removeGuestbook(e.id,x);
+      });
+      row.appendChild(x);
+    }
+    list.appendChild(row);
+  });
+}
+
+async function removeGuestbook(id,btn){
+  if(!current) return;
+  btn.disabled=true; btn.textContent="지우는 중…";
+  try{
+    const r=await fetch("/api/guestbook?id="+encodeURIComponent(id),{method:"DELETE"});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+    current.guestbook=current.guestbook.filter(e=>e.id!==id);
+    drawGuestbook(); drawGuestbookList(); renderGrid();
+    flash("지웠습니다");
+  }catch(e){
+    btn.disabled=false; btn.classList.remove("ask"); btn.textContent="지우기";
+    gbErr.textContent="지우지 못했습니다 — "+e.message; gbErr.style.display="";
+  }
+}
+
 const gbSaveBtn=document.getElementById("gbSave");
 gbSaveBtn.addEventListener("click",async()=>{
   const m=gbText.value.trim();
@@ -2559,7 +2633,7 @@ gbSaveBtn.addEventListener("click",async()=>{
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
     current.guestbook.push(d.entry||{name:session.name,msg:m});
-    drawGuestbook(); renderGrid();          // 로비 카드의 방명록 수도 함께
+    drawGuestbook(); drawGuestbookList(); renderGrid();   // 로비 카드의 수도 함께
     closeModal("gbm"); flash("방명록에 남겼습니다");
   }catch(e){
     gbErr.textContent="남기지 못했습니다 — "+e.message;

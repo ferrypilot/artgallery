@@ -183,7 +183,8 @@ function recentGuestbook(rows: any) {
     .slice()
     .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
     .slice(-GUESTBOOK_MAX)
-    .map((e) => ({ name: e.visitor_name, msg: e.message }));
+    // id 를 함께 보냅니다. 주인과 선생님이 한 줄만 골라 지우려면 필요합니다.
+    .map((e) => ({ id: e.id, name: e.visitor_name, msg: e.message }));
 }
 
 export async function GET() {
@@ -201,7 +202,7 @@ export async function GET() {
     .from("galleries")
     .select("handle, title, owner_name, theme, layout, owner_id, " +
             "works(slot, title, note, kind, media_url), " +
-            "guestbook(visitor_name, message, created_at)")
+            "guestbook(id, visitor_name, message, created_at)")
     .order("created_at");
 
   if (error) return json({ error: error.message }, 500);

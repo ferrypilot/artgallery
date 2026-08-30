@@ -13,3 +13,9 @@ public/works/*
 
 # npm run backup 결과물. 영상이 통째로 들어 있습니다.
 backup/
+
+# 2FA 복구 코드·비밀번호 메모. 절대 커밋하지 마세요.
+# 한 번 올라간 비밀값은 지워도 이력에 남습니다.
+docs/recovery-codes.txt
+*recovery-code*
+*.secret

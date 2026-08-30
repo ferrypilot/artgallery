@@ -16,6 +16,7 @@ import { supabaseServer } from "@/lib/supabase";
 import { json } from "@/lib/imagine";
 
 const HANDLE = /^[a-z0-9-]{2,20}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // 벽에 걸리는 판이라 길면 잘립니다. DB 의 check 도 80 자입니다.
 const MAX_MSG = 80;
 const MAX_NAME = 12;
@@ -53,4 +54,26 @@ export async function POST(request: Request) {
 
   // 화면이 쓰는 모양으로 돌려줍니다 — exhibition.json 과 같은 {name, msg} 입니다.
   return json({ entry: { name: data.visitor_name, msg: data.message } });
+}
+
+/**
+ * 한 줄 지우기.  DELETE /api/guestbook?id=<uuid>
+ *
+ * 부적절한 글이 올라왔을 때 전시장 주인과 선생님이 내립니다. 누가 지울 수
+ * 있는지는 RLS 의 "전시장 주인과 관리자만 지운다" 가 정합니다 — 여기서
+ * 세지 않고, 막히면 0행 삭제로 오는 것을 403 으로 바꿉니다.
+ */
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id") ?? "";
+  if (!UUID.test(id)) return json({ error: "글 번호가 올바르지 않습니다" }, 400);
+
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase
+    .from("guestbook").delete().eq("id", id).select("id");
+
+  if (error) return json({ error: error.message }, 500);
+  if (!data || !data.length) {
+    return json({ error: "지울 권한이 없거나 이미 없는 글입니다" }, 403);
+  }
+  return json({ ok: true, id });
 }
