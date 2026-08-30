@@ -2428,6 +2428,23 @@ document.getElementById("wkm").addEventListener("drop",e=>{
 function openWorkModal(slot){
   if(!current||!canManage(current)) return;
   const existing=current.works.find(w=>w.slot===slot);
+
+  /* 서버가 붙어 있으면 빈 자리에는 여기서 걸지 않습니다.
+
+     이 창에서 거는 것은 브라우저 메모리에만 남습니다 — 걸 때 화면에는
+     보이지만 서버로 가지 않아서, 로비로 나왔다 오면 사라집니다. 학생 눈에는
+     저장이 고장난 것으로 보입니다.
+     아래 "빈 자리에 작품 걸기" 단추는 진작부터 이렇게 막고 있었는데, 방
+     안에서 빈 액자를 직접 클릭하거나 E 를 누르는 길은 그 검사를 지나쳐
+     이 창을 바로 열었습니다. 이제 세 길이 여기 한 곳에서 막힙니다.
+
+     서버 없이 파일만 열었을 때(OFFLINE.md)는 그대로 씁니다. 저장할 곳이
+     없는 화면이고, 그쪽은 exhibition.json 을 손으로 고치는 방식입니다. */
+  if(SERVER&&!existing){
+    flash("작품은 생성 스튜디오에서 겁니다");
+    setTimeout(()=>window.open("studio-ai.html","_blank","noopener"),700);
+    return;
+  }
   wkSlotIndex=slot;
   document.getElementById("wkHead").textContent=existing?"작품 바꾸기":"작품 걸기";
   document.getElementById("wkSlot").textContent=
@@ -2501,9 +2518,37 @@ document.getElementById("wkClear").addEventListener("click",async()=>{
   }
   buildRoomContents(g); clearPending(); closeWorkModal();
 });
-document.getElementById("wkSave").addEventListener("click",()=>{
+document.getElementById("wkSave").addEventListener("click",async()=>{
   if(!canManage(current)) return;
   const t=wkTitle.value.trim(); if(!t){wkTitle.focus();return;}
+
+  /* 서버가 붙어 있으면 여기 오는 것은 "이미 걸린 작품의 이름표 고치기"
+     뿐입니다(빈 자리는 위에서 막았습니다). 영상은 바꾸지 않고 제목과
+     설명만 서버에 보냅니다 — 화면만 고치면 로비를 다녀올 때 옛 제목으로
+     돌아옵니다. */
+  if(SERVER){
+    const w=current.works.find(x=>x.slot===wkSlotIndex);
+    if(!w){closeWorkModal();return;}
+    const note=wkNote.value.trim();
+    const btn=document.getElementById("wkSave"), label=btn.textContent;
+    btn.disabled=true; btn.textContent="저장하는 중…";
+    try{
+      const r=await fetch("/api/works",{
+        method:"PATCH",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({handle:current.handle,slot:wkSlotIndex,title:t,note}),
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+      w.title=t; w.note=note||"설명 없음";
+      buildRoomContents(current); clearPending(); closeWorkModal();
+      flash("고쳤습니다");
+    }catch(e){
+      flash("고치지 못했습니다 — "+e.message);
+    }
+    btn.disabled=false; btn.textContent=label;
+    return;
+  }
+
   if(wkTab==="file"&&!pending){fileMeta.textContent="파일을 먼저 선택해주세요";return;}
   const i=current.works.findIndex(w=>w.slot===wkSlotIndex);
   if(i>=0){

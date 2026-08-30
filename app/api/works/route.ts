@@ -12,6 +12,8 @@ import { supabaseServer } from "@/lib/supabase";
 import { loadViewer, json } from "@/lib/imagine";
 import { roomOf, MAX_SLOTS } from "@/lib/rooms";
 
+const HANDLE = /^[a-z0-9-]{2,20}$/;
+
 // 자리 수는 전시장이 쓰는 전시관에 달렸습니다. 지금은 큰 전시실 하나뿐이라
 // 어디나 20자리지만, 방이 늘면 전시장마다 달라집니다.
 // lib/rooms.ts 의 표가 자리 이름을, public/exhibition.html 의 ROOMS 가
@@ -215,4 +217,55 @@ async function createGallery(supabase: any, v: { id: string; email: string }) {
 
 function range(n: number) {
   return Array.from({ length: n }, (_, i) => i);
+}
+
+/**
+ * 걸린 작품의 제목·설명 고치기.  PATCH { handle, slot, title, note }
+ *
+ * 지금까지 전시실 안에서 제목을 바꾸면 화면에만 반영되고 서버에는 가지
+ * 않았습니다. 로비로 나왔다 들어오면 옛 제목으로 돌아왔는데, 학생 눈에는
+ * 고친 것이 지워진 것으로 보입니다.
+ *
+ * 영상 자체는 여기서 바꾸지 못합니다. 거는 것은 생성 스튜디오의 일이고,
+ * 이쪽은 이미 걸린 것의 이름표만 손봅니다.
+ *
+ * 권한은 RLS 의 "주인과 관리자만 작품을 바꾼다" 가 정합니다.
+ */
+export async function PATCH(request: Request) {
+  const v = await loadViewer();
+  if (!v) return json({ error: "로그인이 필요합니다" }, 401);
+
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ error: "본문을 읽지 못했습니다" }, 400);
+
+  const handle = String(body.handle ?? "").trim().toLowerCase();
+  if (!HANDLE.test(handle)) return json({ error: "주소가 올바르지 않습니다" }, 400);
+
+  const slot = Number(body.slot);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= MAX_SLOTS) {
+    return json({ error: "자리 번호가 올바르지 않습니다" }, 400);
+  }
+
+  const title = String(body.title ?? "").trim().slice(0, 60);
+  if (!title) return json({ error: "제목을 적어주세요" }, 400);
+  const note = String(body.note ?? "").trim().slice(0, 200) || null;
+
+  const supabase = await supabaseServer();
+  const { data: gallery } = await supabase
+    .from("galleries").select("id").eq("handle", handle).maybeSingle();
+  if (!gallery) return json({ error: "전시장을 찾을 수 없습니다" }, 404);
+
+  const { data, error } = await supabase
+    .from("works")
+    .update({ title, note })
+    .eq("gallery_id", gallery.id)
+    .eq("slot", slot)
+    .select("slot, title, note");
+
+  if (error) return json({ error: error.message }, 500);
+  // RLS 가 막으면 오류가 아니라 0행 수정으로 옵니다. 조용한 실패를 막습니다.
+  if (!data || !data.length) {
+    return json({ error: "고칠 권한이 없거나 빈 자리입니다" }, 403);
+  }
+  return json({ ok: true, work: data[0] });
 }
