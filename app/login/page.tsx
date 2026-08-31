@@ -16,18 +16,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser, SUPABASE_READY } from "@/lib/supabase-browser";
 
-type Mode = "in" | "link";
 type Me = { email: string; approved: boolean; isAdmin: boolean };
 
 export default function Login() {
   const supabase = useMemo(() => supabaseBrowser(), []);
 
-  const [mode, setMode] = useState<Mode>("in");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
 
   // 비밀번호 바꾸기 — 로그인한 뒤에만 씁니다
   const [pwOpen, setPwOpen] = useState(false);
@@ -67,20 +64,6 @@ export default function Login() {
 
     setBusy(true); setError(null);
     try {
-      if (mode === "link") {
-        const { error } = await supabase.auth.signInWithOtp({
-          email: addr,
-          options: {
-            emailRedirectTo:
-              `${location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}`,
-            shouldCreateUser: false,   // 매직링크로 새 계정을 만들지는 않습니다
-          },
-        });
-        if (error) throw error;
-        setSent(true);
-        return;
-      }
-
       if (!pw) { setError("비밀번호를 넣어주세요"); return; }
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -210,24 +193,7 @@ export default function Login() {
           )}
         </>
 
-      /* ── 매직링크를 보낸 뒤 ── */
-      ) : sent ? (
-        <>
-          <Notice>
-            <b>{email.trim().toLowerCase()}</b> 으로 링크를 보냈습니다.
-            메일함을 확인하세요.
-          </Notice>
-          <p className="t-help" style={{ margin: "18px 0 14px" }}>
-            링크는 한 번만 쓸 수 있고 한 시간쯤 뒤 만료됩니다.
-            메일이 안 오면 선생님 계정이 아닌 주소일 수 있습니다 —
-            학생은 아래 비밀번호 방식을 쓰세요.
-          </p>
-          <button onClick={() => { setSent(false); setMode("in"); }} className="btn">
-            비밀번호로 로그인
-          </button>
-        </>
-
-      /* ── 로그인 · 가입 ── */
+      /* ── 로그인 ── */
       ) : (
         <form onSubmit={submit}>
           <p className="t-help" style={{ margin: "18px 0 14px" }}>
@@ -252,21 +218,6 @@ export default function Login() {
             {busy ? "잠시만요…" : "로그인"}
           </button>
 
-          {/* 선생님 전용. 학생 주소로는 메일이 가지 않습니다. */}
-          <button type="button" className="btn-quiet" style={{ display: "block", width: "100%", marginTop: 14 }}
-            onClick={() => { setMode("link"); setError(null); }}>
-            선생님이신가요? 메일 링크로 로그인
-          </button>
-
-          {mode === "link" && (
-            <Notice>
-              위 주소로 접속 링크를 보냅니다. 비밀번호는 쓰지 않습니다.
-              {" "}
-              <button type="submit" className="btn-quiet" style={{ color: "var(--ink)", fontSize: 13 }} disabled={busy}>
-                {busy ? "보내는 중…" : "링크 보내기"}
-              </button>
-            </Notice>
-          )}
         </form>
       )}
 
