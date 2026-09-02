@@ -35,7 +35,11 @@ export default function Login() {
 
   // undefined = 확인 중. null = 로그인 안 함.
   const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const [back, setBack] = useState("/studio-ai.html");
+  /* 로그인하고 나서 갈 곳. 어디서 왔는지(?next=)가 있으면 그리로 돌아가고,
+     없으면 전시장입니다 — 학생도 선생님도 여기 오는 까닭은 대개 전시장을
+     보러 오는 것이지 영상을 만들러 오는 것이 아닙니다. 영상은 전시장
+     안에서도, 안내 화면에서도 들어갈 수 있습니다. */
+  const [back, setBack] = useState("/exhibition.html");
 
   useEffect(() => {
     const n = nextPath();
@@ -141,10 +145,10 @@ export default function Login() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {me.approved && (
               <a href={back} className="btn primary" style={{ flex: 1, padding: "12px 14px", fontSize: 14 }}>
-                {back === "/studio-ai.html"
-                  ? "생성 스튜디오로"
-                  : back.startsWith("/exhibition.html")
-                    ? "Art Gallery 로 가기"
+                {back.startsWith("/exhibition.html")
+                  ? "전시장으로 입장하기"
+                  : back === "/studio-ai.html"
+                    ? "생성 스튜디오로"
                     : "돌아가기"}
               </a>
             )}

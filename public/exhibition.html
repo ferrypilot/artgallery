@@ -1479,12 +1479,12 @@ function makeFabricTexture(){
   t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(5,5);
   return t;
 }
-(function(){
-  const fab=makeFabricTexture();
-  ["sofa","seat","cushA","cushB","cushC"].forEach(k=>{
-    FIXMAT[k].map=fab; FIXMAT[k].needsUpdate=true;
-  });
-})();
+/* 천 결은 한 장만 만들어 거실 붙박이 가구와 학생이 놓는 가구가 나눠
+   씁니다 — 두 장을 만들 이유가 없습니다. */
+const FABRIC_TEX=makeFabricTexture();
+["sofa","seat","cushA","cushB","cushC"].forEach(k=>{
+  FIXMAT[k].map=FABRIC_TEX; FIXMAT[k].needsUpdate=true;
+});
 
 /* 러그. 고르게 칠한 한 판은 러그가 아니라 색종이로 보입니다. 실제 러그는
    털이 누운 방향에 따라 빛을 다르게 되받아서 넓게 밝고 어두운 자리가
@@ -2883,66 +2883,131 @@ function drawNameTag(text){
    r 은 부딪히는 반지름입니다. 네모난 상자 대신 원으로 잡은 이유 — 가구는
    아무 각도로나 돌아가는데, 축에 나란한 상자로는 돌아간 소파를 다룰 수
    없습니다. 원은 어느 각도에서도 그대로입니다. */
+/* 색이 보기보다 어둡게 적혀 있습니다 — 액자와 같은 까닭입니다.
+   화면이 재질 색을 한 번 더 밝히고 조명이 셋 얹혀서, 눈에 보이는 색을
+   그대로 적으면 가구가 허옇게 뜹니다. 옆의 설명이 실제로 보이는 색입니다. */
 const FMAT={
-  wood:  new THREE.MeshLambertMaterial({color:"#6b5844"}),
-  fabric:new THREE.MeshLambertMaterial({color:"#565f6b"}),
-  metal: new THREE.MeshLambertMaterial({color:"#4a4d55"}),
-  pot:   new THREE.MeshLambertMaterial({color:"#6a5f52"}),
-  leaf:  new THREE.MeshLambertMaterial({color:"#4c6150"}),
+  wood:  new THREE.MeshLambertMaterial({color:"#4a3a24"}),   // 나무 — 호두빛
+  fabric:new THREE.MeshLambertMaterial({color:"#3b4450",map:FABRIC_TEX}), // 천 — 청회색
+  seatF: new THREE.MeshLambertMaterial({color:"#45505e",map:FABRIC_TEX}), // 방석 — 한 단 밝게
+  metal: new THREE.MeshLambertMaterial({color:"#2c2f35"}),   // 쇠 — 짙은 회색
+  pot:   new THREE.MeshLambertMaterial({color:"#4a4136"}),   // 화분
+  soil:  new THREE.MeshLambertMaterial({color:"#241d16"}),   // 흙
+  leaf:  new THREE.MeshLambertMaterial({color:"#2f4536"}),   // 잎
 };
 const box=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
-const rod=(r1,r2,h,m)=>new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,12),m);
-/** 다리 넷. 상판 아래에 같은 모양으로 붙습니다. */
-function legs(g,w,d,h,t){
+const rod=(r1,r2,h,m)=>new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,14),m);
+/** 모서리가 둥근 상자 하나. 가구의 거의 모든 조각이 이것입니다 —
+ *  각진 상자로만 쌓으면 어떤 가구를 만들어도 상자 더미로 보입니다. */
+const sbox=(w,h,d,r,m)=>new THREE.Mesh(softBox(w,h,d,r),m);
+
+/** 다리 넷. 위가 굵고 아래로 갈수록 가늘어집니다 — 굵기가 같은 각목
+ *  넷은 가구가 아니라 받침대로 보입니다. 살짝 벌려 세우면 안정돼
+ *  보입니다. */
+function legs(g,w,d,h,rTop,rBot,mat,splay){
+  const sp=splay===undefined?0.05:splay;
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
-    const l=box(t,h,t,FMAT.wood);
-    l.position.set(sx*(w/2-t*0.8),h/2,sz*(d/2-t*0.8)); g.add(l);
+    const l=rod(rTop,rBot,h,mat||FMAT.wood);
+    l.position.set(sx*(w/2-rTop*1.4),h/2,sz*(d/2-rTop*1.4));
+    l.rotation.set(-sz*sp,0,sx*sp); g.add(l);
   });
 }
+
 const FURNITURE={
   bench:{name:"벤치", r:0.62, build(){
-    const g=new THREE.Group(); legs(g,1.30,0.40,0.36,0.07);
-    const top=box(1.40,0.09,0.44,FMAT.wood); top.position.y=0.405; g.add(top);
-    return g;
-  }},
-  sofa:{name:"소파", r:0.72, build(){
-    const g=new THREE.Group(); legs(g,1.30,0.56,0.13,0.07);
-    const seat=box(1.44,0.20,0.62,FMAT.fabric); seat.position.y=0.23; g.add(seat);
-    const back=box(1.44,0.34,0.16,FMAT.fabric); back.position.set(0,0.50,-0.23); g.add(back);
-    [-1,1].forEach(sx=>{const a=box(0.14,0.18,0.62,FMAT.fabric);
-      a.position.set(sx*0.65,0.42,0); g.add(a);});
-    return g;
-  }},
-  table:{name:"낮은 테이블", r:0.56, build(){
-    const g=new THREE.Group(); legs(g,0.92,0.54,0.34,0.06);
-    const top=box(1.00,0.05,0.60,FMAT.wood); top.position.y=0.365; g.add(top);
-    return g;
-  }},
-  stool:{name:"스툴", r:0.30, build(){
+    /* 나무 벤치. 앉는 판 하나에 가는 다리 넷, 그리고 다리를 잇는 가로대.
+       가로대가 있어야 다리가 따로 노는 막대 넷으로 보이지 않습니다. */
     const g=new THREE.Group();
-    const l=rod(0.05,0.06,0.36,FMAT.metal); l.position.y=0.18; g.add(l);
-    const ft=rod(0.20,0.20,0.02,FMAT.metal); ft.position.y=0.01; g.add(ft);
-    const st=rod(0.22,0.22,0.08,FMAT.fabric); st.position.y=0.40; g.add(st);
+    legs(g,1.24,0.34,0.40,0.030,0.020);
+    [-1,1].forEach(sz=>{
+      const r=sbox(1.16,0.030,0.030,0.010,FMAT.wood);
+      r.position.set(0,0.13,sz*0.15); g.add(r);
+    });
+    const top=sbox(1.40,0.070,0.42,0.028,FMAT.wood);
+    top.position.y=0.435; g.add(top);
     return g;
   }},
-  plant:{name:"화분", r:0.36, build(){
+
+  sofa:{name:"소파", r:0.74, build(){
+    /* 소파. 몸통 하나에 방석 둘, 등받이는 살짝 젖혀 놓습니다.
+       반듯이 세운 등받이는 앉는 것이 아니라 칸막이로 보입니다. */
     const g=new THREE.Group();
-    const pt=rod(0.17,0.22,0.30,FMAT.pot); pt.position.y=0.15; g.add(pt);
-    const stem=rod(0.022,0.028,0.34,FMAT.leaf); stem.position.y=0.44; g.add(stem);
-    [[0,0.72,0,0.24],[0.13,0.66,0.06,0.17],[-0.11,0.68,-0.07,0.15]].forEach(([x,y,z,r])=>{
-      const b=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),FMAT.leaf);
-      b.scale.set(1,0.72,1); b.position.set(x,y,z); g.add(b);
+    legs(g,1.20,0.54,0.12,0.028,0.020,FMAT.metal,0.03);
+    const body=sbox(1.42,0.24,0.66,0.055,FMAT.fabric);
+    body.position.y=0.24; g.add(body);
+    [-1,1].forEach(sx=>{                       // 방석 둘
+      const c=sbox(0.62,0.15,0.56,0.055,FMAT.seatF);
+      c.position.set(sx*0.33,0.415,0.02); g.add(c);
+    });
+    const back=sbox(1.42,0.42,0.18,0.060,FMAT.fabric);
+    back.position.set(0,0.53,-0.25); back.rotation.x=0.10; g.add(back);
+    [-1,1].forEach(sx=>{                       // 팔걸이
+      const a=sbox(0.15,0.32,0.66,0.055,FMAT.fabric);
+      a.position.set(sx*0.685,0.40,0); g.add(a);
     });
     return g;
   }},
-  stand:{name:"안내대", r:0.32, build(){
+
+  table:{name:"낮은 테이블", r:0.56, build(){
+    /* 낮은 테이블. 상판을 얇게 하고 다리를 가늘게 뽑아야 가벼워 보입니다.
+       두꺼운 판에 굵은 다리는 작업대입니다. */
     const g=new THREE.Group();
-    const col=rod(0.16,0.22,0.82,FMAT.wood); col.position.y=0.41; g.add(col);
-    const top=box(0.40,0.04,0.30,FMAT.wood);
-    top.position.y=0.86; top.rotation.x=-0.28; g.add(top);
+    legs(g,0.86,0.48,0.38,0.026,0.016,FMAT.wood,0.07);
+    const top=sbox(1.00,0.042,0.58,0.018,FMAT.wood);
+    top.position.y=0.40; g.add(top);
+    const apron=sbox(0.86,0.045,0.44,0.015,FMAT.wood);   // 상판 밑 테
+    apron.position.y=0.355; g.add(apron);
+    return g;
+  }},
+
+  stool:{name:"스툴", r:0.30, build(){
+    /* 스툴. 둥근 방석에 가는 기둥, 바닥에는 납작한 원반.
+       원반이 없으면 기둥이 바닥에 꽂힌 것처럼 보입니다. */
+    const g=new THREE.Group();
+    const base=rod(0.19,0.21,0.022,FMAT.metal); base.position.y=0.011; g.add(base);
+    const col=rod(0.032,0.040,0.36,FMAT.metal); col.position.y=0.20; g.add(col);
+    const pad=rod(0.215,0.215,0.075,FMAT.seatF); pad.position.y=0.415; g.add(pad);
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(0.215,18,10,0,Math.PI*2,0,Math.PI/2),FMAT.seatF);
+    dome.scale.y=0.30; dome.position.y=0.450; g.add(dome);
+    return g;
+  }},
+
+  plant:{name:"화분", r:0.36, build(){
+    /* 화분. 아래가 좁은 항아리에 테두리를 두르고, 잎은 크기를 달리해
+       여섯 덩이. 같은 크기로 셋이면 잎이 아니라 공입니다. */
+    const g=new THREE.Group();
+    const pt=rod(0.155,0.105,0.28,FMAT.pot); pt.position.y=0.14; g.add(pt);
+    const rim=rod(0.170,0.162,0.045,FMAT.pot); rim.position.y=0.2625; g.add(rim);
+    const so=rod(0.150,0.150,0.012,FMAT.soil); so.position.y=0.282; g.add(so);
+    [[0.02,0.42,0.02,0.020,0.30],[-0.09,0.38,0.05,0.016,0.24],[0.10,0.40,-0.06,0.016,0.26]]
+     .forEach(([x,y,z,r,h])=>{                 // 줄기 셋
+      const st=rod(r*0.8,r,h,FMAT.leaf);
+      st.position.set(x,y,z); st.rotation.set(z*1.6,0,-x*1.6); g.add(st);
+    });
+    [[0,0.74,0.01,0.23],[0.16,0.66,0.07,0.165],[-0.15,0.63,-0.05,0.15],
+     [0.06,0.80,-0.10,0.135],[-0.08,0.71,0.13,0.12],[0.13,0.55,-0.09,0.105]]
+     .forEach(([x,y,z,r])=>{
+      const bl=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),FMAT.leaf);
+      bl.scale.set(1,0.62,1); bl.position.set(x,y,z); g.add(bl);
+    });
+    return g;
+  }},
+
+  stand:{name:"안내대", r:0.32, build(){
+    /* 안내대. 비스듬한 판에 아래 턱을 하나 답니다 — 턱이 없으면 종이가
+       미끄러져 내리게 생겼습니다. 바닥에는 넓은 받침. */
+    const g=new THREE.Group();
+    const base=sbox(0.42,0.035,0.34,0.014,FMAT.metal);
+    base.position.y=0.018; g.add(base);
+    const col=rod(0.050,0.065,0.80,FMAT.metal); col.position.y=0.42; g.add(col);
+    const top=sbox(0.42,0.032,0.30,0.012,FMAT.wood);
+    top.position.y=0.855; top.rotation.x=-0.30; g.add(top);
+    const lip=sbox(0.42,0.028,0.026,0.010,FMAT.wood);
+    lip.position.set(0,0.828,0.148); lip.rotation.x=-0.30; g.add(lip);
     return g;
   }},
 };
+
 const FURNITURE_KEYS=Object.keys(FURNITURE);
 const MAX_FURNITURE=8;
 /* 돌리는 단위 둘. 45° 는 벽에 맞춰 세울 때, 15° 는 미세하게 틀 때 씁니다.
