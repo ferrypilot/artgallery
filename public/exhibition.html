@@ -183,13 +183,20 @@
     color:#7d7a74;pointer-events:none}
   #hint{position:absolute;bottom:22px;right:24px;z-index:10;font-size:11.5px;letter-spacing:0;
     color:#7d7a74;text-align:right;line-height:2;pointer-events:none}
-  #back{position:absolute;top:18px;right:170px;z-index:22;padding:9px 16px;
-    border:1px solid rgba(140,138,130,.4);background:rgba(10,10,13,.6);color:#dcd8cf;
-    font-size:12px;font-weight:700;letter-spacing:0;backdrop-filter:blur(6px)}
-  #gear{position:absolute;top:18px;right:22px;z-index:22;padding:9px 16px;
-    border:1px solid rgba(140,138,130,.4);background:rgba(10,10,13,.6);color:#dcd8cf;
-    font-size:12px;font-weight:700;letter-spacing:0;backdrop-filter:blur(6px)}
-  #back:hover,#gear:hover{border-color:#8a8780}
+  /* 위 오른쪽 두 단추. 하는 일이 아주 다른데 생김새가 같으면 손이
+     헷갈립니다 — 나가는 단추는 테두리만 두르고, 지금 방을 손보는 단추는
+     채웁니다. 나란히 놓아야 서로 견주어 보이므로 한 줄로 묶습니다.
+     예전에는 각자 오른쪽에서 몇 px 떨어뜨려 세웠는데, 그러면 글자가
+     길어질 때마다 그 숫자를 다시 맞춰야 했습니다. */
+  #topBtns{position:absolute;top:18px;right:22px;z-index:22;display:flex;gap:9px}
+  #topBtns button{padding:9px 15px;font-size:12px;font-weight:700;letter-spacing:0;
+    white-space:nowrap;transition:.18s;backdrop-filter:blur(6px)}
+  #back{border:1px solid rgba(150,148,140,.42);background:rgba(10,10,13,.52);
+    color:#c9c5bc}
+  #back:hover{border-color:#b0aca3;background:rgba(10,10,13,.78);color:#f2efe8}
+  #gear{border:1px solid rgba(20,20,24,.30);background:rgba(235,233,228,.94);
+    color:#17171b;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+  #gear:hover{background:#fff;border-color:rgba(20,20,24,.55)}
   #cross{position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;
     border-radius:50%;background:rgba(232,230,225,.5);z-index:9;pointer-events:none;
     opacity:0;transition:opacity .2s}
@@ -615,8 +622,10 @@
 
 <div id="root" class="lobbyMode">
   <div id="mark"></div>
-  <button id="back">로비</button>
-  <button id="gear">전시 설정</button>
+  <div id="topBtns">
+    <button id="back">← 로비로 돌아가기</button>
+    <button id="gear">전시 설정</button>
+  </div>
   <div id="cross"></div>
 
   <div id="label">
@@ -632,19 +641,6 @@
   <button id="move">앞으로</button>
 
   <aside id="panel">
-    <div class="grp" id="ownerGrp">
-      <h3>이 전시장 <span class="val" id="slotCount"></span></h3>
-      <button class="panelBtn" id="addWorkBtn">빈 자리에 작품 걸기</button>
-      <button class="panelBtn" id="backupMineBtn">내 전시 백업</button>
-      <button class="panelBtn" id="backupAllBtn" style="display:none">전체 전시 백업 · 관리자</button>
-      <button class="panelBtn danger" id="delGalleryBtn">전시장 삭제</button>
-    </div>
-    <div class="grp" id="viewerGrp" style="display:none">
-      <h3>이 전시장 <span class="val" id="slotCount2"></span></h3>
-      <p class="small" id="viewerMsg"></p>
-      <button class="panelBtn" id="panelLoginBtn" style="margin-top:11px">이메일로 로그인</button>
-    </div>
-    <div class="divider"></div>
     <div class="grp">
       <h3>내 캐릭터</h3>
       <div class="row">
@@ -677,6 +673,18 @@
     </div>
     <div class="grp"><h3>벽 색상</h3><input type="color" id="wallColor" value="#131318" /></div>
     <div class="grp"><h3>바닥 색상</h3><input type="color" id="floorColor" value="#0a0a0c" /></div>
+    <div class="grp">
+      <h3>바닥 마감</h3>
+      <div class="row">
+        <button class="opt sel" data-floorpat="plank">마루</button>
+        <button class="opt" data-floorpat="tile">타일</button>
+        <button class="opt" data-floorpat="plain">민무늬</button>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>거실 가구</h3>
+      <div class="row" id="loungePick"></div>
+    </div>
     <!-- 가구. 주인과 관리자만, 서버가 있을 때만 보입니다. -->
     <div class="grp" id="furnGrp" style="display:none">
       <h3>가구 <span class="val" id="furnCount"></span></h3>
@@ -717,6 +725,21 @@
     <div class="grp">
       <h3>재생 반경 <span class="val" id="radiusVal">7.5m</span></h3>
       <input type="range" id="radius" min="3.5" max="13" step="0.5" value="7.5" />
+    </div>
+    <!-- 전시장 자체를 다루는 칸은 맨 아래입니다. 백업과 삭제는 자주
+         누르는 것이 아니고, 삭제는 손이 스치기 쉬운 자리에 있으면
+         안 됩니다. 꾸미기(캐릭터·색·가구)를 먼저 만나게 둡니다. -->
+    <div class="divider"></div>
+    <div class="grp" id="ownerGrp">
+      <h3>이 전시장 <span class="val" id="slotCount"></span></h3>
+      <button class="panelBtn" id="backupMineBtn">내 전시 백업</button>
+      <button class="panelBtn" id="backupAllBtn" style="display:none">전체 전시 백업 · 관리자</button>
+      <button class="panelBtn danger" id="delGalleryBtn">전시장 삭제</button>
+    </div>
+    <div class="grp" id="viewerGrp" style="display:none">
+      <h3>이 전시장 <span class="val" id="slotCount2"></span></h3>
+      <p class="small" id="viewerMsg"></p>
+      <button class="panelBtn" id="panelLoginBtn" style="margin-top:11px">로그인</button>
     </div>
   </aside>
 
@@ -808,6 +831,11 @@
       <input type="text" id="ngTitle" maxlength="20" placeholder="예: 느린 아침" />
       <div class="fl">주소 <span class="err" id="ngErr"></span></div>
       <input type="text" class="mono" id="ngHandle" maxlength="20" placeholder="seoyeon" />
+      <!-- 방을 먼저 고르고 분위기를 정합니다. 어느 방인지가 먼저고
+           그 방을 어떤 색으로 칠할지가 나중입니다. -->
+      <div class="fl">전시실</div>
+      <div class="row" id="ngRoomPick"></div>
+      <p class="note" id="ngRoomNote"></p>
       <div class="fl">전시실 분위기</div>
       <div class="row">
         <button class="opt sel" data-ngtheme="night">심야</button>
@@ -889,7 +917,7 @@
         <input type="range" id="hue" min="0" max="359" step="1" value="190" />
       </div>
       <div class="fl">캔버스 크기 <span class="val" id="sizeVal">100%</span></div>
-      <input type="range" id="sizeR" min="0.6" max="1.6" step="0.05" value="1" />
+      <input type="range" id="sizeR" min="0.6" max="2" step="0.05" value="1" />
       <div class="tip">60~140%까지 키우고 줄일 수 있습니다. 전시장 안에서 작품을 바라본 채
         <b>[</b> 와 <b>]</b> 키를 눌러도 조절됩니다.</div>
       <div class="fl">제목</div>
@@ -953,32 +981,184 @@ const FULL_RADIUS=2.6, MAX_PLAYING=3;
             at 은 그 벽을 따라간 거리입니다. 가벽에 거는 자리는 몇 번째
             가벽(part)의 어느 면(side)인지로 적습니다 */
 const ROOMS={
-  /* 큰 전시실 — 지금은 이 방 하나뿐입니다.
-     예전에는 24×14m 짜리 "기본 전시실"(10자리)이 함께 있었는데, 벽을
-     3분의 1도 쓰지 않는 방이었습니다. 정면 벽이 24m 인데 작품이 둘뿐이었고,
-     실제로 모든 전시장이 이쪽을 골랐습니다. 고르는 사람이 없는 선택지는
-     고를 곳을 하나 더 만들 뿐이라 걷어냈습니다.
-     네 벽을 모두 쓰고, 가운데 가벽을 둘로 갈라 동선이 한 갈래로 흐르지
-     않게 했습니다. */
-  grand:{
-    name:"큰 전시실", note:"작품 20점 · 가벽 둘 · 네 벽을 모두 씁니다",
-    size:{w:28,d:16,h:4.6},
-    parts:[{x:-5.5,z:0,w:0.5,d:4.4,h:3.2},{x:5.5,z:0,w:0.5,d:4.4,h:3.2}],
+  /* 빈이 보이는 방 — 파리·피렌체·로마 방과 같은 짜임입니다. 가운데 거실을
+     두고 양옆에 방을 하나씩, 사이에 문은 없습니다. 거실 정면은 벽을
+     통째로 창으로 내고 천장에도 천창을 냅니다.
+
+     예전에 여기 있던 "큰 전시실" 을 대신합니다. 창이 하나도 없고 가벽
+     둘로 나뉜 28×16m 짜리 방이었습니다.
+
+     네 방이 다른 것은 깊이입니다 — 로마 20m, 피렌체 18m, 파리 16m,
+     이 방이 14m 로 가장 얕습니다. 창밖 광장이 옆으로 길게 펼쳐져서
+     앞뒤로 깊을 이유가 없습니다. */
+  vienna:{
+    name:"빈이 보이는 방", note:"작품 21점 · 거실 정면이 통째로 창 · 창밖은 빈",
+    size:{w:30,d:14,h:5.0},
+    parts:[
+      {x:-8,z:-4.9,w:0.45,d:4.2,h:5.0},{x:-8,z:4.9,w:0.45,d:4.2,h:5.0},
+      {x: 8,z:-4.9,w:0.45,d:4.2,h:5.0},{x: 8,z:4.9,w:0.45,d:4.2,h:5.0},
+    ],
+    view:"vienna",
+    windows:[
+      {wall:"L",at:0,w:4.0, y0:0.55,h:3.4},  // 왼쪽 방 끝 — 광장 왼편
+      {wall:"B",at:0,w:14.4,y0:0.50,h:4.0},  // 거실 정면 — 벽 통째로
+      {wall:"R",at:0,w:4.0, y0:0.55,h:3.4},  // 오른쪽 방 끝 — 광장 오른편
+    ],
+    lounge:true,                        // 거실 한가운데에 붙박이 가구
+    sky:{w:5.2,d:9},
     slots:[
-      // 좌우 벽 각 넷. 안쪽(정면 벽 쪽)에서 입구 쪽으로.
-      {wall:"L",at:-6},{wall:"L",at:-2},{wall:"L",at:2},{wall:"L",at:6},
-      {wall:"R",at:-6},{wall:"R",at:-2},{wall:"R",at:2},{wall:"R",at:6},
-      // 정면 벽 다섯. 들어서면 가장 먼저 보이는 벽입니다.
-      {wall:"B",at:-9},{wall:"B",at:-4.5},{wall:"B",at:0},{wall:"B",at:4.5},{wall:"B",at:9},
-      // 입구 쪽 벽 셋. 문(가운데)과 방명록(오른쪽)을 피해 앉습니다.
-      {wall:"F",at:-10.5},{wall:"F",at:-6},{wall:"F",at:10},
-      // 가벽 둘, 각 앞뒤로 하나씩.
-      {part:0,side:"+",at:0},{part:0,side:"-",at:0},
-      {part:1,side:"+",at:0},{part:1,side:"-",at:0},
+      // 정면 벽. 거실 쪽은 통창이라 자리가 없고 옆방 앞쪽만 씁니다.
+      {wall:"B",at:-13.4},{wall:"B",at:-10.2},
+      {wall:"B",at:10.2},{wall:"B",at:13.4},
+      // 입구 쪽 벽 다섯. 문·방명록·안쪽 벽을 모두 비켜 앉습니다.
+      {wall:"F",at:-13.4},{wall:"F",at:-10.2},{wall:"F",at:-4.7},
+      {wall:"F",at:10.2},{wall:"F",at:13.4},
+      // 양끝 벽. 방이 얕아 창 앞뒤로 하나씩입니다.
+      {wall:"L",at:-4.6},{wall:"L",at:4.6},
+      {wall:"R",at:-4.6},{wall:"R",at:4.6},
+      // 안쪽 벽 여덟. 양면을 모두 씁니다.
+      {part:0,side:"+",at:0},{part:1,side:"+",at:0},      // 거실 쪽
+      {part:2,side:"-",at:0},{part:3,side:"-",at:0},
+      {part:0,side:"-",at:0},{part:1,side:"-",at:0},      // 옆방 쪽
+      {part:2,side:"+",at:0},{part:3,side:"+",at:0},
+    ],
+  },
+
+  /* 로마가 보이는 방 — 피렌체·파리 방과 같은 짜임입니다. 가운데
+     거실을 두고 양옆에 방을 하나씩, 사이에 문은 없습니다.
+     다른 점은 깊이입니다. 바다 방이 옆으로 넓다면 이 방은 앞뒤로
+     깁니다(20m) — 양끝 벽이 길어져 한쪽 방만으로도 여섯 점이 걸립니다.
+     창밖은 로마입니다. 거실 정면 창이 8m 로 더 넓은 것은, 창밖 광장이
+     좌우로 길게 펼쳐지기 때문입니다. */
+  rome:{
+    name:"로마가 보이는 방", note:"작품 25점 · 거실 정면이 통째로 창 · 창밖은 로마",
+    size:{w:30,d:20,h:4.9},
+    parts:[
+      {x:-8,z:-6.4,w:0.45,d:7.2,h:4.9},{x:-8,z:6.4,w:0.45,d:7.2,h:4.9},
+      {x: 8,z:-6.4,w:0.45,d:7.2,h:4.9},{x: 8,z:6.4,w:0.45,d:7.2,h:4.9},
+    ],
+    view:"rome",
+    /* 창은 키가 크고 좁습니다. 바다 방처럼 넓고 낮게 내면 창밖 광장이
+       옆으로 늘어나 기둥이 굵어집니다 — 물결은 늘어나도 모르지만
+       건물은 바로 보입니다. 세 창의 몫을 합치면 파노라마 한 장과
+       거의 딱 맞습니다. */
+    /* 거실 정면은 벽을 통째로 창으로 냅니다. 예전에는 창 하나에 작품
+       둘이 끼어 있어서 바깥을 보는 벽도, 작품을 거는 벽도 아니었습니다.
+       이렇게 나누면 거실은 바깥을 보는 자리, 옆방과 안쪽 벽은 작품을
+       보는 자리가 됩니다.
+       벽마다 그림을 따로 떠오므로 이만큼 넓혀도 광장이 늘어나지 않습니다.
+       어느 벽이냐가 그림의 어디를 받을지를 정합니다 — 정면 창이
+       한복판이라 들어서면 오벨리스크를 마주 봅니다. */
+    windows:[
+      {wall:"L",at:0,w:4.0, y0:0.55,h:3.4},  // 왼쪽 방 끝 — 광장 왼편
+      {wall:"B",at:0,w:14.4,y0:0.50,h:4.0},  // 거실 정면 — 벽 통째로
+      {wall:"R",at:0,w:4.0, y0:0.55,h:3.4},  // 오른쪽 방 끝 — 광장 오른편
+    ],
+    /* 거실 천장에도 천창을 냅니다. 문에서 창까지 앞뒤로 길게 나 있어
+       걸어 들어가는 길을 빛이 따라옵니다. 통창과 함께 이 방의
+       개방감을 만듭니다. */
+    lounge:true,                        // 거실 한가운데에 붙박이 가구
+    sky:{w:5.4,d:13},
+    slots:[
+      // 정면 벽 여섯. 가운데 창을 비켜 둘, 옆방 쪽으로 둘씩.
+      // 거실 쪽은 통창이라 자리가 없습니다. 옆방 앞쪽만 씁니다.
+      {wall:"B",at:-13.4},{wall:"B",at:-10.2},
+      {wall:"B",at:10.2},{wall:"B",at:13.4},
+      // 입구 쪽 벽 다섯. 문·방명록·안쪽 벽을 모두 비켜 앉습니다.
+      {wall:"F",at:-13.4},{wall:"F",at:-10.2},{wall:"F",at:-4.7},
+      {wall:"F",at:10.2},{wall:"F",at:13.4},
+      // 양끝 벽 각 넷. 방이 깊어 창 위아래로 둘씩 들어갑니다.
+      {wall:"L",at:-8.6},{wall:"L",at:-5.4},{wall:"L",at:5.4},{wall:"L",at:8.6},
+      {wall:"R",at:-8.6},{wall:"R",at:-5.4},{wall:"R",at:5.4},{wall:"R",at:8.6},
+      // 안쪽 벽 여덟. 바다 방과 같이 양면을 모두 씁니다.
+      {part:0,side:"+",at:0},{part:1,side:"+",at:0},      // 거실 쪽
+      {part:2,side:"-",at:0},{part:3,side:"-",at:0},
+      {part:0,side:"-",at:0},{part:1,side:"-",at:0},      // 옆방 쪽
+      {part:2,side:"+",at:0},{part:3,side:"+",at:0},
+    ],
+  },
+
+  /* 피렌체가 보이는 방 — 로마·파리 방과 같은 짜임입니다. 가운데 거실을
+     두고 양옆에 방을 하나씩, 사이에 문은 없습니다. 거실 정면은 벽을
+     통째로 창으로 내고 천장에도 천창을 냅니다.
+
+     천장이 5.2m 로 셋 중 가장 높습니다. 창을 세로로 키운 만큼 사진을
+     덜 잘라도 됩니다 — 다른 방이 사진의 62%를 쓴다면 이 방은 66%를
+     씁니다. 강과 하늘이 함께 들어오려면 그 4%가 필요합니다. */
+  florence:{
+    name:"피렌체가 보이는 방", note:"작품 21점 · 거실 정면이 통째로 창 · 창밖은 피렌체",
+    size:{w:30,d:18,h:5.2},
+    parts:[
+      {x:-8,z:-5.9,w:0.45,d:6.2,h:5.2},{x:-8,z:5.9,w:0.45,d:6.2,h:5.2},
+      {x: 8,z:-5.9,w:0.45,d:6.2,h:5.2},{x: 8,z:5.9,w:0.45,d:6.2,h:5.2},
+    ],
+    view:"florence",
+    windows:[
+      {wall:"L",at:0,w:6.0, y0:0.55,h:3.4},  // 왼쪽 방 끝 — 광장 왼편
+      {wall:"B",at:0,w:14.4,y0:0.50,h:4.3},  // 거실 정면 — 벽 통째로
+      {wall:"R",at:0,w:6.0, y0:0.55,h:3.4},  // 오른쪽 방 끝 — 광장 오른편
+    ],
+    lounge:true,                        // 거실 한가운데에 붙박이 가구
+    sky:{w:5.0,d:12},
+    slots:[
+      // 정면 벽. 거실 쪽은 통창이라 자리가 없고 옆방 앞쪽만 씁니다.
+      {wall:"B",at:-13.4},{wall:"B",at:-10.2},
+      {wall:"B",at:10.2},{wall:"B",at:13.4},
+      // 입구 쪽 벽 다섯. 문·방명록·안쪽 벽을 모두 비켜 앉습니다.
+      {wall:"F",at:-13.4},{wall:"F",at:-10.2},{wall:"F",at:-4.7},
+      {wall:"F",at:10.2},{wall:"F",at:13.4},
+      // 양끝 벽. 창 앞뒤로 하나씩.
+      {wall:"L",at:-6.5},{wall:"L",at:6.5},
+      {wall:"R",at:-6.5},{wall:"R",at:6.5},
+      // 안쪽 벽 여덟. 양면을 모두 씁니다.
+      {part:0,side:"+",at:0},{part:1,side:"+",at:0},      // 거실 쪽
+      {part:2,side:"-",at:0},{part:3,side:"-",at:0},
+      {part:0,side:"-",at:0},{part:1,side:"-",at:0},      // 옆방 쪽
+      {part:2,side:"+",at:0},{part:3,side:"+",at:0},
+    ],
+  },
+
+  /* 파리가 보이는 방 — 로마·바다 방과 같은 짜임입니다. 가운데 거실을
+     두고 양옆에 방을 하나씩, 사이에 문은 없습니다. 거실 정면은 벽을
+     통째로 창으로 내고 천장에도 천창을 냅니다.
+
+     세 방이 다른 것은 깊이입니다. 로마가 20m 로 가장 깊고, 바다가 18m,
+     이 방은 16m 로 가장 얕습니다 — 옆으로 넓고 앞뒤로 얕아서 파리
+     지붕처럼 가로로 길게 펼쳐지는 풍경에 맞습니다. */
+  paris:{
+    name:"파리가 보이는 방", note:"작품 21점 · 거실 정면이 통째로 창 · 창밖은 파리",
+    size:{w:30,d:16,h:5.0},
+    parts:[
+      {x:-8,z:-5.4,w:0.45,d:5.2,h:5.0},{x:-8,z:5.4,w:0.45,d:5.2,h:5.0},
+      {x: 8,z:-5.4,w:0.45,d:5.2,h:5.0},{x: 8,z:5.4,w:0.45,d:5.2,h:5.0},
+    ],
+    view:"paris",
+    windows:[
+      {wall:"L",at:0,w:4.0, y0:0.55,h:3.4},  // 왼쪽 방 끝 — 지붕 왼편
+      {wall:"B",at:0,w:14.4,y0:0.50,h:4.0},  // 거실 정면 — 벽 통째로
+      {wall:"R",at:0,w:4.0, y0:0.55,h:3.4},  // 오른쪽 방 끝 — 지붕 오른편
+    ],
+    lounge:true,                        // 거실 한가운데에 붙박이 가구
+    sky:{w:5.2,d:11},
+    slots:[
+      // 정면 벽. 거실 쪽은 통창이라 자리가 없고 옆방 앞쪽만 씁니다.
+      {wall:"B",at:-13.4},{wall:"B",at:-10.2},
+      {wall:"B",at:10.2},{wall:"B",at:13.4},
+      // 입구 쪽 벽 다섯. 문·방명록·안쪽 벽을 모두 비켜 앉습니다.
+      {wall:"F",at:-13.4},{wall:"F",at:-10.2},{wall:"F",at:-4.7},
+      {wall:"F",at:10.2},{wall:"F",at:13.4},
+      // 양끝 벽. 방이 얕아 창 앞뒤로 하나씩입니다.
+      {wall:"L",at:-5},{wall:"L",at:5},
+      {wall:"R",at:-5},{wall:"R",at:5},
+      // 안쪽 벽 여덟. 양면을 모두 씁니다.
+      {part:0,side:"+",at:0},{part:1,side:"+",at:0},      // 거실 쪽
+      {part:2,side:"-",at:0},{part:3,side:"-",at:0},
+      {part:0,side:"-",at:0},{part:1,side:"-",at:0},      // 옆방 쪽
+      {part:2,side:"+",at:0},{part:3,side:"+",at:0},
     ],
   },
 };
-const DEFAULT_ROOM="grand";
+const DEFAULT_ROOM="vienna";
 /** 전시장이 쓰는 방. theme 에 적어두므로 대표 이미지(cover)와 같은 방식이고,
  *  모르는 이름이면 기본 방으로 떨어집니다 — 손으로 고친 exhibition.json 이
  *  오타 하나로 빈 화면이 되지 않게. */
@@ -1102,6 +1282,54 @@ function makeWallTexture(hex){
   x.fillStyle=g; x.fillRect(0,0,4,256);
   return new THREE.CanvasTexture(c);
 }
+function makeFloorTexture(hex,kind){
+  const b=new THREE.Color(hex),hsl={}; b.getHSL(hsl);
+  const sh=d=>"#"+new THREE.Color().setHSL(hsl.h,hsl.s,Math.max(0,Math.min(1,hsl.l+d))).getHexString();
+  const S=256;
+  const c=document.createElement("canvas"); c.width=c.height=S;
+  const x=c.getContext("2d");
+  x.fillStyle=sh(0); x.fillRect(0,0,S,S);
+
+  /* 밝기 차이를 바닥 색에 비례해서 잡습니다. 고정값을 쓰면 심야 전시장의
+     바닥(밝기 0.03)에서 0.013 을 더한 칸이 두 배 가까이 밝아져, 타일이
+     체스판처럼 튀었습니다. 같은 값이 백색 큐브에서는 티도 안 나고요. */
+  const step=Math.max(0.004,Math.min(0.022,hsl.l*0.13));  // 널·장 사이 밝기 차
+  const seam=Math.max(0.008,Math.min(0.050,hsl.l*0.35));  // 줄눈은 늘 어둡게
+
+  if(kind==="tile"){
+    /* 줄눈만 긋습니다. 장마다 밝기를 엇갈려 칠하면 어떤 색에서도 결국
+       체스판이 됩니다 — 두 장짜리 무늬가 되풀이되기 때문입니다. */
+    const n=2,u=S/n;
+    x.fillStyle=sh(-seam);
+    for(let i=0;i<n;i++){x.fillRect(i*u,0,2,S); x.fillRect(0,i*u,S,2);}
+  } else if(kind!=="plain"){
+    // 마루널. 가로로 긴 널을 여섯 줄, 줄마다 이음매를 엇갈려 놓습니다 —
+    // 나란히 두면 바둑판이 되고 마루로 보이지 않습니다.
+    const rows=6,rh=S/rows;
+    for(let r=0;r<rows;r++){
+      x.fillStyle=sh(r%2?step:-step*0.4); x.fillRect(0,r*rh,S,rh);
+      x.fillStyle=sh(-seam);
+      x.fillRect(0,Math.round(r*rh),S,1.6);                 // 널 사이 가로 줄
+      (r%2?[0.12,0.58]:[0.31,0.79]).forEach(k=>             // 짧은 세로 이음매
+        x.fillRect(Math.round(k*S),Math.round(r*rh),1.6,rh));
+    }
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+/** 바닥 그림을 지금 색·마감·방 크기에 맞춰 다시 깝니다. 한 장이 3m 쯤
+ *  되도록 되풀이 횟수를 방 크기에서 구합니다 — 방이 커지면 널이 함께
+ *  커지는 게 아니라 수가 늘어야 합니다. */
+function refreshFloor(){
+  if(floorMat.map) floorMat.map.dispose();
+  const t=makeFloorTexture(floorHex,floorPattern);
+  t.repeat.set(Math.max(1,Math.round(ROOM.w/3)),Math.max(1,Math.round(ROOM.d/3)));
+  floorMat.map=t;
+  floorMat.color.set("#ffffff");          // 색은 그림이 들고 있습니다
+  floorMat.needsUpdate=true;
+}
+
 /* 3D 안에 그리는 글자(이름표·방명록판·빈 자리표)도 화면과 같은 글꼴을
    씁니다. CSS 변수는 캔버스에 닿지 않아서 여기 한 번 더 적습니다 —
    theme.css 의 --font 와 같은 줄로 맞춰 두세요. */
@@ -1139,6 +1367,204 @@ addEventListener("resize",()=>{renderer.setSize(innerWidth,innerHeight);
 
 const wallMat=new THREE.MeshBasicMaterial({map:makeWallTexture("#131318"),side:THREE.DoubleSide});
 const floorMat=new THREE.MeshBasicMaterial({color:"#0a0a0c"});
+/* 걸레받이 — 벽과 바닥이 맞닿는 자리에 두르는 낮은 띠입니다. 이 줄 하나가
+   방의 크기를 눈에 잡히게 합니다. 없으면 벽이 어디서 끝나고 바닥이 어디서
+   시작하는지 경계가 색 하나로만 갈려서, 방이 아니라 색칠한 배경으로
+   보입니다. */
+const baseMat=new THREE.MeshBasicMaterial({color:"#1c1c22"});
+
+/* ---------- 거실의 붙박이 가구 ----------
+
+   미술관 로비의 긴 쿠션 벤치와 좌대입니다. 학생이 놓는 가구(layout)와
+   달리 방에 딸린 것이라 옮기거나 치울 수 없습니다 — 거실 한가운데가
+   늘 비어 있으면 통창이 아무리 커도 "지나가는 복도" 로 보입니다.
+   앉을 자리와 볼 것이 있어야 머무는 자리가 됩니다.
+
+   학생의 가구 여덟 개 한도와는 별개입니다.
+
+   재질은 빛을 받습니다. 아바타와 가구를 비추려고 이미 달아둔 조명이
+   그대로 쿠션을 둥글게 깎아줍니다 — 조명을 더 달지 않습니다. */
+const FIXMAT={
+  sofa: new THREE.MeshLambertMaterial(),   // 소파 몸통
+  seat: new THREE.MeshLambertMaterial(),   // 앉는 방석 — 한 단 밝게
+  wood: new THREE.MeshLambertMaterial(),   // 테이블 상판
+  leg:  new THREE.MeshLambertMaterial({color:"#3b3b3f"}),   // 테이블 다리
+  cushA:new THREE.MeshLambertMaterial(),   // 쿠션 셋
+  cushB:new THREE.MeshLambertMaterial(),
+  cushC:new THREE.MeshLambertMaterial(),
+  vase: new THREE.MeshLambertMaterial({color:"#f4f2ee"}),
+  bloom:new THREE.MeshLambertMaterial({color:"#f0bcc6"}),
+  rug:  new THREE.MeshLambertMaterial({color:"#ffffff"}),   // 무늬가 색을 들고 있습니다
+  rugSide:new THREE.MeshLambertMaterial(), // 러그 옆면(털의 두께)
+};
+
+/* 거실 가구의 색 한 벌. 소파·쿠션·테이블·러그가 같이 움직여야 한 세트로
+   보입니다 — 소파만 검게 하고 러그를 민트로 두면 따로 놀아 보입니다.
+   고른 이름은 theme 에 적습니다. 대표 이미지·전시관·바닥 마감과 같은
+   방식이라 DB 에 새 컬럼이 필요 없습니다. */
+const LOUNGE_SETS={
+  cream:{
+    name:"크림 · 민트",
+    sofa:"#efece3", seat:"#f5f3ec", wood:"#a98a6d",
+    cush:["#3f8d86","#cdbb9c","#f1e5d2"],
+    rug:"#a9cbc6", rugLine:"#f0ece1", rugSide:"#8fb4af",
+  },
+  charcoal:{
+    name:"차콜 · 자주",
+    sofa:"#3f3e42", seat:"#494851", wood:"#c9c8b6",
+    cush:["#8a4d80","#f0b6c4","#f7dfe4"],
+    rug:"#efeae0", rugLine:"#8a4d80", rugSide:"#d9d3c6",
+  },
+};
+const LOUNGE_KEYS=Object.keys(LOUNGE_SETS);
+let loungeSet=LOUNGE_KEYS[0];
+
+/* 모서리가 둥근 상자. three 에는 이런 기하가 없어서 직접 만듭니다 —
+   모서리를 둥글린 납작한 사각형을 그려 두께 방향으로 밀어내고(extrude),
+   미는 양 끝을 깎아(bevel) 열두 모서리를 모두 둥글립니다.
+   각진 상자로 쌓으면 사무실 가구가 되고, 이 한 겹이 천을 씌운 것처럼
+   보이게 합니다. */
+function softBox(w,h,d,r){
+  const b=Math.min(0.055,d*0.3,h*0.3,r);          // 두께 방향으로 깎는 양
+  const rr=Math.max(0.005,Math.min(r,w/2-0.005,h/2-0.005));
+  const sh=new THREE.Shape();
+  const x0=-w/2+rr,x1=w/2-rr,y0=-h/2+rr,y1=h/2-rr;
+  sh.moveTo(-w/2,y0);
+  sh.lineTo(-w/2,y1); sh.quadraticCurveTo(-w/2, h/2,x0, h/2);
+  sh.lineTo(x1, h/2); sh.quadraticCurveTo( w/2, h/2, w/2,y1);
+  sh.lineTo( w/2,y0); sh.quadraticCurveTo( w/2,-h/2,x1,-h/2);
+  sh.lineTo(x0,-h/2); sh.quadraticCurveTo(-w/2,-h/2,-w/2,y0);
+  const dep=Math.max(0.01,d-b*2);
+  const g=new THREE.ExtrudeGeometry(sh,{depth:dep,bevelEnabled:true,
+    bevelSize:b,bevelThickness:b,bevelSegments:3,curveSegments:5,steps:1});
+  g.translate(0,0,-dep/2);                        // 가운데로 옮깁니다
+  return g;
+}
+
+/* 쿠션. 모서리만 둥글린 상자로 만들면 얇은 판때기가 됩니다 — 쿠션은
+   가운데가 볼록하고 네 귀퉁이가 잡히는 모양입니다.
+
+   구의 점들을 초타원체(superellipsoid)로 옮겨 만듭니다. 지수 n 이 2 면
+   공, 4 면 모서리 둥근 상자이고, 그 사이인 2.6 쯤이면 면이 도톰하게
+   부풀고 귀퉁이가 잡힙니다 — 솜을 넣은 쿠션이 딱 그 모양입니다. */
+function pillowGeo(w,h,d,n){
+  const g=new THREE.SphereGeometry(0.5,20,14);
+  const p=g.attributes.position, v=new THREE.Vector3();
+  const e=n===undefined?2.6:n;
+  for(let i=0;i<p.count;i++){
+    v.fromBufferAttribute(p,i).multiplyScalar(2);          // 반지름 1 로
+    const k=Math.pow(Math.pow(Math.abs(v.x),e)+Math.pow(Math.abs(v.y),e)+
+                     Math.pow(Math.abs(v.z),e),-1/e);
+    p.setXYZ(i,v.x*k*w/2,v.y*k*h/2,v.z*k*d/2);
+  }
+  p.needsUpdate=true; g.computeVertexNormals();
+  return g;
+}
+
+/* 천의 결. 아주 고운 점을 뿌려 놓으면 매끈한 흰 면이 천처럼 보입니다.
+   무늬가 눈에 띄면 안 됩니다 — 밝기 차이가 몇 단계면 충분하고, 그
+   이상이면 천이 아니라 얼룩이 됩니다. */
+function makeFabricTexture(){
+  const S=128,c=document.createElement("canvas"); c.width=c.height=S;
+  const x=c.getContext("2d");
+  const im=x.createImageData(S,S), d=im.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=236+Math.floor(Math.random()*20);
+    d[i]=d[i+1]=d[i+2]=n; d[i+3]=255;
+  }
+  x.putImageData(im,0,0);
+  x.fillStyle="rgba(0,0,0,0.05)";                 // 씨줄 날줄
+  for(let i=0;i<S;i+=3){x.fillRect(i,0,1,S); x.fillRect(0,i,S,1);}
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(5,5);
+  return t;
+}
+(function(){
+  const fab=makeFabricTexture();
+  ["sofa","seat","cushA","cushB","cushC"].forEach(k=>{
+    FIXMAT[k].map=fab; FIXMAT[k].needsUpdate=true;
+  });
+})();
+
+/* 러그. 고르게 칠한 한 판은 러그가 아니라 색종이로 보입니다. 실제 러그는
+   털이 누운 방향에 따라 빛을 다르게 되받아서 넓게 밝고 어두운 자리가
+   생기고, 가까이 보면 올이 보입니다. 그 셋을 차례로 얹습니다 —
+   큰 얼룩 · 올의 결 · 짧은 씨줄.
+   캔버스를 러그 비율에 맞춰 그려야 테두리 폭이 사방으로 고릅니다. */
+function makeRugTexture(base,line,edge){
+  const W=384,H=276,c=document.createElement("canvas");
+  c.width=W; c.height=H;
+  const x=c.getContext("2d");
+  x.fillStyle=base; x.fillRect(0,0,W,H);
+
+  for(let i=0;i<26;i++){                       // 큰 얼룩
+    const cx=Math.random()*W, cy=Math.random()*H, r=40+Math.random()*90;
+    const up=Math.random()<0.5, a=(0.020+Math.random()*0.030).toFixed(3);
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+    g.addColorStop(0,(up?"rgba(255,255,255,":"rgba(0,0,0,")+a+")");
+    g.addColorStop(1,"rgba(255,255,255,0)");
+    x.fillStyle=g; x.fillRect(cx-r,cy-r,r*2,r*2);
+  }
+
+  x.strokeStyle=line; x.lineWidth=7;           // 테두리 한 줄
+  x.strokeRect(18,18,W-36,H-36);
+
+  const im=x.getImageData(0,0,W,H), d=im.data; // 올의 결
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()-0.5)*26;
+    d[i]  =Math.max(0,Math.min(255,d[i]  +n));
+    d[i+1]=Math.max(0,Math.min(255,d[i+1]+n));
+    d[i+2]=Math.max(0,Math.min(255,d[i+2]+n));
+  }
+  x.putImageData(im,0,0);
+
+  for(let i=0;i<2800;i++){                     // 짧은 씨줄
+    const px=Math.random()*W, py=Math.random()*H, len=2+Math.random()*5;
+    x.fillStyle=Math.random()<0.5?"rgba(255,255,255,0.055)":"rgba(0,0,0,0.055)";
+    x.fillRect(px,py,len,1);
+  }
+
+  x.strokeStyle=edge; x.lineWidth=5;           // 가장자리 마감
+  x.strokeRect(2.5,2.5,W-5,H-5);
+  return new THREE.CanvasTexture(c);
+}
+
+/** 거실 가구의 색을 갈아입힙니다. 모양은 그대로라 재질의 색만 바꾸면
+ *  됩니다 — 방을 다시 세울 필요가 없어 고르는 즉시 바뀝니다. */
+function applyLounge(key,remember){
+  loungeSet=LOUNGE_SETS[key]?key:LOUNGE_KEYS[0];
+  const L=LOUNGE_SETS[loungeSet];
+  FIXMAT.sofa.color.set(L.sofa);
+  FIXMAT.seat.color.set(L.seat);
+  FIXMAT.wood.color.set(L.wood);
+  FIXMAT.cushA.color.set(L.cush[0]);
+  FIXMAT.cushB.color.set(L.cush[1]);
+  FIXMAT.cushC.color.set(L.cush[2]);
+  FIXMAT.rugSide.color.set(L.rugSide);
+  if(FIXMAT.rug.map) FIXMAT.rug.map.dispose();
+  FIXMAT.rug.map=makeRugTexture(L.rug,L.rugLine,L.rugSide);
+  FIXMAT.rug.needsUpdate=true;
+  if(remember&&current&&canManage(current)) current.theme.lounge=loungeSet;
+  selectIn("lounge",loungeSet);
+}
+applyLounge(loungeSet);
+/* 붙박이 가구가 막는 자리. 가벽과 같이 네모로 잡습니다 — 벤치는 길쭉해서
+   원으로 잡으면 앞이 뚫리거나 옆이 지나치게 막힙니다. */
+let FIX=[];
+const FIX_PAD=0.42;
+function fixAt(x,z){
+  for(const f of FIX)
+    if(Math.abs(x-f.x)<f.w/2+FIX_PAD && Math.abs(z-f.z)<f.d/2+FIX_PAD) return f;
+  return null;
+}
+/* 바닥 마감. 지금까지 바닥은 색 한 장이었습니다 — 무늬도 이음매도 없어서
+   걸어도 움직이는 느낌이 나지 않았습니다.
+   벽 그림(makeWallTexture)과 같은 방식으로 고른 색에서 무늬를 만듭니다.
+   흰 무늬에 색을 곱하는 방법을 쓰지 않는 이유는, 이 전시장들의 바닥이
+   아주 어두워서(#0a0a0c) 곱하면 이음매가 1~2단계 차이로 뭉개지기
+   때문입니다. */
+const FLOOR_PATTERNS=["plank","tile","plain"];
+let floorPattern="plank", floorHex="#0a0a0c";
 const ceilMat=new THREE.MeshBasicMaterial({color:"#050506"});
 const partMat=new THREE.MeshBasicMaterial({color:"#131318"});
 /* 방의 껍데기 — 바닥·천장·네 벽·가벽. 방마다 크기가 달라서 한 번 만들고
@@ -1153,7 +1579,13 @@ let LIMX=0, LIMZ=0;
 function applyRoom(room){
   ROOM=room.size; PARTS=room.parts; SLOTS=room.slots;
 
-  shell.children.slice().forEach(m=>{shell.remove(m); m.geometry.dispose();});
+  /* 껍데기를 비웁니다. 창처럼 여러 조각이 묶인 그룹도 들어 있으므로
+     안쪽까지 훑어 지웁니다 — 예전에는 바로 아래 자식의 geometry 만
+     지웠는데, 그룹에는 geometry 가 없어서 방을 다시 세울 때 터졌습니다. */
+  shell.children.slice().forEach(o=>{
+    shell.remove(o);
+    o.traverse(m=>{if(m.geometry) m.geometry.dispose();});
+  });
   partMeshes=[];
 
   fl=new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w,ROOM.d),floorMat);
@@ -1170,10 +1602,385 @@ function applyRoom(room){
     m.position.set(p.x,p.h/2,p.z); shell.add(m); partMeshes.push(m);
   });
 
+  /* 걸레받이. 네 벽을 두르고, 가벽에도 밑단으로 한 바퀴 두릅니다.
+     입구 쪽 벽만 문을 비켜 두 토막으로 놓습니다 — 문틀 아래를 가로지르면
+     같은 자리에서 두 면이 겹쳐 문턱이 지지직거립니다. */
+  const BB_H=0.15, BB_T=0.05, DOOR_W=2.6, sideW=(ROOM.w-DOOR_W)/2;
+  [[ROOM.w,0,-ROOM.d/2+BB_T/2,0],
+   [sideW,-(DOOR_W+sideW)/2,ROOM.d/2-BB_T/2,0],
+   [sideW, (DOOR_W+sideW)/2,ROOM.d/2-BB_T/2,0],
+   [ROOM.d,-ROOM.w/2+BB_T/2,0,Math.PI/2],[ROOM.d,ROOM.w/2-BB_T/2,0,Math.PI/2]]
+   .forEach(([len,x,z,ry])=>{
+     const m=new THREE.Mesh(new THREE.BoxGeometry(len,BB_H,BB_T),baseMat);
+     m.position.set(x,BB_H/2,z); m.rotation.y=ry; shell.add(m);
+   });
+  PARTS.forEach(p=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(p.w+0.07,BB_H,p.d+0.07),baseMat);
+    m.position.set(p.x,BB_H/2,p.z); shell.add(m);
+  });
+  /* 창. 벽에서의 자리와 바라보는 방향은 작품 자리와 같은 약속입니다. */
+  hasWindows=false;
+  outKind=room.view||"sea";
+  /* 창밖 그림을 창마다 어떻게 떠올지.
+
+     한 벽에 나란히 선 창들(파리 방)은 이어 붙입니다 — 왼쪽 창에서
+     오른쪽 창으로 풍경이 이어져야 큰 창 하나를 여러 칸으로 나눈 것처럼
+     보입니다. 이때는 창의 가로세로 비에 맞춰 몫을 나눕니다. 똑같이
+     삼등분하면 넓고 낮은 창에서 그림이 옆으로 늘어납니다.
+
+     서로 다른 벽에 난 창들(로마·바다 방)은 각자 잘라 씁니다. 정면 창은
+     안쪽을, 옆방 창은 옆을 보는데 그 둘이 이어진 풍경일 리가 없습니다.
+     각자 자르면 창을 벽 끝까지 키워도 그림이 늘어나지 않습니다 —
+     거실 정면을 통창으로 낼 수 있는 것이 이 규칙 덕입니다. */
+  const wins=room.windows||[];
+  const oneWall=wins.length>0&&wins.every(v=>v.wall===wins[0].wall);
+  const share=wins.map(v=>(v.w/(v.h||2.5))*(outCanvas.height/outCanvas.width));
+  const shareSum=share.reduce((a,b)=>a+b,0)||1;
+  let uAt=0;
+  wins.forEach((win,wi)=>{
+    hasWindows=true;
+    // 창 높이는 방마다 다릅니다. 파리 방의 발코니 창은 키가 크고 좁습니다.
+    const y0=win.y0!==undefined?win.y0:0.95, wh=win.h||2.5, ww=win.w;
+    let px,pz,ry;
+    if(win.wall==="L")      {px=-ROOM.w/2; pz=win.at; ry= Math.PI/2;}
+    else if(win.wall==="R") {px= ROOM.w/2; pz=win.at; ry=-Math.PI/2;}
+    else if(win.wall==="B") {px=win.at; pz=-ROOM.d/2; ry=0;}
+    else                    {px=win.at; pz= ROOM.d/2; ry=Math.PI;}
+    const nx=Math.sin(ry), nz=Math.cos(ry);
+
+    const gp=new THREE.Group();
+    gp.position.set(px+nx*0.02,0,pz+nz*0.02); gp.rotation.y=ry; shell.add(gp);
+    /* 이 창이 맡은 토막. 판의 UV 를 직접 고쳐서 재료는 하나로 씁니다 —
+       창마다 재료를 만들면 물결을 그릴 때마다 전부 갱신해야 합니다. */
+    const geo=new THREE.PlaneGeometry(ww,wh);
+    let u0,u1;
+    if(oneWall){
+      u0=uAt; u1=uAt+share[wi]/shareSum; uAt=u1;
+    }else{
+      /* 제 비율만큼만 가져갑니다. 어느 벽이냐에 따라 그림의 왼쪽·
+         가운데·오른쪽에서 떠옵니다 — 정면 창이 한복판을 받습니다. */
+      const uw=Math.min(1,share[wi]);
+      const c=win.wall==="L"?uw/2:win.wall==="R"?1-uw/2:0.5;
+      u0=c-uw/2; u1=c+uw/2;
+    }
+    const uv=geo.attributes.uv;
+    for(let k=0;k<uv.count;k++) uv.setX(k,u0+uv.getX(k)*(u1-u0));
+    uv.needsUpdate=true;
+    const view=new THREE.Mesh(geo,outMat);
+    view.position.y=y0+wh/2; gp.add(view);
+
+    // 창틀과 창살
+    const bar=(w,h,bx,by)=>{
+      const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.10),winFrameMat);
+      m.position.set(bx,by,0.02); gp.add(m);
+    };
+    bar(ww+0.22,0.11,0,y0-0.055); bar(ww+0.22,0.11,0,y0+wh+0.055);
+    bar(0.11,wh+0.22,-(ww/2+0.055),y0+wh/2);
+    bar(0.11,wh+0.22, (ww/2+0.055),y0+wh/2);
+    /* 세로 창살. 통창처럼 넓은 창에 살이 둘뿐이면 유리 한 장이 5m 가
+       되어 창틀이 아니라 그림 액자로 보입니다. 한 칸이 2m 안쪽이 되게
+       나눕니다. 지금까지의 창(4~6m)은 예전처럼 세 칸입니다. */
+    const cols=ww<=6.5?3:Math.max(4,Math.round(ww/1.8));
+    for(let i=1;i<cols;i++) bar(0.07,wh,-ww/2+ww*i/cols,y0+wh/2);
+    const rowsN=wh>3?3:2;                        // 키 큰 창은 가로살을 더
+    for(let i=1;i<rowsN;i++) bar(ww,0.07,0,y0+wh*i/rowsN);
+    const sill=new THREE.Mesh(new THREE.BoxGeometry(ww+0.36,0.09,0.26),winFrameMat);
+    sill.position.set(0,y0-0.13,0.10); gp.add(sill);
+
+    // 창으로 들어온 빛이 바닥에 앉습니다
+    const lit=new THREE.Mesh(new THREE.PlaneGeometry(ww*1.6,ww*1.6),winLightMat);
+    lit.rotation.x=-Math.PI/2;
+    lit.position.set(px+nx*1.7,0.018,pz+nz*1.7); shell.add(lit);
+  });
+  if(hasWindows) drawOutside();
+
+  if(room.sky){
+    const sw=room.sky.w, sd=room.sky.d;
+    const pane=new THREE.Mesh(new THREE.PlaneGeometry(sw,sd),skyMat);
+    pane.rotation.x=Math.PI/2; pane.position.y=ROOM.h-0.015; shell.add(pane);
+    /* 창살. 밝은 면만 있으면 뚫린 곳이 아니라 흰 판으로 보입니다.
+       2.2m 쯤마다 한 줄씩, 양쪽 방향으로 넣습니다 — 큰 전시실처럼 길게
+       난 천창은 한 방향으로만 살을 넣으면 사다리처럼 보입니다. */
+    const skyBar=(w,d,bx,bz)=>{
+      const m=new THREE.Mesh(new THREE.BoxGeometry(w,0.06,d),baseMat);
+      m.position.set(bx,ROOM.h-0.055,bz); shell.add(m);
+    };
+    const nz=Math.max(2,Math.round(sd/2.2)), nx=Math.max(2,Math.round(sw/2.2));
+    for(let i=1;i<nz;i++) skyBar(sw,0.10,0,-sd/2+sd*i/nz);
+    for(let i=1;i<nx;i++) skyBar(0.10,sd,-sw/2+sw*i/nx,0);
+    const lit=new THREE.Mesh(new THREE.PlaneGeometry(sw*1.25,sd*1.6),skyFloorMat);
+    lit.rotation.x=-Math.PI/2; lit.position.y=0.02; shell.add(lit);
+  }
+  /* 거실 한가운데의 붙박이 가구. 통창을 바라보는 긴 벤치와, 그 앞에
+     놓인 좌대입니다. 앉아서 보면 좌대 위의 것 뒤로 창밖이 배경이 됩니다.
+     자리는 방 깊이에 비례해 잡습니다 — 20m 방과 14m 방에 같은 좌표로
+     두면 한쪽은 문 앞에, 한쪽은 창에 붙습니다. */
+  FIX=[];
+  if(room.lounge){
+    /* 거실의 붙박이 가구 — 창가에 놓인 ㄱ자 소파와 원형 테이블, 러그.
+       소파는 창을 보고 앉습니다(등받이가 문 쪽인 +z). 통창을 이만큼
+       키워놓고 등을 돌리게 하면 창을 낸 뜻이 없습니다.
+       자리는 방 깊이에 비례해 잡습니다 — 20m 방과 14m 방에 같은 좌표로
+       두면 한쪽은 방 한가운데에, 한쪽은 창에 붙습니다. */
+    const set=new THREE.Group();
+    set.position.set(0,0,-ROOM.d*0.22); shell.add(set);
+    const put=(g,w,h,d,x,y,z,mat,r)=>{
+      const m=new THREE.Mesh(softBox(w,h,d,r===undefined?0.09:r),mat);
+      m.position.set(x,y,z); g.add(m); return m;
+    };
+
+    /* 러그. 두께가 있어야 러그입니다 — 종이처럼 한 겹만 깔면 바닥에
+       무늬를 칠한 것으로 보입니다. 낮은 판을 하나 깔고 그 위에 무늬 면을
+       얹어, 옆에서 보면 털의 두께가 보이게 합니다. */
+    const rugPad=new THREE.Mesh(new THREE.BoxGeometry(6.6,0.024,4.8),FIXMAT.rugSide);
+    rugPad.position.y=0.012; set.add(rugPad);
+    const rug=new THREE.Mesh(new THREE.PlaneGeometry(6.6,4.8),FIXMAT.rug);
+    rug.rotation.x=-Math.PI/2; rug.position.y=0.0255; set.add(rug);
+
+    /* ㄱ자 소파. 긴 쪽이 좌우로 눕고, 오른쪽에 발받침(셰이즈)이 창 쪽으로
+       뻗습니다. 모서리가 각진 요즘 소파라 상자로 깎습니다 — 벤치처럼
+       둥글릴 필요가 없습니다. */
+    const SX=-0.5, SZ=1.35;                    // 긴 쪽의 한가운데
+    put(set,3.60,0.34,1.05,SX,0.20,SZ,FIXMAT.sofa);          // 몸통
+    put(set,3.32,0.52,0.24,SX,0.50,SZ+0.40,FIXMAT.sofa);     // 등받이
+    [-1,1].forEach(sx=>                                       // 팔걸이
+      put(set,0.24,0.56,1.05,SX+sx*1.68,0.45,SZ,FIXMAT.sofa));
+    /* 앉는 방석 셋. 사이를 벌리고 두툼하게 올려야 방석으로 보입니다 —
+       딱 붙여 얇게 깔면 소파가 통짜 상자로 읽힙니다. */
+    for(let i=0;i<3;i++)
+      put(set,0.98,0.20,0.86,SX-1.06+i*1.06,0.47,SZ-0.06,FIXMAT.seat,0.10);
+
+    const CX=SX+2.42, CZ=SZ-0.52;                             // 셰이즈
+    put(set,1.60,0.34,2.10,CX,0.20,CZ,FIXMAT.sofa);
+    put(set,0.24,0.34,2.10,CX+0.68,0.38,CZ,FIXMAT.sofa);      // 바깥 팔걸이
+    put(set,1.26,0.20,1.90,CX-0.10,0.47,CZ,FIXMAT.seat,0.10);
+
+    /* 쿠션 여섯. 등받이에 비스듬히 기대 놓습니다 — 반듯이 세우면
+       전시용 진열대처럼 보입니다. 크기와 기울기를 조금씩 달리해야
+       사람이 던져둔 것처럼 보입니다. 똑같이 여섯이면 진열입니다. */
+    [[-1.35,"cushA",1.00],[-0.95,"cushC",0.92],[-0.55,"cushB",1.05],
+     [ 0.30,"cushB",0.95],[ 0.70,"cushA",1.03],[ 1.10,"cushC",0.90]]
+     .forEach(([dx,k,sc],i)=>{
+      const c=new THREE.Mesh(pillowGeo(0.46*sc,0.46*sc,0.21*sc),FIXMAT[k]);
+      c.position.set(SX+dx,0.60+0.02*sc,SZ+0.24);
+      c.rotation.set(-0.36,(i%2?1:-1)*0.13,(i%2?1:-1)*0.14);
+      set.add(c);
+    });
+
+    /* 원형 테이블 둘. 큰 것이 뒤, 작은 것이 앞에 겹칩니다. 다리는 V 자로
+       벌어진 검은 쇠입니다. */
+    const round=(r,h,x,z)=>{
+      const t=new THREE.Mesh(new THREE.CylinderGeometry(r,r,0.05,26),FIXMAT.wood);
+      t.position.set(x,h,z); set.add(t);
+      for(let k=0;k<3;k++){
+        const a=k*Math.PI*2/3+0.4;
+        const l=new THREE.Mesh(new THREE.BoxGeometry(0.045,h,0.045),FIXMAT.leg);
+        l.position.set(x+Math.cos(a)*r*0.62,h/2,z+Math.sin(a)*r*0.62);
+        l.rotation.set(Math.sin(a)*0.14,0,-Math.cos(a)*0.14); set.add(l);
+      }
+    };
+    round(0.62,0.42,-0.15,-0.55);
+    round(0.44,0.32,-0.92,-0.35);
+
+    /* 꽃병. 큰 상 위에 하나. 꽃송이는 작은 구 셋을 모아 놓습니다 —
+       하나만 크게 두면 꽃다발이 아니라 버섯으로 보입니다. */
+    const vx=-0.15, vz=-0.55;
+    const vs=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.06,0.20,12),FIXMAT.vase);
+    vs.position.set(vx,0.545,vz); set.add(vs);
+    [[0,0.685,0,0.075],[0.055,0.665,0.03,0.055],[-0.05,0.66,-0.035,0.05]]
+     .forEach(([dx,y,dz,r])=>{
+      const b=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),FIXMAT.bloom);
+      b.position.set(vx+dx,y,vz+dz); set.add(b);
+    });
+
+    // 부딪히는 자리. 소파 긴 쪽 · 셰이즈 · 테이블 셋만 잡습니다.
+    const gz=-ROOM.d*0.22;
+    FIX.push({x:SX,       z:gz+SZ,       w:3.60,d:1.30});
+    FIX.push({x:CX,       z:gz+CZ,       w:1.60,d:2.10});
+    FIX.push({x:-0.45,    z:gz-0.48,     w:1.90,d:1.30});
+  }
+
+  refreshFloor();                              // 널 수가 방 크기를 따라갑니다
+
   LIMX=ROOM.w/2-0.7; LIMZ=ROOM.d/2-0.7;
   // 문과 방명록은 입구 쪽 벽에 붙어 있습니다. 벽이 옮겨가면 함께 갑니다.
   doorGroup.position.set(0,0,ROOM.d/2-0.03);
   gbBoard.position.set(Math.min(5.4,ROOM.w/2-2.4),1.85,ROOM.d/2-0.03);
+  buildRoomLights();                           // 조명도 방 크기를 따라갑니다
+}
+
+/* ---------- 전시 조명 ----------
+
+   미술관을 미술관으로 보이게 하는 건 벽 색이 아니라 작품 위에서 떨어지는
+   빛입니다. 그런데 이 방의 벽·바닥·천장은 빛을 계산하지 않는 재질이라
+   진짜 조명을 아무리 달아도 화면은 그대로입니다.
+
+   그래서 벽 재질을 바꾸는 대신 "빛이 닿은 자국" 을 벽 바로 앞에 덧대
+   그립니다. 작품이 바닥에 뿌리는 spill 판과 같은 수법입니다. 이렇게 하면
+   선생님이 고른 벽 색이 조명에 물들지 않고 그대로 나오고, 이미 만들어진
+   전시장도 색이 변하지 않습니다. 마음에 안 들면 이 그룹 하나만
+   지우면 예전 모습으로 돌아갑니다.
+
+   천장에는 진짜 기구를 답니다 — 레일과 그 위의 작은 조명, 그리고 벽까지
+   가는 옅은 빛줄기. 빛이 어디서 오는지가 눈에 보여야 벽의 자국이
+   "칠해둔 무늬" 가 아니라 "빛" 으로 읽힙니다. */
+
+const LIGHT_WARM="#ffe3b4";        // 전시 조명은 하얗지 않고 살짝 노랗습니다
+const lightGroup=new THREE.Group(); scene.add(lightGroup);
+/* 기구만 빛을 받는 재질입니다. 아바타를 비추려고 이미 달아둔 조명이
+   그대로 원통을 깎아줍니다 — 조명을 더 달지 않습니다. */
+const fixtureMat=new THREE.MeshLambertMaterial({color:"#2b2b33"});
+const lensMat=new THREE.MeshBasicMaterial({color:LIGHT_WARM});
+let beamTex=null;                  // 처음 쓸 때 한 장만 만듭니다
+const beamMat=new THREE.MeshBasicMaterial({color:LIGHT_WARM,transparent:true,
+  blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,opacity:0.018});
+const poolMats=[];                 // 방 밝기에 맞춰 세기를 함께 낮춥니다
+let poolGain=1;
+
+/* 벽에 떨어지는 빛 웅덩이 한 장. 위(천장)에서 좁게 시작해 아래로
+   퍼지고, 작품이 걸린 높이에서 가장 밝습니다.
+
+   가로줄 하나하나를 "가운데가 밝은" 그라디언트로 칠해 가장자리를
+   흐리게 만듭니다. canvas 의 blur 필터를 쓰지 않는 이유는 브라우저마다
+   결과가 달라서입니다 — 학생 태블릿에서도 같은 그림이어야 합니다.
+
+   peak 은 가장 밝은 높이입니다(0 천장 · 1 바닥). 벽에 건 작품과 가벽에
+   건 작품은 높이가 달라서 판마다 다른 값이 들어옵니다. */
+function makeWallPoolTexture(peak){
+  /* 한 줄이 1px 입니다. 예전에 80줄로 나눠 칠했더니 벽에 가로 띠가
+     생겼습니다 — 줄 하나가 3px 넘게 두꺼웠고, 그 안이 한 가지 밝기라
+     계단이 그대로 보였습니다. */
+  const W=128,H=256;
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const x=c.getContext("2d");
+  for(let i=0;i<H;i++){
+    const t=i/(H-1);
+    // 가장 밝은 자리가 peak 에 오도록 0~1 을 접어서 sin 곡선에 태웁니다
+    const u=t<peak ? 0.5*t/peak : 0.5+0.5*(t-peak)/(1-peak);
+    const a=Math.pow(Math.max(0,Math.sin(Math.PI*u)),1.15)*0.55;
+    if(a<0.003) continue;
+    const half=W*Math.min(0.49,0.13+0.42*Math.pow(t,0.7));    // 아래로 갈수록 넓게
+    const g=x.createLinearGradient(W/2-half,0,W/2+half,0);
+    g.addColorStop(0,"rgba(255,255,255,0)");
+    g.addColorStop(0.5,"rgba(255,255,255,"+a.toFixed(3)+")");
+    g.addColorStop(1,"rgba(255,255,255,0)");
+    x.fillStyle=g; x.fillRect(0,i,W,1);
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+/* 빛줄기에 씌우는 그림. 기구 쪽이 밝고 벽에 닿기 전에 사라집니다.
+   이게 없으면 원뿔의 밑면 테두리가 그대로 드러나 종이 고깔처럼 보입니다.
+   원기둥 계열의 UV 는 아래(v=0)에서 위(v=1)로 갑니다. 꼭짓점이 위쪽이니
+   캔버스 맨 윗줄이 기구 쪽입니다. */
+function makeBeamTexture(){
+  const c=document.createElement("canvas"); c.width=4; c.height=128;
+  const x=c.getContext("2d"),g=x.createLinearGradient(0,0,0,128);
+  g.addColorStop(0,"rgba(255,255,255,1)");
+  g.addColorStop(0.45,"rgba(255,255,255,0.34)");
+  g.addColorStop(1,"rgba(255,255,255,0)");
+  x.fillStyle=g; x.fillRect(0,0,4,128);
+  return new THREE.CanvasTexture(c);
+}
+/* 같은 높이의 자리는 같은 그림을 씁니다 — 스무 장을 따로 그릴 이유가
+   없습니다. 실제로 만들어지는 건 두세 장뿐입니다. */
+const poolTexCache={};
+function poolTexture(peak){
+  const k=peak.toFixed(2);
+  if(!poolTexCache[k]) poolTexCache[k]=makeWallPoolTexture(+k);
+  return poolTexCache[k];
+}
+
+/** 한 자리에 조명 하나. 벽의 빛 자국 · 천장의 기구 · 그 사이의 빛줄기를
+ *  함께 만듭니다.
+ *  @param target 비추는 곳(작품 한가운데)
+ *  @param ry     그 벽이 보는 방향 — 작품 그룹과 같은 값
+ *  @param wide   빛 자국의 폭. 작품보다 조금 넓게 잡습니다
+ *  @param top    빛이 시작하는 높이. 벽은 천장, 가벽은 가벽 꼭대기
+ *  @param gain   세기. 작품은 1, 문·방명록처럼 곁들이는 곳은 그보다 낮게 */
+function aimLight(target,ry,wide,top,gain){
+  const nx=Math.sin(ry), nz=Math.cos(ry);      // 벽이 방 안쪽을 보는 방향
+
+  const h=Math.max(0.6,top);
+  const peak=Math.min(0.9,Math.max(0.1,(top-target.y)/h));
+  const mat=new THREE.MeshBasicMaterial({map:poolTexture(peak),color:LIGHT_WARM,
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+    opacity:gain*poolGain});
+  mat.userData.gain=gain; poolMats.push(mat);
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(wide,h),mat);
+  // 벽에서 아주 조금만 띄웁니다. 작품(액자·화면)보다는 뒤여야 합니다.
+  pool.position.set(target.x+nx*0.006,h/2,target.z+nz*0.006);
+  pool.rotation.y=ry; lightGroup.add(pool);
+
+  // 천장의 기구 — 벽에서 0.95m 앞, 천장 바로 밑에서 작품을 겨눕니다
+  const fy=ROOM.h-0.15, fx=target.x+nx*0.95, fz=target.z+nz*0.95;
+  const head=new THREE.Group();
+  head.position.set(fx,fy,fz);
+  head.lookAt(target.x,target.y,target.z);     // 일반 물체는 +Z 가 목표를 봅니다
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.068,0.05,0.19,10),fixtureMat);
+  body.rotation.x=Math.PI/2; head.add(body);   // 원기둥을 눕혀 +Z 로 세웁니다
+  const lens=new THREE.Mesh(new THREE.CircleGeometry(0.066,14),lensMat);
+  lens.position.z=0.097; head.add(lens);
+  const dist=Math.hypot(fx-target.x,fy-target.y,fz-target.z);
+  /* 빛줄기. 꼭짓점이 기구, 밑면이 벽입니다. 아주 옅게 — 진하면 안개가
+     낀 것처럼 보이고 작품이 그 뒤로 묻힙니다. */
+  if(!beamTex){beamTex=makeBeamTexture(); beamMat.map=beamTex; beamMat.needsUpdate=true;}
+  const beam=new THREE.Mesh(new THREE.ConeGeometry(wide*0.32,dist,22,1,true),beamMat);
+  beam.rotation.x=-Math.PI/2; beam.position.z=dist/2; head.add(beam);
+  lightGroup.add(head);
+  // 천장에 붙는 짧은 대. 기구가 공중에 떠 있지 않게 합니다.
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.016,0.016,ROOM.h-fy,6),fixtureMat);
+  stem.position.set(fx,(fy+ROOM.h)/2,fz); lightGroup.add(stem);
+}
+
+/** 네 벽을 도는 조명 레일 한 줄. 기구가 매달린 자리입니다.
+ *  천장까지 닿는 벽이 가로막으면 그 앞에서 끊고 건너편에서 다시 잇습니다 —
+ *  벽을 뚫고 지나가는 레일은 옆방에서 보면 벽에서 튀어나온 막대가 됩니다.
+ *  낮은 가벽은 레일보다 아래라 그냥 지나갑니다.
+ *  @param axis "x" 면 x 를 따라 달리고 fixed 가 z 입니다. "z" 면 반대.  */
+function railRun(from,to,axis,fixed){
+  const cuts=[];
+  PARTS.forEach(p=>{
+    if(p.h<ROOM.h-0.5) return;
+    const along=axis==="x"?[p.x-p.w/2,p.x+p.w/2]:[p.z-p.d/2,p.z+p.d/2];
+    const cross=axis==="x"?[p.z-p.d/2,p.z+p.d/2]:[p.x-p.w/2,p.x+p.w/2];
+    if(fixed>cross[0]-0.1&&fixed<cross[1]+0.1) cuts.push(along);
+  });
+  cuts.sort((a,b)=>a[0]-b[0]);
+  const put=(a,b)=>{
+    if(b-a<0.4) return;                        // 토막이 너무 짧으면 두지 않습니다
+    const m=new THREE.Mesh(new THREE.BoxGeometry(b-a,0.055,0.055),fixtureMat);
+    if(axis==="x") m.position.set((a+b)/2,ROOM.h-0.045,fixed);
+    else {m.position.set(fixed,ROOM.h-0.045,(a+b)/2); m.rotation.y=Math.PI/2;}
+    lightGroup.add(m);
+  };
+  let at=from;
+  cuts.forEach(c=>{put(at,Math.min(c[0],to)); at=Math.max(at,c[1]);});
+  put(at,to);
+}
+
+function buildRoomLights(){
+  lightGroup.children.slice().forEach(o=>{
+    lightGroup.remove(o);
+    o.traverse(m=>{if(m.geometry) m.geometry.dispose();});
+  });
+  poolMats.forEach(m=>m.dispose()); poolMats.length=0;
+
+  // 벽에서 0.95m 안쪽으로, 네 줄이 모서리에서 만나 사각을 이룹니다
+  railRun(-ROOM.w/2+0.95,ROOM.w/2-0.95,"x",-ROOM.d/2+0.95);
+  railRun(-ROOM.w/2+0.95,ROOM.w/2-0.95,"x", ROOM.d/2-0.95);
+  railRun(-ROOM.d/2+0.95,ROOM.d/2-0.95,"z",-ROOM.w/2+0.95);
+  railRun(-ROOM.d/2+0.95,ROOM.d/2-0.95,"z", ROOM.w/2-0.95);
+
+  /* 자리마다 하나씩 — 작품이 걸렸든 비었든 답니다. 빈 전시장에 처음
+     들어와도 "여기가 거는 자리" 라는 게 빛으로 먼저 보입니다. */
+  SLOTS.forEach((sl,i)=>{
+    const {pos,ry,pw}=slotTransform(i);
+    const top=sl.part!==undefined ? PARTS[sl.part].h : ROOM.h-0.05;
+    aimLight(new THREE.Vector3(pos[0],pos[1],pos[2]),ry,pw*1.36,top,1);
+  });
+  /* 방명록 판에도 하나. 문은 이미 자기 빛(doorGlow)이 있어 건너뜁니다. */
+  aimLight(gbBoard.position.clone(),Math.PI,3.9,ROOM.h-0.05,0.72);
 }
 
 /* 가벽이 막는 영역. 실제 몸통보다 넉넉히 잡습니다 — 딱 맞게 잡으면
@@ -1190,7 +1997,22 @@ const blocked=(x,z)=>!!partAt(x,z);
  *  가벽은 네모라 옆으로, 가구는 원이라 바깥쪽으로 밀어냅니다. */
 function pushOut(o){
   const p=partAt(o.x,o.z);
-  if(p) o.x=o.x>=p.x?p.x+p.w/2+PAD_X:p.x-p.w/2-PAD_X;
+  if(p){
+    /* 덜 파고든 쪽으로 뺍니다. 예전에는 늘 옆(x)으로만 밀었습니다 —
+       얇은 가벽에서는 그게 맞지만, 가운데 기둥처럼 네모진 덩어리를
+       앞에서 들이받으면 몸이 옆구리까지 미끄러졌습니다. */
+    const ox=p.w/2+PAD_X-Math.abs(o.x-p.x);
+    const oz=p.d/2+PAD_Z-Math.abs(o.z-p.z);
+    if(ox<=oz) o.x=o.x>=p.x?p.x+p.w/2+PAD_X:p.x-p.w/2-PAD_X;
+    else       o.z=o.z>=p.z?p.z+p.d/2+PAD_Z:p.z-p.d/2-PAD_Z;
+  }
+  const fx=fixAt(o.x,o.z);
+  if(fx){                                      // 붙박이 가구도 가벽과 같이
+    const ox=fx.w/2+FIX_PAD-Math.abs(o.x-fx.x);
+    const oz=fx.d/2+FIX_PAD-Math.abs(o.z-fx.z);
+    if(ox<=oz) o.x=o.x>=fx.x?fx.x+fx.w/2+FIX_PAD:fx.x-fx.w/2-FIX_PAD;
+    else       o.z=o.z>=fx.z?fx.z+fx.d/2+FIX_PAD:fx.z-fx.d/2-FIX_PAD;
+  }
   const f=furnAt(o.x,o.z);
   if(f){
     let dx=o.x-f.x, dz=o.z-f.z, d=Math.hypot(dx,dz);
@@ -1256,6 +2078,337 @@ scene.add(highlight);
 
 /* ---------- 작품 ---------- */
 const glowTex=radialTexture(6);
+/* 천창. 천장에 난 밝은 면과, 그 아래 바닥에 떨어지는 빛입니다.
+   방을 다르게 만드는 건 크기보다 이런 한 가지입니다 — 위가 열린 방과
+   닫힌 방은 들어서는 순간 다릅니다. */
+/* 천창의 밝기. 방에서 가장 밝은 것이 맞지만 너무 희면 천장의 절반이
+   빛나는 판이 되어 작품보다 먼저 눈에 들어옵니다. */
+const skyMat=new THREE.MeshBasicMaterial({color:"#c9d3e2"});
+const skyFloorMat=new THREE.MeshBasicMaterial({map:glowTex,transparent:true,
+  blending:THREE.AdditiveBlending,depthWrite:false,opacity:0.16,color:"#e6ecf8"});
+
+/* ---------- 창밖 풍경 ----------
+
+   그림은 캔버스에 직접 그립니다. 사진 파일을 쓰지 않는 이유는 전시 당일
+   인터넷이 없는 자리에서도 열려야 하기 때문입니다(OFFLINE.md) — 아바타와
+   가구를 구와 원기둥으로 깎는 것과 같은 이유입니다.
+
+   방마다 창밖이 다릅니다. 한 번에 한 방에만 들어가 있으므로 캔버스는 한
+   장을 나눠 씁니다. 어느 풍경을 쓰는지는 ROOMS 의 view 에 적습니다.
+
+   낮과 저녁 두 벌을 두고 방 밝기에 따라 고릅니다. 심야 전시실에 한낮
+   풍경이 걸리면 방이 아니라 밝은 화면 몇 개가 됩니다. */
+
+let outKind="sea", outMood="dusk", outPhase=0, outLast=0, hasWindows=false;
+/* 한 장을 가로로 길게 그리고 창마다 다른 토막을 걸어 놓습니다.
+   창 셋에 같은 그림을 걸면 에펠탑이 셋 보이고, 바다 방에서는 해가 세
+   방향에 뜹니다. 파리 방처럼 창이 한 벽에 나란히 선 경우에는 왼쪽
+   창부터 차례로 이어져 하나의 풍경이 됩니다. */
+const outCanvas=document.createElement("canvas");
+outCanvas.width=1024; outCanvas.height=288;
+const outCtx=outCanvas.getContext("2d");
+const outTex=new THREE.CanvasTexture(outCanvas);
+/* 캔버스에 적은 색이 화면에서도 그 색이어야 합니다. 이 표시가 없으면
+   three 가 캔버스 값을 이미 밝기 보정된 값으로 여겨 한 번 더 밝히고,
+   저녁 하늘의 짙은 파랑이 한낮처럼 떠 버립니다. */
+outTex.encoding=THREE.sRGBEncoding;
+const outMat=new THREE.MeshBasicMaterial({map:outTex,fog:false});
+const winFrameMat=new THREE.MeshLambertMaterial({color:"#33333c"});
+const winLightMat=new THREE.MeshBasicMaterial({map:glowTex,transparent:true,
+  blending:THREE.AdditiveBlending,depthWrite:false,opacity:0.18,color:"#cfe2f2"});
+
+const rgba=(hex,a)=>{
+  const c=new THREE.Color(hex);
+  return "rgba("+Math.round(c.r*255)+","+Math.round(c.g*255)+","+
+         Math.round(c.b*255)+","+a+")";
+};
+/* 같은 자리는 늘 같은 모양이어야 합니다. Math.random 을 쓰면 한 장 그릴
+   때마다 건물이 새로 지어져서 거리가 부글거립니다 — 자리에서 값을 뽑는
+   가짜 난수를 씁니다. 같은 자리는 늘 같은 값이 나옵니다. */
+const rnd=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453; return v-Math.floor(v);};
+
+/* ---------- 바다 ----------
+   지금은 이 그림을 쓰는 방이 없습니다(바다 방이 피렌체 방이 되었습니다).
+   창밖에 사진을 못 읽었을 때의 대비로 남겨둡니다 — 방을 하나 만들면서
+   view:"sea" 라고 적으면 그대로 살아납니다. */
+const SEA={
+  day: {sky:["#a9cde8","#e8eff3"], sun:"#fffaea", sunY:0.60,
+        sea:["#41718f","#1d4157"], glint:"#e4f2ff"},
+  dusk:{sky:["#243350","#c9855a"], sun:"#ffd79a", sunY:0.585,
+        sea:["#39485f","#111a27"], glint:"#ffcf9c"},
+};
+function drawSea(){
+  const W=outCanvas.width,H=outCanvas.height,p=SEA[outMood];
+  const hy=Math.round(H*p.sunY), x=outCtx;
+
+  let g=x.createLinearGradient(0,0,0,hy);                 // 하늘
+  g.addColorStop(0,p.sky[0]); g.addColorStop(1,p.sky[1]);
+  x.fillStyle=g; x.fillRect(0,0,W,hy);
+
+  const sx=W*0.62, sy=hy-H*0.05;                          // 해와 해무리
+  g=x.createRadialGradient(sx,sy,1,sx,sy,H*0.34);
+  g.addColorStop(0,rgba(p.sun,0.95));
+  g.addColorStop(0.18,rgba(p.sun,0.5));
+  g.addColorStop(1,rgba(p.sun,0));
+  x.fillStyle=g; x.fillRect(0,0,W,hy);
+  x.fillStyle=rgba(p.sun,0.95);
+  x.beginPath(); x.arc(sx,sy,H*0.042,0,Math.PI*2); x.fill();
+
+  /* 구름. 딱딱한 타원으로 그리면 하늘에 알약이 뜬 것으로 보입니다 —
+     가장자리가 흐린 덩어리로 그립니다. */
+  const cloud=(cx,cy,cw,ch,a)=>{
+    const cg=x.createRadialGradient(cx,cy,0,cx,cy,cw);
+    cg.addColorStop(0,rgba(p.sky[1],a));
+    cg.addColorStop(0.5,rgba(p.sky[1],a*0.42));
+    cg.addColorStop(1,rgba(p.sky[1],0));
+    x.save(); x.translate(cx,cy); x.scale(1,ch/cw); x.translate(-cx,-cy);
+    x.fillStyle=cg; x.beginPath(); x.arc(cx,cy,cw,0,Math.PI*2); x.fill(); x.restore();
+  };
+  [[0.13,0.17,0.21,0.030,0.55],[0.31,0.12,0.13,0.021,0.40],
+   [0.56,0.08,0.17,0.024,0.42],[0.85,0.22,0.15,0.026,0.50]]
+   .forEach(c=>cloud(W*c[0],H*c[1],W*c[2],H*c[3],c[4]));
+
+  g=x.createLinearGradient(0,hy,0,H);                     // 바다
+  g.addColorStop(0,p.sea[0]); g.addColorStop(1,p.sea[1]);
+  x.fillStyle=g; x.fillRect(0,hy,W,H-hy);
+
+  // 수평선. 한 줄 밝게 그어야 하늘과 바다가 붙지 않습니다.
+  x.fillStyle=rgba(p.glint,0.30); x.fillRect(0,hy-1,W,1.6);
+
+  /* 해가 물 위에 남기는 길 — 옅게 깔고, 반짝임은 아래에서 얹습니다.
+     사각형 하나로 그리면 좌우에 곧은 자국이 남아 물이 아니라 종이를
+     오려 붙인 것으로 보입니다. 가로줄마다 가운데가 밝은 그라디언트로
+     칠해 가장자리를 흐립니다 — 벽의 빛 웅덩이와 같은 방법입니다. */
+  const rows=30, rh=Math.ceil((H-hy)/rows)+1;
+  for(let i=0;i<rows;i++){
+    const t=i/(rows-1), y=hy+t*(H-hy);
+    const half=W*(0.028+0.16*Math.pow(t,0.8));
+    const pg=x.createLinearGradient(sx-half,0,sx+half,0);
+    pg.addColorStop(0,rgba(p.glint,0));
+    pg.addColorStop(0.5,rgba(p.glint,0.20*(1-t*0.85)));
+    pg.addColorStop(1,rgba(p.glint,0));
+    x.fillStyle=pg; x.fillRect(0,y,W,rh);
+  }
+
+  /* 물결. 수평선에서 멀어질수록 굵고 성기게 — 이게 원근입니다.
+     한 줄을 통째로 긋지 않고 짧게 끊습니다. 화면을 가로지르는 긴 줄은
+     물이 아니라 화면에 그은 줄로 보입니다.
+     줄마다 흐르는 속도도 달라야 합니다. 같은 속도면 무늬가 통째로
+     미끄러지는 것으로 보입니다. */
+  for(let i=0;i<30;i++){
+    const t=i/29, y=hy+Math.pow(t,1.9)*(H-hy), th=0.8+t*3.0;
+    const speed=0.35+t*1.1;
+    for(let j=0;j<9;j++){
+      const seed=i*7.13+j*2.71;
+      const dx=(((Math.sin(seed)*0.5+0.5)*W+outPhase*speed*W*0.05)%(W*1.2))-W*0.1;
+      const len=Math.max(2,W*(0.03+0.10*t)*(0.6+0.5*Math.sin(seed*1.7)));
+      // 해 아래는 더 반짝입니다 — 빛나는 길이 여기서 생깁니다
+      const near=Math.max(0,1-Math.abs(dx+len/2-sx)/(W*(0.05+0.22*t)));
+      const a=(0.035+0.085*(1-t))*(0.5+1.8*near);
+      x.fillStyle=rgba(p.glint,Math.min(0.55,a));
+      x.fillRect(dx,y,len,th);
+    }
+  }
+}
+
+/* ---------- 창밖에 진짜 사진 걸기 ----------
+
+   손으로 그린 풍경 대신 사진을 걸 수 있습니다. 파일이 public 에 있으면
+   그 사진이 걸리고, 없거나 못 읽으면 아래 손그림으로 그대로 떨어집니다 —
+   오프라인 전시에서 파일 하나가 빠졌다고 창이 까맣게 비면 안 됩니다.
+
+   사진은 움직이지 않으므로 한 번만 그립니다. 초당 열두 번 다시 그리는 건
+   물결이 흐르는 바다에만 필요합니다. */
+/* 풍경마다 사진 한 장. top 은 세로로 어디부터 남길지입니다(0 맨 위 ~
+   1 맨 아래). 사진마다 다릅니다 — 파리 사진은 아래에 공사장이 있고,
+   로마 사진은 아래 4분의 1이 관광객 얼굴이라 더 잘라내야 합니다. */
+const PHOTO={
+  paris:   {src:"paris-bg.jpg",    top:0.30},
+  rome:    {src:"rome-bg.jpg",     top:0.34},
+  // 박물관이 사진 가운데 띠에 있습니다. 위 하늘과 아래 포장길을 덜어냅니다.
+  vienna:  {src:"vienna-bg.jpg",   top:0.55},
+  /* 베키오 다리가 사진 한가운데를 가로지릅니다. 위로는 해가, 아래로는
+     아르노 강이 걸리도록 가운데를 조금 위쪽에서 떠옵니다. */
+  florence:{src:"florence-bg.jpg", top:0.32},
+};
+const photos={};            // 이름 → {img, ready, top}
+let outStatic=false;        // 지금 창밖이 움직이지 않는 그림인가
+function photoFor(kind){
+  const p=PHOTO[kind]; if(!p) return null;
+  let e=photos[kind];
+  if(!e){
+    e=photos[kind]={img:new Image(),ready:false,top:p.top};
+    e.img.onload=()=>{e.ready=true; if(hasWindows&&outKind===kind) drawOutside();};
+    e.img.onerror=()=>{e.ready=false;};      // 없으면 손그림으로 갑니다
+    e.img.src=p.src;
+  }
+  return e.ready?e:null;
+}
+/** 사진을 창 폭에 맞게 잘라 채웁니다. 늘이지 않고 잘라냅니다 —
+ *  늘인 사진은 한눈에 티가 나고, 창이 아니라 벽에 붙인 포스터가 됩니다. */
+function drawPhoto(img,top){
+  const W=outCanvas.width,H=outCanvas.height,x=outCtx;
+  const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+  const want=W/H;
+  let sw=iw, sh=iw/want;
+  if(sh>ih){sh=ih; sw=ih*want;}              // 세로가 모자라면 가로를 줄입니다
+  /* 세로로 어디를 남길지. 가운데가 아니라 위쪽을 남깁니다 — 창밖은
+     하늘과 지붕이 보여야 하고, 발밑의 길바닥은 창턱에 가립니다. */
+  const sx=(iw-sw)/2, sy=(ih-sh)*(top===undefined?0.30:top);
+  x.drawImage(img,sx,sy,sw,sh,0,0,W,H);
+  /* 밝은 전시실에서는 저녁 사진이 혼자 어둡습니다. 옅게 씌워 낮 쪽으로
+     당깁니다. 어두운 방에서는 사진 그대로가 맞습니다. */
+  if(outMood==="day"){
+    x.fillStyle="rgba(226,238,248,0.20)"; x.fillRect(0,0,W,H);
+  }
+}
+
+/* ---------- 파리 시내 (사진이 없을 때) ---------- */
+const PARIS={
+  day: {sky:["#7ba7cd","#dce8ef"], sun:"#fffdf2", sunY:0.50,
+        haze:"#e2ebf1", far:"#a9b8c4", mid:"#94a3b0", near:"#7d8b98",
+        roof:"#6d7a86", glow:"#fdf6e3", winA:0.10},
+  dusk:{sky:["#1b2742","#e2a068"], sun:"#ffe0ac", sunY:0.50,
+        haze:"#d9a071", far:"#5a6478", mid:"#414a5c", near:"#2b3242",
+        roof:"#232a38", glow:"#ffd287", winA:0.42},
+};
+
+/* 에펠탑. 아래가 넓고 위로 갈수록 바늘처럼 좁아지는 곡선 하나가 8할입니다.
+   다리 사이를 비우고 아치를 얹으면 나머지가 채워집니다. */
+function eiffel(x,cx,baseY,h,col){
+  const half=t=>h*0.150*Math.pow(1-t,2.0)+h*0.007;   // t: 0 바닥 ~ 1 꼭대기
+  const yAt=t=>baseY-h*t;
+  x.fillStyle=col;
+
+  x.beginPath();                                      // 1층 위로는 한 덩어리
+  for(let i=0;i<=26;i++){const t=0.24+(i/26)*0.76; x.lineTo(cx-half(t),yAt(t));}
+  for(let i=26;i>=0;i--){const t=0.24+(i/26)*0.76; x.lineTo(cx+half(t),yAt(t));}
+  x.closePath(); x.fill();
+
+  [-1,1].forEach(s=>{                                 // 바깥 다리 둘
+    x.beginPath();
+    x.moveTo(cx+s*half(0),yAt(0));
+    x.lineTo(cx+s*half(0.245),yAt(0.245));
+    x.lineTo(cx+s*half(0.245)*0.40,yAt(0.245));
+    x.lineTo(cx+s*half(0)*0.55,yAt(0));
+    x.closePath(); x.fill();
+  });
+
+  x.beginPath();                                      // 다리 사이 아치
+  x.moveTo(cx-half(0.02),yAt(0.02));
+  x.quadraticCurveTo(cx,yAt(0.235),cx+half(0.02),yAt(0.02));
+  x.lineTo(cx+half(0.02)*0.60,yAt(0.02));
+  x.quadraticCurveTo(cx,yAt(0.155),cx-half(0.02)*0.60,yAt(0.02));
+  x.closePath(); x.fill();
+
+  [0.245,0.55].forEach((t,i)=>{                       // 전망대 둘
+    const hw=half(t)*(1.5-i*0.2), th=Math.max(1.4,h*0.016);
+    x.fillRect(cx-hw,yAt(t)-th/2,hw*2,th);
+  });
+  x.fillRect(cx-h*0.005,yAt(1)-h*0.055,h*0.010,h*0.055);   // 꼭대기 안테나
+}
+
+function drawParis(){
+  const W=outCanvas.width,H=outCanvas.height,p=PARIS[outMood];
+  const hy=Math.round(H*p.sunY), x=outCtx;
+
+  /* 하늘을 캔버스 끝까지 깔아둡니다. 지붕이 아래를 다 덮지 못하는
+     자리가 생겨도 빈 곳이 남지 않습니다. */
+  let g=x.createLinearGradient(0,0,0,hy+H*0.10);
+  g.addColorStop(0,p.sky[0]); g.addColorStop(1,p.sky[1]);
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.fillStyle=p.sky[1]; x.fillRect(0,hy+H*0.10,W,H);
+  x.fillStyle=g; x.fillRect(0,0,W,hy+H*0.10);
+
+  const sx=W*0.22, sy=hy-H*0.03;                            // 낮게 걸린 해
+  g=x.createRadialGradient(sx,sy,1,sx,sy,H*0.40);
+  g.addColorStop(0,rgba(p.sun,0.80)); g.addColorStop(0.16,rgba(p.sun,0.38));
+  g.addColorStop(1,rgba(p.sun,0));
+  x.fillStyle=g; x.fillRect(0,0,W,hy+H*0.10);
+
+  const cloud=(cx,cy,cw,ch,a)=>{                            // 가로로 길게 뜬 구름
+    const cg=x.createRadialGradient(cx,cy,0,cx,cy,cw);
+    cg.addColorStop(0,rgba(p.haze,a));
+    cg.addColorStop(0.5,rgba(p.haze,a*0.40));
+    cg.addColorStop(1,rgba(p.haze,0));
+    x.save(); x.translate(cx,cy); x.scale(1,ch/cw); x.translate(-cx,-cy);
+    x.fillStyle=cg; x.beginPath(); x.arc(cx,cy,cw,0,Math.PI*2); x.fill(); x.restore();
+  };
+  [[0.16,0.14,0.22,0.026,0.45],[0.48,0.09,0.16,0.020,0.35],
+   [0.80,0.19,0.19,0.024,0.40]].forEach(c=>cloud(W*c[0],H*c[1],W*c[2],H*c[3],c[4]));
+
+  // 에펠탑은 지붕보다 뒤에 섭니다 — 먼저 그리고 그 앞으로 거리를 쌓습니다
+  eiffel(x,W*0.71,hy+H*0.14,H*0.52,rgba(p.far,0.92));
+
+  /* 지붕. 뒤에서 앞으로 세 겹입니다. 겹마다 조금씩 진하게 그리면 그게
+     거리로 읽힙니다. 파리라서 지붕이 비스듬히 꺾인 맨사드 지붕입니다 —
+     그 각진 어깨가 이 도시의 인상입니다. */
+  const row=(baseY,hmin,hmax,body,step,seed,winScale,gap)=>{
+    let bx=-step*0.5;
+    while(bx<W+step){
+      const w=step*(0.62+rnd(seed+bx*0.13)*0.85);
+      const bh=hmin+rnd(seed+bx*0.31)*(hmax-hmin);
+      const top=baseY-bh, sh=bh*0.24;                 // sh: 지붕이 차지하는 높이
+      x.fillStyle=body; x.fillRect(bx,top+sh,w,bh-sh+2);
+      x.fillStyle=p.roof; x.beginPath();              // 맨사드 지붕
+      x.moveTo(bx,top+sh); x.lineTo(bx+w*0.15,top);
+      x.lineTo(bx+w*0.85,top); x.lineTo(bx+w,top+sh);
+      x.closePath(); x.fill();
+      const nch=1+Math.floor(rnd(seed+bx*0.77)*3);    // 굴뚝
+      for(let c=0;c<nch;c++){
+        const cw=Math.max(1.6,w*0.055), chh=bh*0.10;
+        x.fillRect(bx+w*(0.18+0.64*rnd(seed+bx+c*3.3)),top-chh,cw,chh+2);
+      }
+      /* 창. 저녁이면 켜진 것만 보이고, 켜진 창은 아주 천천히 밝기가
+         바뀝니다 — 전부 한꺼번에 깜빡이면 전광판처럼 보입니다. */
+      const ww=Math.max(1.4,w*0.085*winScale), wh=ww*1.45;
+      const gx=ww*2.2, gy=wh*2.0;
+      const wyEnd=Math.min(baseY,H)-wh*0.6;
+      for(let wy=top+sh+wh*0.7; wy<wyEnd; wy+=gy)
+        for(let wx=bx+ww*1.1; wx<bx+w-ww*1.6; wx+=gx){
+          const k=rnd(wx*0.37+wy*0.71+seed);
+          if(outMood==="dusk"){
+            if(k>p.winA) continue;
+            const f=rnd(wx*3.1+wy*1.3+Math.floor(outPhase*0.22+k*11));
+            x.fillStyle=rgba(p.glow,0.38+0.52*f);
+          } else {
+            x.fillStyle=rgba(p.roof,0.16+0.10*k);
+          }
+          x.fillRect(wx,wy,ww,wh);
+        }
+      bx+=w+step*(gap===undefined?0.09:gap);
+    }
+  };
+  /* 눈높이는 위층 창입니다 — 길이 아니라 지붕을 내려다봅니다. 그래서
+     맨 앞 겹의 바닥은 화면 아래로 내려보내고 지붕만 걸치게 합니다.
+     건물 너비도 좁게 잡습니다. 파리 지붕은 촘촘합니다 — 넓게 잡으면
+     창고 몇 채가 서 있는 것으로 보입니다. */
+  row(hy+H*0.16, H*0.09, H*0.17, rgba(p.far,0.92), W*0.035, 11.3, 0.7);
+  row(hy+H*0.34, H*0.13, H*0.23, p.mid,            W*0.050, 27.9, 0.9);
+  row(hy+H*0.62, H*0.21, H*0.33, p.near,           W*0.072, 43.1, 1.1, 0);
+
+  // 지붕 위에 낮게 깔린 아지랑이. 겹과 겹 사이를 떨어뜨려 놓습니다.
+  g=x.createLinearGradient(0,hy,0,H);
+  g.addColorStop(0,rgba(p.haze,0.26)); g.addColorStop(0.40,rgba(p.haze,0.05));
+  g.addColorStop(1,rgba(p.haze,0));
+  x.fillStyle=g; x.fillRect(0,hy,W,H-hy);
+}
+
+/** 지금 방의 창밖을 한 장 그립니다.
+ *
+ *  먼저 지웁니다. 캔버스는 지우지 않으면 앞 장 위에 겹쳐 그려집니다 —
+ *  구름·아지랑이처럼 반투명한 것들이 초당 열두 번씩 쌓여서, 몇 초만
+ *  지나면 지붕 아래가 주황색 얼룩과 촛불 같은 줄무늬로 뒤덮였습니다.
+ *  바다는 하늘과 물이 화면을 꽉 채워서 티가 나지 않았을 뿐입니다. */
+function drawOutside(){
+  outCtx.clearRect(0,0,outCanvas.width,outCanvas.height);
+  const photo=photoFor(outKind);
+  outStatic=!!photo;
+  if(photo) drawPhoto(photo.img,photo.top);
+  // 사진이 없으면 손그림입니다. 도시는 파리 지붕으로, 그 밖은 바다로.
+  else (outKind==="sea"?drawSea:drawParis)();
+  outTex.needsUpdate=true;
+}
 
 /* 입구 문 — 들어온 곳이자 나가는 곳. 돌아서면 눈에 들어옵니다. */
 const doorGroup=new THREE.Group();
@@ -1279,13 +2432,178 @@ doorPick.position.set(0,1.56,0.07); doorPick.userData.door=true; doorGroup.add(d
 // 들어갈 때마다 enterGallery 가 그 전시장의 방으로 다시 부릅니다.
 applyRoom(ROOMS[DEFAULT_ROOM]);
 let panels=[],frames=[],empties=[],pickables=[],framesOn=true;
+
+/* ---------- 액자 ----------
+
+   로코코 금박 액자입니다. 옅은 샴페인 금빛 몸통에 네 모서리와 위아래
+   한가운데에 소용돌이 장식이 붙고, 안쪽에 구슬선과 크림색 턱이 둘립니다.
+
+   예전에는 그림 뒤에 얇은 판 하나를 깔아 테두리처럼 보이게 했습니다.
+   벽에 그림을 붙이고 둘레에 색을 칠한 셈이라 옆에서 보면 두께가 없었고,
+   그다음에는 짙은 나무 테에 금선만 둘렀는데 그건 액자이긴 해도 밋밋한
+   요즘 액자였습니다.
+
+   ── 조각이 마흔 개인데 그리는 일은 세 번뿐입니다 ──
+
+   장식까지 넣으면 액자 하나가 마흔 조각쯤 됩니다. 스물다섯 점이 걸린
+   방이면 천 조각이고, 그만큼 그리기를 시키면 학생 태블릿이 버티지
+   못합니다. 그래서 만들어 놓은 조각을 색깔별로 하나씩 합쳐 둡니다 —
+   액자 하나에 그리는 일이 세 번(금·밝은 금·크림)입니다.
+
+   three 에 합치는 도구(BufferGeometryUtils)가 따로 있지만 가져오지
+   않았습니다. 전시 당일에는 three 를 vendor/ 에 넣고 여는데(OFFLINE.md),
+   챙길 파일이 하나 늘면 그날 빠뜨리기 좋습니다. 아래 mergeGeos 가
+   스무 줄입니다. */
+/* 색이 보기보다 어둡게 적혀 있습니다.
+
+   이 화면은 재질 색을 한 번 더 밝혀 내보내는 설정(outputEncoding
+   sRGB)이고, 그 위에 조명이 셋 얹힙니다. 금색을 금색으로("#c2a05e")
+   적었더니 액자가 통째로 흰 테로 떠 버렸습니다 — 화면에서 픽셀을 재보니
+   252,252,253 이었습니다.
+
+   그래서 화면에 나오길 바라는 색이 아니라, 그 색이 나오도록 만드는 값을
+   적습니다. 옆의 설명이 실제로 보이는 색입니다. */
+const FRAMEMAT={
+  gold: new THREE.MeshLambertMaterial({color:"#895113"}),   // 몸통 — 짙은 금
+  light:new THREE.MeshLambertMaterial({color:"#b57a26"}),   // 도드라진 선과 장식 — 밝은 금
+  shade:new THREE.MeshLambertMaterial({color:"#251505"}),   // 파인 골 — 그늘
+  lip:  new THREE.MeshLambertMaterial({color:"#d8c9a3"}),   // 그림에 닿는 턱 — 크림
+};
+
+/** 여러 조각을 하나로 합칩니다. 조각마다 이미 제자리로 옮겨 놓은
+ *  기하만 받습니다 — 옮기는 일은 아래에서 geometry 에 직접 합니다. */
+function mergeGeos(list){
+  if(!list.length) return null;
+  let vc=0;
+  list.forEach(g=>vc+=g.attributes.position.count);
+  const pos=new Float32Array(vc*3), nrm=new Float32Array(vc*3), uvs=new Float32Array(vc*2);
+  const idx=[]; let vo=0;
+  list.forEach(g=>{
+    const p=g.attributes.position, n=g.attributes.normal, u=g.attributes.uv;
+    pos.set(p.array,vo*3);
+    if(n) nrm.set(n.array,vo*3);
+    if(u) uvs.set(u.array,vo*2);
+    const gi=g.index;
+    if(gi) for(let i=0;i<gi.count;i++) idx.push(gi.array[i]+vo);
+    else   for(let i=0;i<p.count;i++)  idx.push(i+vo);
+    vo+=p.count; g.dispose();
+  });
+  const out=new THREE.BufferGeometry();
+  out.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  out.setAttribute("normal",new THREE.BufferAttribute(nrm,3));
+  out.setAttribute("uv",new THREE.BufferAttribute(uvs,2));
+  out.setIndex(idx);
+  return out;
+}
+
+/* 액자 두께. 테 너비는 그림 크기를 따릅니다 — 5m 짜리에 13cm 테를
+   두르면 실처럼 가늘어 보이고, 작은 그림에 22cm 를 두르면 액자가
+   그림을 잡아먹습니다. */
+const FRAME_D=0.085;
+const frameB=w=>Math.max(0.13,Math.min(0.26,w*0.075));
+const FRAME_B=0.17;                          // 조준 판이 쓰는 어림값
+
+/** 소용돌이 장식 한 벌. 원환 토막 하나에 잎사귀 셋 —
+ *  이 넷이 로코코 액자의 그 넝쿨 모양으로 읽힙니다. */
+function scrollGeos(s){
+  const out=[];
+  /* 큰 소용돌이. 원환의 3/4 토막입니다 — 이 곡선 하나가 넝쿨로 읽힙니다.
+     구를 여러 개 붙여봤더니 멀리서 솜뭉치로 보였습니다. 장식은 크기가
+     아니라 실루엣으로 읽힙니다. */
+  const c=new THREE.TorusGeometry(s*0.50,s*0.100,7,16,Math.PI*1.62);
+  c.rotateZ(-0.35); c.scale(1,1,0.52); out.push(c);
+  const c2=new THREE.TorusGeometry(s*0.26,s*0.072,6,12,Math.PI*1.45);
+  c2.rotateZ(2.30); c2.scale(1,1,0.48); c2.translate(s*0.74,s*0.52,0); out.push(c2);
+  // 뻗은 잎 둘. 길쭉해야 잎으로 보입니다 — 둥글면 또 솜뭉치입니다.
+  const l=new THREE.SphereGeometry(s*0.30,9,7);
+  l.scale(2.0,0.40,0.42); l.rotateZ(0.92); l.translate(s*0.60,-s*0.20,0); out.push(l);
+  const l2=new THREE.SphereGeometry(s*0.24,9,7);
+  l2.scale(1.9,0.38,0.40); l2.rotateZ(-0.32); l2.translate(-s*0.18,s*0.64,0); out.push(l2);
+  return out;
+}
+/** 위아래 한가운데의 조가비 장식. 가운데 한 덩어리에 잎 둘. */
+function shellGeos(s){
+  /* 부채꼴 조가비. 가운데가 높고 좌우로 낮아지는 잎 다섯 —
+     한 덩어리로 두면 그냥 혹입니다. 갈라져야 조가비로 보입니다. */
+  const out=[];
+  for(let i=-2;i<=2;i++){
+    const l=new THREE.SphereGeometry(s*(0.34-Math.abs(i)*0.055),9,7);
+    l.scale(0.40,1.30,0.42);
+    l.rotateZ(-i*0.30);
+    l.translate(i*s*0.27,s*0.05,0);
+    out.push(l);
+  }
+  return out;
+}
+
+function buildFrame(g,w,h){
+  g.children.slice().forEach(m=>{g.remove(m); if(m.geometry) m.geometry.dispose();});
+  const B=frameB(w), D=FRAME_D;
+  const gold=[], light=[], shade=[], lip=[];
+
+  /* 테를 네 겹으로 두릅니다. 바깥에서 안으로 — 밝은 바깥선 · 넓은 몸통 ·
+     구슬선 · 크림 턱. 두께를 조금씩 달리해야 옆에서 볼 때 층이 집니다. */
+  const ring=(bucket,inW,inH,band,depth,z)=>{
+    const oW=inW+band*2, oH=inH+band*2;
+    const put=(bw,bh,x,y)=>{
+      const q=new THREE.BoxGeometry(bw,bh,depth);
+      q.translate(x,y,z); bucket.push(q);
+    };
+    put(oW,band,0, (inH+band)/2); put(oW,band,0,-(inH+band)/2);
+    put(band,inH,-(inW+band)/2,0); put(band,inH, (inW+band)/2,0);
+    return [oW,oH];
+  };
+  /* 바깥에서 안으로 다섯 겹 — 바깥선 · 몸통 · 파인 골 · 도드라진 선 ·
+     크림 턱. 가운데 어두운 골 한 줄이 있어야 층이 집니다. 금색만
+     이어 두면 두께가 있어도 납작한 띠로 보입니다. */
+  const b1=B*0.10, b2=B*0.50, b3=B*0.10, b4=B*0.14, b5=B*0.16;
+  const [w5,h5]=ring(lip,   w,  h,  b5,D*0.50,D*0.24);   // 크림 턱
+  const [w4,h4]=ring(light, w5, h5, b4,D*0.78,D*0.40);   // 도드라진 선
+  const [w3,h3]=ring(shade, w4, h4, b3,D*0.55,D*0.26);   // 파인 골
+  const [w2,h2]=ring(gold,  w3, h3, b2,D,     D*0.50);   // 몸통
+  ring(light, w2, h2, b1,D*0.70,D*0.34);                 // 바깥선
+
+  // 네 모서리의 소용돌이. 90도씩 돌려 네 귀퉁이가 서로 마주 보게 합니다.
+  const sc=B*1.05;
+  [[-1,-1,Math.PI],[1,-1,-Math.PI/2],[1,1,0],[-1,1,Math.PI/2]]
+   .forEach(([sx,sy,rz])=>{
+    scrollGeos(sc).forEach(q=>{
+      q.rotateZ(rz);
+      q.translate(sx*(w2+b2*0.2)/2,sy*(h2+b2*0.2)/2,D*0.72);
+      light.push(q);
+    });
+  });
+  // 위아래 한가운데의 조가비
+  [[0,1,0],[0,-1,Math.PI]].forEach(([cx,sy,rz])=>{
+    shellGeos(B*0.95).forEach(q=>{
+      q.rotateZ(rz); q.translate(cx,sy*(h2+b2*0.35)/2,D*0.74);
+      light.push(q);
+    });
+  });
+
+  [[gold,FRAMEMAT.gold],[light,FRAMEMAT.light],
+   [shade,FRAMEMAT.shade],[lip,FRAMEMAT.lip]].forEach(([list,mat])=>{
+    const geo=mergeGeos(list);
+    if(geo) g.add(new THREE.Mesh(geo,mat));
+  });
+}
 function slotTransform(slot){
   const s=SLOTS[slot];
   // 가벽에 거는 자리. 벽보다 좁게 겁니다 — 가벽은 몸통이 짧습니다.
   if(s.part!==undefined){
-    const p=PARTS[s.part], plus=s.side==="+", pw=1.9;
+    const p=PARTS[s.part], pw=1.9, ph=pw*(9/16);
+    /* 가벽의 앞뒤 면(z+ · z-). 얇은 가벽에는 쓸 일이 없지만, 가운데
+       기둥처럼 네 면이 다 드러난 덩어리에는 필요합니다.
+       바라보는 방향(ry)은 벽과 같은 약속입니다 — 정면 벽(B)이 0,
+       입구 쪽 벽(F)이 π 이고, 둘 다 방 안쪽을 봅니다. */
+    if(s.side==="z+"||s.side==="z-"){
+      const plus=s.side==="z+";
+      return {pos:[p.x+s.at,1.72,p.z+(plus?p.d/2+0.01:-p.d/2-0.01)],
+              ry:plus?0:Math.PI, pw, ph};
+    }
+    const plus=s.side==="+";
     return {pos:[p.x+(plus?p.w/2+0.01:-p.w/2-0.01),1.72,p.z+s.at],
-            ry:plus?Math.PI/2:-Math.PI/2, pw, ph:pw*(9/16)};
+            ry:plus?Math.PI/2:-Math.PI/2, pw, ph};
   }
   const pw=2.5, ph=pw*(9/16);
   let pos,ry;
@@ -1312,30 +2630,55 @@ function clearRoom(){
 /* 작품 크기 — 자리의 기본 폭 × 개별 배율, 비율은 미디어 원본을 따릅니다 */
 /* 크기 한도.
 
-   위쪽을 160% 로 잡은 이유는 두 가지입니다.
+   위쪽을 200% 로 엽니다. 예전에는 160% 였고, 그때는 큰 전시실의 자리가
+   4m 간격이라 16:9 작품이 160% 에서 딱 4m 로 맞았습니다. 지금은 방이
+   모두 바뀌어 자리 간격이 3.2m 입니다 — 그러니 이제 "겹치지 않는 최대"
+   같은 것은 없고, 크게 걸지 말지는 거는 사람이 정합니다. 옆자리가 비어
+   있으면 크게 걸어도 아무 문제가 없고, 옆에 작품이 있으면 아래 setSlotScale
+   이 겹친다고 알려줍니다.
 
-   하나, 큰 전시실의 좌우 벽은 자리가 4m 간격입니다. 16:9 작품이 160% 면
-   가로 4.0m 로 딱 맞고, 그 이상은 옆 작품과 겹칩니다.
+   진짜 한도는 아래 maxH 입니다. 배율을 아무리 올려도 세로가 여기서
+   잘리면 폭도 함께 멈춥니다 — 예전 상한 2.45m 는 176% 에서 이미 걸려서,
+   그 위로 슬라이더를 밀어도 아무 일이 일어나지 않는 구간이 있었습니다.
+   지금은 방 높이에서 구합니다. 천장이 5m 인 방이면 2.95m 까지 커지고,
+   그보다 낮은 방을 나중에 만들면 저절로 함께 낮아집니다. */
+const SCALE_MIN=0.6, SCALE_MAX=2.0;
+/** 작품 하나를 제자리에 놓습니다. 자리 좌표 + 옮긴 값(dx·dy) + 큰 작품을
+ *  올려 거는 값(lift)을 여기 한 곳에서 셈합니다 — 세 군데에서 따로 더하면
+ *  한쪽만 고쳤을 때 작품이 벽에서 어긋납니다. */
+function placePanel(e){
+  const {pos,ry}=slotTransform(e.work.slot);
+  e.group.position.set(pos[0],pos[1],pos[2]);
+  e.group.rotation.y=ry;
+  e.group.translateX(e.work.dx||0);
+  e.group.translateY((e.work.dy||0)+(e.lift||0));
+  if(e.spill&&e.normal)
+    e.spill.position.set(e.group.position.x+e.normal.x*1.5,0.015,
+                         e.group.position.z+e.normal.z*1.5);
+}
 
-   둘, 아래 maxH 가 세로를 2.45m 로 자릅니다. 16:9 는 174% 부터 그 벽에
-   부딪혀 더 커지지 않습니다 — 한도를 그 위로 열면 슬라이더를 밀어도
-   아무 일도 안 일어나는 구간이 생깁니다. */
-const SCALE_MIN=0.6, SCALE_MAX=1.6;
 function applySize(e,aspect){
   if(aspect) e.aspect=aspect;
   const a=e.aspect||16/9, sc=Math.max(SCALE_MIN,Math.min(SCALE_MAX,e.work.scale||1));
   let w=e.baseW*sc, h=w/a;
-  const maxH=Math.min(1.85*sc,2.45);          // 천장·바닥에 닿지 않게
+  const maxH=Math.min(1.85*sc,ROOM.h-1.55);   // 천장에 닿지 않게
   if(h>maxH){h=maxH; w=h*a;}
   e.screen.geometry.dispose(); e.screen.geometry=new THREE.PlaneGeometry(w,h);
-  e.frame.geometry.dispose();  e.frame.geometry=new THREE.PlaneGeometry(w+0.09,h+0.09);
+  buildFrame(e.frame,w,h);
   e.halo.geometry.dispose();   e.halo.geometry=new THREE.PlaneGeometry(w*2.6,h*3.4);
-  e.pick.geometry.dispose();   e.pick.geometry=new THREE.PlaneGeometry(w+0.09,h+0.09);
+  e.pick.geometry.dispose();
+  e.pick.geometry=new THREE.PlaneGeometry(w+FRAME_B*2,h+FRAME_B*2);
   e.spill.geometry.dispose();  e.spill.geometry=new THREE.PlaneGeometry(w*2.4,w*2.4);
-  e.hlSize=[w+0.12,h+0.12];
+  e.hlSize=[w+FRAME_B*2+0.06,h+FRAME_B*2+0.06];
+  /* 아주 큰 작품은 조금 올려 겁니다. 자리 한가운데(1.78m)에 그대로 두면
+     세로 3.4m 짜리가 바닥에서 8cm 까지 내려옵니다. 미술관도 큰 그림은
+     위로 올려 걸고, 바닥에서 한 뼘은 띄웁니다. */
+  const FLOOR_KEEP=0.42;
+  e.lift=Math.max(0,(FLOOR_KEEP+h/2)-1.78);
+  if(e.group) placePanel(e);
   if(hoverSlot===e.work.slot){                // 선택 테두리도 즉시 따라오게
     highlight.geometry.dispose();
-    highlight.geometry=new THREE.PlaneGeometry(w+0.12,h+0.12);
+    highlight.geometry=new THREE.PlaneGeometry(w+FRAME_B*2+0.06,h+FRAME_B*2+0.06);
   }
 }
 function buildRoomContents(g){
@@ -1350,15 +2693,18 @@ function buildRoomContents(g){
   works.forEach(w=>{
     const {pos,ry,pw,ph}=slotTransform(w.slot);
     const group=new THREE.Group();
-    group.position.set(pos[0],pos[1],pos[2]); group.rotation.y=ry; scene.add(group);
+    group.position.set(pos[0],pos[1],pos[2]); group.rotation.y=ry;
+    /* 자리 안에서 옮긴 만큼 밀어줍니다. 벽을 따라(local x)와 위아래(y)
+       로만 움직이므로 방향을 계산할 필요 없이 제 축으로 옮기면 됩니다. */
+    group.translateX(w.dx||0); group.translateY(w.dy||0);
+    scene.add(group);
     const color=new THREE.Color().setHSL((w.hue||200)/360,0.6,0.5);
     const halo=new THREE.Mesh(new THREE.PlaneGeometry(pw*2.6,ph*3.4),
       new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,
         depthWrite:false,opacity:0,color:color.clone()}));
     halo.position.z=0.012; group.add(halo);
-    const frame=new THREE.Mesh(new THREE.PlaneGeometry(pw+0.09,ph+0.09),
-      new THREE.MeshBasicMaterial({color:"#26262c"}));
-    frame.position.z=0.02; frame.visible=framesOn; group.add(frame); frames.push(frame);
+    const frame=new THREE.Group();
+    frame.visible=framesOn; group.add(frame); frames.push(frame);
     let tex=null,ctx=null,video=null;
     if(w.kind==="demo"){
       const cv=document.createElement("canvas"); cv.width=320;cv.height=180;
@@ -1390,17 +2736,20 @@ function buildRoomContents(g){
     }
     const screen=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph),new THREE.MeshBasicMaterial({map:tex}));
     screen.position.z=0.026; group.add(screen);
-    const pick=new THREE.Mesh(new THREE.PlaneGeometry(pw+0.09,ph+0.09),
+    const pick=new THREE.Mesh(new THREE.PlaneGeometry(pw+FRAME_B*2,ph+FRAME_B*2),
       new THREE.MeshBasicMaterial({visible:false}));
-    pick.position.z=0.05; pick.userData.slot=w.slot; group.add(pick); pickables.push(pick);
+    pick.position.z=FRAME_D+0.02; pick.userData.slot=w.slot;
+    group.add(pick); pickables.push(pick);
     const n=new THREE.Vector3(0,0,1).applyQuaternion(group.quaternion);
     const spill=new THREE.Mesh(new THREE.PlaneGeometry(pw*2.4,pw*2.4),
       new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,
         depthWrite:false,opacity:0,color:color.clone()}));
     spill.rotation.x=-Math.PI/2;
-    spill.position.set(pos[0]+n.x*1.5,0.015,pos[2]+n.z*1.5); scene.add(spill);
+    spill.position.set(group.position.x+n.x*1.5,0.015,group.position.z+n.z*1.5);
+    scene.add(spill);
     const entry={work:w,group,ctx,tex,video,halo,frame,screen,spill,pick,normal:n,
-      gain:0,t:0,last:0,playing:false,color,baseW:pw,aspect:16/9,hlSize:[pw+0.12,ph+0.12]};
+      gain:0,t:0,last:0,playing:false,color,baseW:pw,aspect:16/9,
+      hlSize:[pw+FRAME_B*2+0.06,ph+FRAME_B*2+0.06]};
     panels.push(entry);
     applySize(entry);                          // 저장된 크기 반영
   });
@@ -1427,11 +2776,15 @@ function buildRoomContents(g){
 
 /* ---------- 아바타 ----------
 
-   만화 비율입니다. 사람은 키가 머리 일곱 개 반쯤인데 여기는 넷입니다 —
-   "귀여운 3D 캐릭터" 로 읽히게 하는 것의 8할이 이 비율 하나입니다.
-   나머지는 얼굴 · 머리카락 덩어리 · 옷 · 신발이고, 전부 지금처럼 구와
-   원기둥으로 깎습니다. 모델 파일도 새 라이브러리도 쓰지 않습니다 —
-   전시 당일 인터넷 없는 자리에서도 열려야 하기 때문입니다(OFFLINE.md).
+   사람 비율입니다. 키가 머리 일곱쯤 — 예전에는 넷이었고, 그때는 얼굴을
+   아무리 그려 넣어도 만화 인형으로 읽혔습니다. 비율 하나가 8할입니다.
+   나머지는 목·어깨·손·발이고, 전부 지금처럼 구와 원기둥으로 깎습니다.
+   모델 파일도 새 라이브러리도 쓰지 않습니다 — 전시 당일 인터넷 없는
+   자리에서도 열려야 하기 때문입니다(OFFLINE.md).
+
+   키를 1.7m 로 잡은 것은 눈높이(EYE 1.62m)와 맞추려는 것입니다. 1.4m
+   짜리 인형이 서 있으면 3인칭으로 볼 때 관람객이 아니라 장난감이
+   전시장을 걸어다니는 것으로 보입니다.
 
    색은 스톡 일러스트의 원색을 그대로 쓰지 않고 한 단 낮춥니다. 여기는
    어두운 전시장이고 주인공은 작품입니다. 관람객이 방에서 가장 밝고
@@ -1440,19 +2793,20 @@ function buildRoomContents(g){
 const BODY={
   male:{
     scale:1.00, hairStyle:"boy", skirt:false, bag:false,
-    shoulder:0.163, chest:0.152, waist:0.134, hip:0.144,
-    armX:0.178, armR:0.040, legX:0.070, legR:0.055,
+    shoulder:0.200, chest:0.163, waist:0.132, hip:0.150,
+    armX:0.186, armR:0.046, legX:0.086, legR:0.071,
     skin:"#bfa189", hair:"#4a3529", top:"#d2ccc0", bottom:"#4b5666",
     shoe:"#5b4435", accent:"#8c5748",
   },
   female:{
-    scale:0.97, hairStyle:"girl", skirt:true, bag:true,
-    shoulder:0.151, chest:0.141, waist:0.126, hip:0.142,
-    armX:0.166, armR:0.036, legX:0.062, legR:0.050,
+    scale:0.955, hairStyle:"girl", skirt:true, bag:true,
+    shoulder:0.178, chest:0.148, waist:0.119, hip:0.153,
+    armX:0.166, armR:0.041, legX:0.078, legR:0.064,
     skin:"#c4a68f", hair:"#33251f", top:"#4e6376", bottom:"#39414e",
     shoe:"#674d3d", accent:"#7b5a45",
   },
 };
+
 /* 고를 수 있는 몸. 예전에는 "중립" 이 하나 더 있었고 그게 기본값이라
    아무도 고르지 않아도 넘어갔습니다. 둘만 남기면서 기본값을 없앴습니다 —
    이제 학생이 직접 고르지 않으면 다음으로 갈 수 없습니다. 이름처럼
@@ -1659,34 +3013,51 @@ function buildAvatar(type){
     const ch=avatar.children[i]; avatar.remove(ch);
     ch.traverse(o=>{if(o.geometry)o.geometry.dispose();});
   }
-  /* 키 약 1.4m, 머리 지름 0.35m — 키가 머리 넷입니다.
-     사람 비율(일곱 반)로 두면 아무리 얼굴을 그려 넣어도 만화로 읽히지
-     않습니다. 순서가 반대입니다. */
-  const hipY=0.60, torsoH=0.36, tt=hipY+torsoH, hr=0.165, hy=tt+0.05+hr*0.94;
+  /* 사람 뼈대의 자리. 키 1.7m 를 기준으로 잡습니다 —
+     사타구니 0.82 · 어깨 1.38 · 목 1.45 · 머리 한가운데 1.57 · 정수리 1.69.
+     머리 높이가 0.24m 이니 키가 머리 일곱입니다. */
+  const HIP=0.82, SHO=1.38, torsoH=SHO-HIP;
+  const hr=0.105, hy=SHO+0.075+hr*1.10;
+  const hipY=HIP, tt=SHO;                    // 아래 옷·가방 코드가 쓰는 이름
 
   /* 허리 위는 한 덩어리로 묶습니다. 걸을 때 이 그룹만 위아래로 흔들면
      머리·팔·몸통이 함께 움직입니다. */
   const upper=new THREE.Group(); avatar.add(upper); rig.upper=upper;
 
-  // ── 몸통 = 겉옷. 옆선을 돌려 깎고 앞뒤를 눌러 납작하게. ──
-  const prof=[[b.hip*1.02,0],[b.hip,torsoH*0.22],[b.waist,torsoH*0.50],
-              [b.chest,torsoH*0.78],[b.shoulder,torsoH*0.93],[b.shoulder*0.50,torsoH]];
+  /* 몸통 = 겉옷. 옆선을 돌려 깎고 앞뒤를 눌러 납작하게 합니다.
+     사람 가슴은 폭보다 두께가 얕습니다 — 돌려 깎은 그대로 두면
+     통나무가 됩니다. */
+  const prof=[[b.hip*1.00,0],[b.hip*1.03,torsoH*0.10],[b.waist,torsoH*0.34],
+              [b.chest*0.97,torsoH*0.60],[b.chest,torsoH*0.79],
+              [b.shoulder,torsoH*0.90],[b.shoulder*0.76,torsoH*0.97],
+              [b.shoulder*0.42,torsoH]];
   const torso=new THREE.Mesh(
     new THREE.LatheGeometry(prof.map(v=>new THREE.Vector2(v[0],v[1])),24),MAT.top);
-  torso.scale.z=0.80; torso.position.y=hipY; upper.add(torso); rig.torso=torso;
+  torso.scale.z=0.74; torso.position.y=HIP; upper.add(torso); rig.torso=torso;
 
-  const pelvis=ball(b.hip*1.0,MAT.bottom); pelvis.scale.set(1,0.60,0.80);
-  pelvis.position.y=hipY+0.012; upper.add(pelvis);
+  const pelvis=ball(b.hip*1.0,MAT.bottom); pelvis.scale.set(1,0.55,0.76);
+  pelvis.position.y=HIP+0.015; upper.add(pelvis);
 
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.058,0.070,0.055,12),MAT.skin);
-  neck.position.y=tt+0.010; upper.add(neck);
+  // 목. 사람 목은 생각보다 깁니다 — 짧으면 어깨에 머리를 얹은 꼴이 됩니다.
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.050,0.062,0.105,14),MAT.skin);
+  neck.position.y=SHO+0.045; upper.add(neck);
 
-  // ── 머리 ──
+  // 어깨. 팔이 붙는 자리를 덩어리로 덮어야 이음매가 보이지 않습니다.
+  [-1,1].forEach(s=>{
+    const d=ball(b.armR*1.62,MAT.top); d.scale.set(1.0,0.98,0.92);
+    d.position.set(s*(b.armX-0.020),SHO-0.056,0); upper.add(d);
+  });
+
+  /* 머리. 사람 머리는 폭보다 높이가 크고 뒤통수가 앞보다 큽니다.
+     둥근 공으로 두면 아기 인형이 됩니다. */
   const head=new THREE.Mesh(new THREE.SphereGeometry(hr,24,18),MAT.skin);
-  head.scale.set(0.98,1.06,0.98); head.position.y=hy; upper.add(head);
-  [-1,1].forEach(s=>{                      // 귀
-    const e=ball(hr*0.21,MAT.skin); e.scale.set(0.50,1.0,0.85);
-    e.position.set(s*hr*0.94,hy-0.006,-0.004); upper.add(e);
+  head.scale.set(0.93,1.16,1.00); head.position.y=hy; upper.add(head);
+  const jaw=ball(hr*0.72,MAT.skin);          // 턱 — 아래를 조금 좁힙니다
+  jaw.scale.set(0.92,0.80,0.96); jaw.position.set(0,hy-hr*0.46,hr*0.08);
+  upper.add(jaw);
+  [-1,1].forEach(s=>{                        // 귀
+    const e=ball(hr*0.20,MAT.skin); e.scale.set(0.42,1.05,0.80);
+    e.position.set(s*hr*0.90,hy-0.004,-0.004); upper.add(e);
   });
 
   /* 얼굴.
@@ -1696,86 +3067,90 @@ function buildAvatar(type){
      — 처음에 눈이 안 보이던 것이 이 때문입니다 — 멀리 놓으면 떠 보입니다.
      x·y 를 주면 그 자리의 겉면 z 를 돌려주는 함수 하나로 정리합니다. */
   const faceZ=(x,y)=>{
-    const dy=(y-hy)/(hr*1.06);
-    const r=hr*Math.sqrt(Math.max(0,1-dy*dy));
-    return Math.sqrt(Math.max(0,r*r-x*x));
+    const dy=(y-hy)/(hr*1.16);
+    const r=hr*0.93*Math.sqrt(Math.max(0,1-dy*dy));
+    return Math.sqrt(Math.max(0,r*r-x*x))*(1/0.93);
   };
   /* 눈은 흰자 위에 눈동자를 얹은 덩어리입니다. 평면에 그림을 붙이면 옆에서
-     볼 때 얼굴이 떠 보이는데, 이렇게 두면 옆에서 봐도 튀어나온 눈입니다. */
-  const eyeY=hy+hr*0.09, eyeX=hr*0.36;
+     볼 때 얼굴이 떠 보이는데, 이렇게 두면 옆에서 봐도 튀어나온 눈입니다.
+     크기는 만화 때의 절반쯤입니다 — 큰 눈 하나로 얼굴이 다시 만화가
+     됩니다. */
+  const eyeY=hy+hr*0.06, eyeX=hr*0.33;
   [-1,1].forEach(s=>{
     const ez=faceZ(eyeX,eyeY);
-    const wht=ball(hr*0.26,MAT.white); wht.scale.set(0.90,1.10,0.52);
+    const wht=ball(hr*0.18,MAT.white); wht.scale.set(1.05,0.80,0.45);
     wht.position.set(s*eyeX,eyeY,ez-hr*0.02); upper.add(wht);
-    const pup=ball(hr*0.145,MAT.pupil); pup.scale.set(1,1.06,0.62);
-    pup.position.set(s*eyeX,eyeY-hr*0.015,ez+hr*0.07); upper.add(pup);
-    const by=eyeY+hr*0.30;
-    const brw=new THREE.Mesh(new THREE.BoxGeometry(hr*0.34,hr*0.06,hr*0.07),MAT.hair);
-    brw.position.set(s*eyeX,by,faceZ(eyeX,by)+hr*0.01); brw.rotation.z=-s*0.13;
+    const pup=ball(hr*0.085,MAT.pupil); pup.scale.set(1,1.10,0.60);
+    pup.position.set(s*eyeX,eyeY-hr*0.008,ez+hr*0.04); upper.add(pup);
+    const by=eyeY+hr*0.26;
+    const brw=new THREE.Mesh(new THREE.BoxGeometry(hr*0.30,hr*0.045,hr*0.06),MAT.hair);
+    brw.position.set(s*eyeX,by,faceZ(eyeX,by)+hr*0.005); brw.rotation.z=-s*0.10;
     upper.add(brw);
   });
-  // 웃는 입 — 반원을 뒤집어 입꼬리가 올라가게 둡니다.
-  const my=hy-hr*0.42;
+  // 코 — 작아도 있어야 옆얼굴이 사람으로 보입니다.
+  const ny=hy-hr*0.14;
+  const nose=ball(hr*0.13,MAT.skin); nose.scale.set(0.85,1.05,1.25);
+  nose.position.set(0,ny,faceZ(0,ny)-hr*0.02); upper.add(nose);
+  // 입 — 살짝 웃는 정도로만. 반원을 뒤집어 입꼬리를 올립니다.
+  const my=hy-hr*0.46;
   const mouth=new THREE.Mesh(
-    new THREE.TorusGeometry(hr*0.20,hr*0.032,8,20,Math.PI*0.85),MAT.pupil);
-  mouth.rotation.z=Math.PI+Math.PI*0.075;
+    new THREE.TorusGeometry(hr*0.15,hr*0.024,8,20,Math.PI*0.80),MAT.pupil);
+  mouth.rotation.z=Math.PI+Math.PI*0.10;
   mouth.position.set(0,my,faceZ(0,my)-hr*0.03); upper.add(mouth);
 
   // ── 머리카락 ──
   const cap=new THREE.Mesh(
-    new THREE.SphereGeometry(hr*1.05,24,16,0,Math.PI*2,0,Math.PI*0.50),MAT.hair);
-  cap.scale.set(1.0,1.08,1.02); cap.position.y=hy+0.004; upper.add(cap);
+    new THREE.SphereGeometry(hr*1.05,24,16,0,Math.PI*2,0,Math.PI*0.52),MAT.hair);
+  cap.scale.set(0.97,1.18,1.03); cap.position.y=hy+0.004; upper.add(cap);
   if(b.hairStyle==="boy"){
-    // 위로 쓸어 올린 앞머리 덩어리
-    const q=ball(hr*0.46,MAT.hair); q.scale.set(1.30,0.60,0.90);
-    q.position.set(0,hy+hr*0.66,hr*0.30); q.rotation.x=-0.34; upper.add(q);
-    // 한쪽으로 넘긴 가닥. 눕혀야 상투가 아니라 머리카락으로 읽힙니다.
-    const q2=ball(hr*0.34,MAT.hair); q2.scale.set(1.05,0.42,0.85);
-    q2.position.set(hr*0.30,hy+hr*0.80,hr*0.16);
+    const q=ball(hr*0.44,MAT.hair); q.scale.set(1.30,0.55,0.85);
+    q.position.set(0,hy+hr*0.70,hr*0.32); q.rotation.x=-0.34; upper.add(q);
+    const q2=ball(hr*0.32,MAT.hair); q2.scale.set(1.05,0.40,0.80);
+    q2.position.set(hr*0.30,hy+hr*0.84,hr*0.18);
     q2.rotation.set(-0.42,0,0.42); upper.add(q2);
   } else {
-    // 단발 — 뒤와 옆으로 볼륨, 앞머리는 눈썹 위까지
-    const bk=ball(hr*0.92,MAT.hair); bk.scale.set(1.06,0.95,0.80);
-    bk.position.set(0,hy-hr*0.22,-hr*0.46); upper.add(bk);
+    const bk=ball(hr*0.92,MAT.hair); bk.scale.set(1.04,1.10,0.82);
+    bk.position.set(0,hy-hr*0.30,-hr*0.44); upper.add(bk);
     [-1,1].forEach(s=>{
-      const sd=ball(hr*0.42,MAT.hair); sd.scale.set(0.70,1.35,0.95);
-      sd.position.set(s*hr*0.88,hy-hr*0.40,-hr*0.10); upper.add(sd);
+      const sd=ball(hr*0.40,MAT.hair); sd.scale.set(0.62,1.55,0.95);
+      sd.position.set(s*hr*0.86,hy-hr*0.48,-hr*0.08); upper.add(sd);
     });
-    const fr=ball(hr*0.56,MAT.hair); fr.scale.set(1.14,0.52,0.82);
-    fr.position.set(0,hy+hr*0.56,hr*0.40); upper.add(fr);
+    const fr=ball(hr*0.54,MAT.hair); fr.scale.set(1.14,0.50,0.80);
+    fr.position.set(0,hy+hr*0.60,hr*0.42); upper.add(fr);
   }
 
   // ── 옷의 남은 것 ──
   if(b.skirt){
     const sk=new THREE.Mesh(
-      new THREE.CylinderGeometry(b.hip*1.0,b.hip*1.62,0.20,20,1,true),MAT.bottom);
-    sk.scale.z=0.86; sk.position.y=hipY-0.055; avatar.add(sk);
+      new THREE.CylinderGeometry(b.hip*1.02,b.hip*1.58,0.30,20,1,true),MAT.bottom);
+    sk.scale.z=0.86; sk.position.y=HIP-0.085; avatar.add(sk);
   } else {
-    const tie=new THREE.Mesh(new THREE.BoxGeometry(0.030,0.090,0.012),MAT.accent);
-    tie.position.set(0,tt-0.105,b.chest*0.82); upper.add(tie);
-    const knot=ball(0.020,MAT.accent); knot.scale.set(1,0.85,0.7);
-    knot.position.set(0,tt-0.048,b.chest*0.82); upper.add(knot);
+    const tie=new THREE.Mesh(new THREE.BoxGeometry(0.030,0.135,0.012),MAT.accent);
+    tie.position.set(0,SHO-0.185,b.chest*0.80); upper.add(tie);
+    const knot=ball(0.019,MAT.accent); knot.scale.set(1,0.85,0.7);
+    knot.position.set(0,SHO-0.098,b.chest*0.80); upper.add(knot);
   }
   if(b.bag){
-    const bag=new THREE.Mesh(new THREE.BoxGeometry(b.chest*1.55,0.20,0.085),MAT.accent);
-    bag.position.set(0,hipY+torsoH*0.55,-b.chest*0.84); upper.add(bag);
+    const bag=new THREE.Mesh(new THREE.BoxGeometry(b.chest*1.55,0.26,0.085),MAT.accent);
+    bag.position.set(0,HIP+torsoH*0.52,-b.chest*0.86); upper.add(bag);
     [-1,1].forEach(s=>{
-      const st=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.115,0.018),MAT.accent);
-      st.position.set(s*b.chest*0.56,hipY+torsoH*0.83,b.chest*0.62);
+      const st=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.17,0.018),MAT.accent);
+      st.position.set(s*b.chest*0.56,HIP+torsoH*0.84,b.chest*0.60);
       st.rotation.x=0.16; upper.add(st);
     });
   }
 
-  /* 팔 — 어깨는 몸통 꼭대기가 아니라 조금 아래입니다. 소매는 겉옷 색이고
-     손만 살색입니다. */
+  /* 팔 — 어깨는 몸통 꼭대기가 아니라 조금 아래입니다. 늘어뜨리면 손이
+     허벅지 가운데에 옵니다. 소매는 겉옷 색이고 손만 살색입니다. */
   const arm=(side)=>{
-    const sx=side*b.armX, sy=tt-0.052;
-    const up=limb(b.armR*1.06,b.armR*0.94,0.20,MAT.top);
-    up.position.set(sx,sy,0); up.rotation.z=-side*0.06; upper.add(up);
-    const lo=limb(b.armR*0.94,b.armR*0.84,0.18,MAT.top);
-    lo.position.y=-0.20; up.add(lo);
-    const hand=ball(b.armR*1.10,MAT.skin); hand.scale.set(0.92,1.05,0.70);
-    hand.position.y=-0.185; lo.add(hand);
+    const sx=side*b.armX, sy=SHO-0.050;
+    const up=limb(b.armR*1.10,b.armR*0.92,0.300,MAT.top);
+    up.position.set(sx,sy,0); up.rotation.z=-side*0.05; upper.add(up);
+    const lo=limb(b.armR*0.92,b.armR*0.80,0.265,MAT.top);
+    lo.position.y=-0.300; up.add(lo);
+    /* 손. 공을 눌러 길쭉하고 납작하게 — 사람 손은 넓적합니다. */
+    const hand=ball(b.armR*1.20,MAT.skin); hand.scale.set(0.82,1.55,0.50);
+    hand.position.y=-0.293; lo.add(hand);
     return {up,lo};
   };
   const aL=arm(-1), aR=arm(1);
@@ -1783,18 +3158,23 @@ function buildAvatar(type){
 
   /* 다리 — 허리 위 그룹이 아니라 아바타에 바로 답니다. 걸을 때 상체만
      흔들리고 발은 바닥에 붙어 있어야 합니다.
+     넓적다리 관절은 사타구니보다 위에 있습니다(0.88) — 사타구니에 달면
+     걸을 때 다리가 몸에서 떨어져 나온 것처럼 보입니다.
      치마를 입으면 다리가 맨살, 아니면 바지 색입니다. */
   const legMat=b.skirt?MAT.skin:MAT.bottom;
   const leg=(side)=>{
     const sx=side*b.legX;
-    const up=limb(b.legR*1.12,b.legR*0.96,0.29,legMat);
-    up.position.set(sx,hipY-0.015,0); avatar.add(up);
-    const lo=limb(b.legR*0.96,b.legR*0.82,0.25,legMat);
-    lo.position.y=-0.29; up.add(lo);
-    const shoe=new THREE.Mesh(new THREE.BoxGeometry(b.legR*2.3,0.055,0.15),MAT.shoe);
-    shoe.position.set(0,-0.262,0.026); lo.add(shoe);
-    const toe=ball(b.legR*1.15,MAT.shoe); toe.scale.set(1.0,0.48,0.95);
-    toe.position.set(0,-0.258,0.088); lo.add(toe);
+    const up=limb(b.legR*1.08,b.legR*0.88,0.420,legMat);
+    up.position.set(sx,0.880,0); avatar.add(up);
+    const lo=limb(b.legR*0.88,b.legR*0.66,0.380,legMat);
+    lo.position.y=-0.420; up.add(lo);
+    // 발. 사람 발은 폭보다 훨씬 깁니다 — 네모난 굽으로 두면 나막신입니다.
+    const shoe=new THREE.Mesh(new THREE.BoxGeometry(b.legR*1.35,0.055,0.155),MAT.shoe);
+    shoe.position.set(0,-0.427,0.028); lo.add(shoe);
+    const toe=ball(b.legR*0.78,MAT.shoe); toe.scale.set(1.05,0.62,1.35);
+    toe.position.set(0,-0.424,0.100); lo.add(toe);
+    const heel=ball(b.legR*0.70,MAT.shoe); heel.scale.set(1.0,0.70,0.90);
+    heel.position.set(0,-0.418,-0.048); lo.add(heel);
     return {up,lo};
   };
   const lL=leg(-1), lR=leg(1);
@@ -1829,18 +3209,38 @@ const EYE=1.62;
 /* ---------- 테마 ---------- */
 const wallInput=document.getElementById("wallColor"),floorInput=document.getElementById("floorColor");
 function applyFrameColor(){
-  const hex=wallInput.value,light=lum(hex)>0.42;
-  frames.forEach(f=>f.material.color.set(light?shift(hex,-0.55):shift(hex,0.09)));
+  /* 금박 액자는 어느 벽에서나 금입니다 — 벽 색을 따라가면 흰 벽에서
+     흰 액자가 되어 사라집니다. 다만 밝은 벽에서는 옅은 금이 묻히므로
+     세 색 모두 한 단 짙게 잡습니다. */
+  const light=lum(wallInput.value)>0.42;
+  FRAMEMAT.gold.color.set (light?"#6d3f0d":"#895113");
+  FRAMEMAT.light.color.set(light?"#94621b":"#b57a26");
+  FRAMEMAT.shade.color.set(light?"#1b0f03":"#251505");
+  FRAMEMAT.lip.color.set  (light?"#b8a986":"#d8c9a3");
 }
 function applyTheme(w,f){
   const light=lum(w)>0.42;
   wallMat.map.dispose(); wallMat.map=makeWallTexture(w); wallMat.needsUpdate=true;
-  floorMat.color.set(f);
+  floorHex=f; refreshFloor();
+  // 걸레받이는 벽보다 한 단 도드라져야 줄로 보입니다.
+  baseMat.color.set(shift(w,light?-0.085:0.055));
   ceilMat.color.set(shift(w,light?0.03:-0.025));
   partMat.color.set(shift(w,light?-0.04:0.006));
   const bg=shift(w,light?-0.04:-0.03);
   scene.background.set(bg); scene.fog.color.set(bg);
   glowScale=light?0.34:1;
+  /* 벽이 밝을수록 빛 자국을 낮춥니다. 흰 벽에 흰빛을 더해봐야 하얗게
+     뭉갤 뿐이고, 어두운 벽에서만 빛으로 보입니다.
+     밝다/어둡다 둘로 가르지 않고 밝기에 따라 이어서 줄입니다 — 중간
+     톤인 방(짙은 파랑 같은)이 "어두운 방" 으로 잡혀 빛이 확 세지는 일이
+     있었습니다. */
+  poolGain=Math.max(0.16,Math.min(1,1-lum(w)*1.6));
+  poolMats.forEach(m=>m.opacity=m.userData.gain*poolGain);
+  beamMat.opacity=0.004+0.018*poolGain;
+  skyFloorMat.opacity=0.05+0.14*poolGain;
+  winLightMat.opacity=0.05+0.15*poolGain;
+  const mood=light?"day":"dusk";
+  if(mood!==outMood){outMood=mood; if(hasWindows) drawOutside();}
   /* 아바타에 닿는 빛만 방 밝기에 맞춥니다. 밝은 방에서 세게 때리면
      마네킹만 도드라지고, 어두운 방에서 약하면 벽에 묻힙니다.
      바닥에서 되받는 빛은 바닥 색을 그대로 씁니다 — 서 있는 곳의
@@ -1978,6 +3378,8 @@ function enterGallery(handle){
   current=g; lobby.classList.add("hide"); root.classList.remove("lobbyMode");
   wallInput.value=g.theme.wall; floorInput.value=g.theme.floor;
   applyTheme(g.theme.wall,g.theme.floor); markRoomTheme();
+  setFloorPattern(g.theme.floorPattern,false); // 방 크기는 아래 applyRoom 이
+  applyLounge(g.theme.lounge,false);           // 거실 가구 색
   applyRoom(roomOf(g));                        // 자리 좌표가 방에서 나옵니다
   buildRoomContents(g); applyFurniture(g.layout);
   drawGuestbook(); refreshRoomPermissions();
@@ -1991,7 +3393,7 @@ function enterGallery(handle){
     setTimeout(()=>flash("작품을 바라보고 클릭하면 재생됩니다",4200),1400);
   } else if(canManage(g)&&!sizeTipShown){
     sizeTipShown=true;
-    setTimeout(()=>flash("E 키로 작품 바꾸기 · [ ] 키로 크기 조절",4600),1400);
+    setTimeout(()=>flash("E 키로 작품 바꾸기 · [ ] 키로 크기 · Shift+방향키로 자리 옮기기",5200),1400);
   }
 }
 function route(){
@@ -2352,6 +3754,25 @@ const ngHandle=document.getElementById("ngHandle"),ngErr=document.getElementById
 let ngTheme="night";
 document.querySelectorAll("[data-ngtheme]").forEach(b=>
   b.addEventListener("click",()=>{ngTheme=b.dataset.ngtheme;selectIn("ngtheme",ngTheme);}));
+
+/* 어느 전시실에 지을지. 예전에는 만들고 나서 설정에서만 바꿀 수 있었는데,
+   작품을 걸어둔 뒤에 옮기려면 자리가 모자라 도로 내려야 하는 일이
+   생깁니다. 처음에 고르는 편이 낫습니다.
+   단추는 ROOMS 에서 만듭니다 — 방을 더하면 여기도 저절로 늘어납니다. */
+const ngRoomPick=document.getElementById("ngRoomPick");
+const ngRoomNote=document.getElementById("ngRoomNote");
+let ngRoom=DEFAULT_ROOM;
+function setNgRoom(k){
+  ngRoom=ROOMS[k]?k:DEFAULT_ROOM;
+  selectIn("ngroom",ngRoom);
+  ngRoomNote.textContent=ROOMS[ngRoom].note+" · 나중에 전시 설정에서 바꿀 수 있습니다";
+}
+Object.keys(ROOMS).forEach(key=>{
+  const b=document.createElement("button");
+  b.className="opt"; b.dataset.ngroom=key; b.textContent=ROOMS[key].name;
+  b.addEventListener("click",()=>setNgRoom(key));
+  ngRoomPick.appendChild(b);
+});
 function openNewGallery(){
   if(!signedIn()){pendingAfterLogin="new";openLogin("new");return;}
   document.getElementById("ngOwner").textContent=
@@ -2359,7 +3780,7 @@ function openNewGallery(){
   ngName.value=session.name||""; ngTitle.value=""; ngErr.textContent="";
   ngHandle.value=(session.email.split("@")[0]||"room").replace(/[^a-z0-9-]/g,"")||"room";
   if(GALLERIES.some(g=>g.handle===ngHandle.value)) ngHandle.value+="-2";
-  ngTheme="night"; selectIn("ngtheme","night");
+  ngTheme="night"; selectIn("ngtheme","night"); setNgRoom(DEFAULT_ROOM);
   openModal("ngm"); setTimeout(()=>ngTitle.focus(),60);
 }
 function validHandle(h){
@@ -2387,7 +3808,7 @@ document.getElementById("ngGo").addEventListener("click",async()=>{
     try{
       const r=await fetch("/api/galleries",{
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({handle:h,title,name,
+        body:JSON.stringify({handle:h,title,name,room:ngRoom,
           theme:{wall:theme.wall,floor:theme.floor}}),
       });
       if(!r.ok){
@@ -2402,8 +3823,11 @@ document.getElementById("ngGo").addEventListener("click",async()=>{
     btn.disabled=false; btn.textContent=label;
   }
 
+  // 고른 전시실도 함께 적습니다. 안 적으면 서버에는 남았는데 지금 화면만
+  // 기본 방으로 들어가서, 새로고침하면 방이 바뀌는 것처럼 보입니다.
+  if(ngRoom!==DEFAULT_ROOM) theme.room=ngRoom;
   GALLERIES.push({handle:h,name,title,mine:true,ownerEmail:session.email,
-    theme,works:[],guestbook:[]});
+    theme,layout:[],works:[],guestbook:[]});
   closeModal("ngm"); location.hash="#/g/"+h;
 });
 
@@ -2560,6 +3984,26 @@ function setSlotScale(slot,sc){
   applySize(e);
   return e.work.scale;
 }
+/** 같은 벽의 이웃과 겹치는지. 겹치면 얼마나 겹치는지(미터)를 돌려줍니다.
+ *  막지는 않습니다 — 옆자리가 빌 수도 있고, 일부러 크게 걸 수도 있습니다.
+ *  다만 모르고 겹치는 일은 없어야 합니다. */
+function slotOverlap(slot){
+  const e=panels.find(p=>p.work.slot===slot);
+  if(!e) return 0;
+  const s=SLOTS[slot];
+  if(s.wall===undefined) return 0;              // 가벽은 이웃이 없습니다
+  const mine=s.at+(e.work.dx||0), mw=e.screen.geometry.parameters.width;
+  let worst=0;
+  panels.forEach(o=>{
+    if(o===e) return;
+    const t=SLOTS[o.work.slot];
+    if(!t||t.wall!==s.wall) return;
+    const his=t.at+(o.work.dx||0), hw=o.screen.geometry.parameters.width;
+    const gap=Math.abs(his-mine)-(mw+hw)/2;
+    if(gap<0) worst=Math.min(worst,gap);
+  });
+  return worst;
+}
 
 /* 크기를 서버에 남깁니다.
 
@@ -2570,6 +4014,40 @@ function setSlotScale(slot,sc){
    실패해도 화면을 되돌리지 않습니다 — 눈앞의 작품이 제멋대로 커졌다
    작아지는 편이 더 나쁩니다. 다음에 고칠 때 다시 보냅니다. */
 let scaleTimer=null;
+/* 작품을 자리 안에서 옮깁니다. 자리(slot)는 그대로고 그 자리에서
+   상하좌우로 조금 밀 뿐입니다 — 자리를 옮기려면 작품을 내렸다 다시
+   걸어야 합니다. */
+const NUDGE=0.05, NUDGE_X=0.9, NUDGE_Y=0.5;
+function nudgeSlot(slot,ddx,ddy){
+  const e=panels.find(p=>p.work.slot===slot);
+  if(!e) return null;
+  const w=e.work;
+  w.dx=Math.max(-NUDGE_X,Math.min(NUDGE_X,(w.dx||0)+ddx));
+  w.dy=Math.max(-NUDGE_Y,Math.min(NUDGE_Y,(w.dy||0)+ddy));
+  placePanel(e);                              // 빛 자국도 함께 따라갑니다
+  return w;
+}
+let nudgeTimer=null;
+function saveSlotNudge(slot){
+  if(!SERVER||!current||!canManage(current)) return;
+  const w=current.works.find(x=>x.slot===slot);
+  if(!w) return;
+  const handle=current.handle, title=w.title, note=w.note==="설명 없음"?"":w.note;
+  clearTimeout(nudgeTimer);
+  nudgeTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch("/api/works",{
+        method:"PATCH",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({handle,slot,title,note,dx:w.dx||0,dy:w.dy||0}),
+      });
+      if(!r.ok){
+        const d=await r.json().catch(()=>({}));
+        throw new Error(d.error||("서버 오류 "+r.status));
+      }
+    }catch(e){ flash("자리를 저장하지 못했습니다 — "+e.message); }
+  },600);
+}
+
 function saveSlotScale(slot){
   if(!SERVER||!current||!canManage(current)) return;
   const w=current.works.find(x=>x.slot===slot);
@@ -2700,21 +4178,10 @@ document.getElementById("wkSave").addEventListener("click",async()=>{
   else current.works.push({...base,kind:"demo",hue:parseInt(hueInput.value,10),motion:wkMotion});
   buildRoomContents(current); clearPending(); closeWorkModal();
 });
-document.getElementById("addWorkBtn").addEventListener("click",()=>{
-  if(!canManage(current)) return;
-  // 서버가 붙어 있으면 걸기는 스튜디오에서 합니다. 여기서 건 것은
-  // 브라우저 메모리에만 남아 새로고침하면 사라지는데, 학생 눈에는
-  // 저장이 고장난 것으로 보입니다.
-  if(SERVER){
-    flash("작품은 생성 스튜디오에서 겁니다");
-    setTimeout(()=>window.open("studio-ai.html","_blank","noopener"),700);
-    return;
-  }
-  const filled=new Set(current.works.map(w=>w.slot));
-  const free=SLOTS.map((_,i)=>i).filter(i=>!filled.has(i));
-  if(!free.length){flash("빈 자리가 없습니다");return;}
-  openWorkModal(free[0]);
-});
+/* "빈 자리에 작품 걸기" 단추는 걷어냈습니다. 서버가 붙어 있으면 이
+   단추는 "작품은 스튜디오에서 겁니다" 하고 스튜디오를 열어줄 뿐이었고,
+   실제로 거는 길은 전시실 안에서 빈 자리를 누르는 쪽입니다. 같은 일을
+   하는 문이 둘이면 하나는 헛걸음이 됩니다. */
 
 /* ---------- 백업 ----------
    내려받는 것은 exhibition.json 입니다. 백업과 "전시 당일 오프라인
@@ -2874,7 +4341,22 @@ addEventListener("keydown",e=>{
     if(p){
       const sc=setSlotScale(hoverSlot,(p.work.scale||1)+(e.code==="BracketRight"?0.05:-0.05));
       saveSlotScale(hoverSlot);
-      flash("크기 "+Math.round(sc*100)+"%");
+      const ov=slotOverlap(hoverSlot);
+      flash("크기 "+Math.round(sc*100)+"%"+
+            (ov<0?" · 옆 작품과 "+Math.abs(ov).toFixed(2)+"m 겹칩니다":""));
+    }
+  }
+  /* Shift + 방향키로 작품을 벽에서 옮깁니다. 방향키만 누르면 걸어가는
+     것이라, 겨누고 있을 때 Shift 를 함께 눌러야 옮기기가 됩니다.
+     이때는 걷지 않도록 그 키를 눌린 것으로 세지 않습니다. */
+  const NUD={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.code];
+  if(NUD&&e.shiftKey&&hoverSlot!=null&&canManage(current)){
+    keys[e.code]=false;
+    const w=nudgeSlot(hoverSlot,NUD[0]*NUDGE,NUD[1]*NUDGE);
+    if(w){
+      saveSlotNudge(hoverSlot);
+      flash("자리 "+(w.dx>=0?"→":"←")+Math.abs(w.dx).toFixed(2)+"m · "+
+            (w.dy>=0?"↑":"↓")+Math.abs(w.dy).toFixed(2)+"m");
     }
   }
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
@@ -3073,6 +4555,33 @@ function markRoomTheme(){
 }
 document.querySelectorAll("[data-rmtheme]").forEach(b=>
   b.addEventListener("click",()=>setRoomTheme(b.dataset.rmtheme)));
+
+/* ---------- 바닥 마감 ----------
+   색과 따로 둡니다. 프리셋(분위기)에 묶지 않은 이유는, 같은 색 바닥이라도
+   마루로 깔지 타일로 깔지가 전시장마다 다른 선택이기 때문입니다.
+   theme 의 한 칸에 이름만 적습니다 — 대표 이미지(cover)·전시관(room)과
+   같은 방식이라 DB 에 새 컬럼이 필요 없습니다. */
+function setFloorPattern(k,remember){
+  floorPattern=FLOOR_PATTERNS.includes(k)?k:FLOOR_PATTERNS[0];
+  refreshFloor();
+  if(remember&&current&&canManage(current)) current.theme.floorPattern=floorPattern;
+  selectIn("floorpat",floorPattern);
+}
+document.querySelectorAll("[data-floorpat]").forEach(b=>
+  b.addEventListener("click",()=>setFloorPattern(b.dataset.floorpat,true)));
+
+/* ---------- 거실 가구 색 ----------
+   단추는 LOUNGE_SETS 에서 만듭니다 — 색 한 벌을 더하면 이 줄도 저절로
+   늘어납니다. 벽·바닥 색과 따로 두는 이유는, 같은 색 벽이라도 가구를
+   크림으로 둘지 차콜로 둘지가 전시장마다 다른 선택이기 때문입니다. */
+const loungePick=document.getElementById("loungePick");
+Object.keys(LOUNGE_SETS).forEach(k=>{
+  const b=document.createElement("button");
+  b.className="opt"; b.dataset.lounge=k; b.textContent=LOUNGE_SETS[k].name;
+  b.addEventListener("click",()=>applyLounge(k,true));
+  loungePick.appendChild(b);
+});
+selectIn("lounge",loungeSet);
 
 /* ---------- 대표 이미지 ----------
    로비 카드에 걸리는 그림입니다. 고르지 않으면 지금처럼 전시실을 그린
@@ -3531,7 +5040,8 @@ themeSaveBtn.addEventListener("click",async()=>{
     const r=await fetch("/api/galleries",{
       method:"PATCH", headers:{"Content-Type":"application/json"},
       body:JSON.stringify({handle:current.handle,
-        theme:{wall:wallInput.value,floor:floorInput.value}}),
+        theme:{wall:wallInput.value,floor:floorInput.value,
+               floorPattern:floorPattern,lounge:loungeSet}}),
     });
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
@@ -3754,7 +5264,7 @@ function tick(){
       if(entry){
         const [hw,hh]=entry.hlSize;
         highlight.geometry.dispose(); highlight.geometry=new THREE.PlaneGeometry(hw,hh);
-        highlight.position.copy(entry.group.position).addScaledVector(entry.normal,0.06);
+        highlight.position.copy(entry.group.position).addScaledVector(entry.normal,FRAME_D+0.05);
         highlight.rotation.copy(entry.group.rotation);
       }
     }
@@ -3782,15 +5292,22 @@ function tick(){
     } else if(hoverDoor){
       ctxHint.textContent="클릭 — 문을 열고 나가기"; ctxHint.classList.add("on");
     } else if(hoverSlot!=null){
-      const edit=manage?" · E 바꾸기 · [ ] 크기":"";
+      const edit=manage?" · E 바꾸기 · [ ] 크기 · Shift+방향키 자리":"";
       if(!hovered) ctxHint.textContent="클릭 — "+(hoverSlot+1)+"번 자리에 작품 걸기";
       else if(hovered.work.kind==="image")
-        ctxHint.textContent=manage?(hoverSlot+1)+"번 자리 · E 바꾸기 · [ ] 크기":hovered.work.title;
+        ctxHint.textContent=manage
+          ?(hoverSlot+1)+"번 자리 · E 바꾸기 · [ ] 크기 · Shift+방향키 자리"
+          :hovered.work.title;
       else ctxHint.textContent=(hovered.playing?"클릭 — 정지":"클릭 — 재생")+edit;
       ctxHint.classList.add("on");
     } else if(nearBoard){
       ctxHint.textContent="G — 방명록 남기기"; ctxHint.classList.add("on");
     } else ctxHint.classList.remove("on");
+  }
+  /* 물결. 매 프레임 다시 그릴 필요는 없습니다 — 창이 있는 방에서만,
+     초당 열두 장쯤이면 물처럼 보이고 태블릿도 견딥니다. */
+  if(hasWindows&&!outStatic&&now-outLast>0.082){   // now 는 초 단위입니다
+    outLast=now; outPhase+=0.16; drawOutside();
   }
   renderer.render(scene,camera);
 }
@@ -3822,6 +5339,10 @@ function applyGalleries(list, fallbackOwner){
        theme 가 "night" 같은 이름 하나라 안에 적을 자리가 없습니다. */
     const room=(g.theme&&g.theme.room)||g.room;
     if(room) theme.room=room;
+    const fp=(g.theme&&g.theme.floorPattern)||g.floorPattern;   // 바닥 마감도 같은 약속
+    if(fp) theme.floorPattern=fp;
+    const lg=(g.theme&&g.theme.lounge)||g.lounge;               // 거실 가구 색도
+    if(lg) theme.lounge=lg;
     /* 자리 수만큼만 받습니다. 예전에는 10 이 박혀 있어서, 큰 전시실의
        스무 점 중 뒤쪽 열 점이 화면에 닿기도 전에 잘려나갔습니다. */
     const cap=roomOf({theme}).slots.length;
@@ -3838,6 +5359,8 @@ function applyGalleries(list, fallbackOwner){
         title:w.title||"제목 없음",
         note:w.note||"설명 없음",
         src:w.src, scale:w.scale||1, hue:200,
+        // 자리 안에서 옮긴 값. 없으면 자리 한가운데입니다.
+        dx:Number(w.dx)||0, dy:Number(w.dy)||0,
       })),
       guestbook:Array.isArray(g.guestbook)?g.guestbook:[],
     });

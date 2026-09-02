@@ -83,18 +83,31 @@ create table if not exists works (
 alter table works add column if not exists scale real not null default 1
   check (scale between 0.3 and 3);
 
+-- 걸린 자리 안에서 상하좌우로 조금 옮긴 값(미터). 자리(slot)는 그대로
+-- 두고 그 자리 안에서만 움직입니다 — 벽마다 자리가 4m 간격이라 이만큼은
+-- 옆 작품과 부딪히지 않습니다. 0 이 자리 한가운데입니다.
+alter table works add column if not exists dx real not null default 0
+  check (dx between -0.9 and 0.9);
+alter table works add column if not exists dy real not null default 0
+  check (dy between -0.5 and 0.5);
+
 -- 전시장에 놓은 가구. 배열 하나를 통째로 넣고 뺍니다 — 많아야 여덟 개라
 -- 표를 따로 만들 만한 양이 아니고, /api/galleries 와 백업이 이 칸을 함께
 -- 실어 나르면 오프라인 전시가 저절로 따라옵니다.
 alter table galleries add column if not exists layout jsonb not null default '[]'::jsonb;
 
--- 전시관에 따라 자리가 스무 개까지 늘었습니다(큰 전시실). 예전에 만든
--- 데이터베이스는 0~9 로 묶여 있으므로 제약을 다시 겁니다. 위 create table
--- 은 이미 있는 표를 건드리지 않기 때문에 이 줄이 따로 필요합니다.
--- 어느 방이 몇 자리인지는 lib/rooms.ts 가 정하고, 여기서는 그중 가장 큰
--- 방까지만 허용합니다.
+-- 전시관에 따라 자리 수가 다릅니다. 지금 가장 많은 곳은 바다가 보이는
+-- 방으로 스물세 자리입니다(예전에는 큰 전시실의 스무 자리였습니다).
+-- 위 create table 은 이미 있는 표를 건드리지 않으므로 이 줄이 따로
+-- 필요합니다.
+--
+-- 어느 방이 몇 자리인지는 lib/rooms.ts 가 정합니다. 여기서는 넉넉히
+-- 서른까지 열어둡니다 — 방을 하나 더 만들 때마다 선생님이 이 SQL 을
+-- 다시 실행해야 하는 일을 줄이려는 것입니다. 화면과 서버가 lib/rooms.ts
+-- 를 보고 그보다 좁게 막으므로, 여기가 넓다고 아무 자리나 들어오지는
+-- 않습니다.
 alter table works drop constraint if exists works_slot_check;
-alter table works add  constraint works_slot_check check (slot between 0 and 19);
+alter table works add  constraint works_slot_check check (slot between 0 and 29);
 
 create table if not exists guestbook (
   id           uuid primary key default gen_random_uuid(),

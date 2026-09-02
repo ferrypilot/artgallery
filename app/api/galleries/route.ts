@@ -43,9 +43,14 @@ export async function POST(request: Request) {
   // 색은 화면이 보내는 {wall, floor} 만 받습니다. 아무 jsonb 나 그대로
   // 넣으면 전시장 코드가 읽지 못하는 값이 들어올 수 있습니다.
   const t = body.theme ?? {};
-  const theme = (isColor(t.wall) && isColor(t.floor))
+  const theme: Record<string, unknown> = (isColor(t.wall) && isColor(t.floor))
     ? { wall: t.wall, floor: t.floor }
     : { wall: "#131318", floor: "#0a0a0c" };
+
+  /* 어느 전시실에 지을지. 만들기 창에서 고릅니다 — 작품을 건 뒤에 옮기면
+     자리가 모자라 도로 내려야 하는 일이 생겨서, 처음에 정하는 편이
+     낫습니다. 보내지 않거나 모르는 이름이면 기본 전시실입니다. */
+  if (isRoomName(body.room)) theme.room = body.room;
 
   const supabase = await supabaseServer();
 
@@ -88,6 +93,27 @@ export async function PATCH(request: Request) {
   if (!isColor(t.wall) || !isColor(t.floor)) {
     return json({ error: "색은 #rrggbb 여섯 자리로 보내주세요" }, 400);
   }
+  /* 바닥 마감. 보내지 않으면 그대로 둡니다 — 예전 화면에서 색만 저장해도
+     골라둔 마감이 사라지면 안 됩니다. 이름은 exhibition.html 의
+     FLOOR_PATTERNS 와 같은 줄로 맞춰 두세요. */
+  const FLOOR_PATTERNS = ["plank", "tile", "plain"];
+  let floorPattern: string | null = null;
+  if (t.floorPattern !== undefined) {
+    if (!FLOOR_PATTERNS.includes(String(t.floorPattern))) {
+      return json({ error: "그런 바닥 마감은 없습니다" }, 400);
+    }
+    floorPattern = String(t.floorPattern);
+  }
+  /* 거실 가구 색. 바닥 마감과 같은 규칙입니다 — 보내지 않으면 그대로
+     둡니다. 이름은 exhibition.html 의 LOUNGE_SETS 와 같은 줄로 맞추세요. */
+  const LOUNGE_SETS = ["cream", "charcoal"];
+  let lounge: string | null = null;
+  if (t.lounge !== undefined) {
+    if (!LOUNGE_SETS.includes(String(t.lounge))) {
+      return json({ error: "그런 거실 가구 색은 없습니다" }, 400);
+    }
+    lounge = String(t.lounge);
+  }
 
   // 전시관은 보내지 않으면 그대로 둡니다. 색만 저장하는 쪽이 훨씬 잦습니다.
   let room: RoomName | null = null;
@@ -127,6 +153,8 @@ export async function PATCH(request: Request) {
     ...(g.theme as object), wall: t.wall, floor: t.floor,
   };
   if (room) theme.room = room;
+  if (floorPattern) theme.floorPattern = floorPattern;
+  if (lounge) theme.lounge = lounge;
 
   const { data, error } = await supabase
     .from("galleries")
@@ -197,13 +225,23 @@ export async function GET() {
   // 로그인하지 않았어도 됩니다. 관람은 누구나 — 그때 user 는 null 입니다.
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 공개 전시장만 보이는 것은 RLS 가 정합니다. 여기서 거르지 않습니다.
-  const { data, error } = await supabase
-    .from("galleries")
-    .select("handle, title, owner_name, theme, layout, owner_id, " +
-            "works(slot, title, note, kind, media_url, scale), " +
-            "guestbook(id, visitor_name, message, created_at)")
-    .order("created_at");
+  /* 공개 전시장만 보이는 것은 RLS 가 정합니다. 여기서 거르지 않습니다.
+
+     dx·dy 는 나중에 더한 칸입니다. schema.sql 을 아직 돌리지 않은
+     데이터베이스에서는 이 칸이 없어 조회가 통째로 실패하고, 그러면
+     로비가 500 으로 뜹니다 — 배포가 마이그레이션보다 먼저 나가면
+     전시장 전체가 안 열리는 셈입니다. 한 번 겪은 일이라 두 번 묻습니다:
+     새 칸이 없으면 그것만 빼고 다시 읽고, 그 값은 0 으로 봅니다. */
+  const base = "handle, title, owner_name, theme, layout, owner_id, " +
+               "guestbook(id, visitor_name, message, created_at), ";
+  const pick = (cols: string) =>
+    supabase.from("galleries").select(base + "works(" + cols + ")").order("created_at");
+
+  let { data, error } = await pick("slot, title, note, kind, media_url, scale, dx, dy");
+  if (error && /dx|dy/.test(error.message)) {
+    console.warn("works.dx/dy 가 없습니다 — supabase/schema.sql 을 실행하세요");
+    ({ data, error } = await pick("slot, title, note, kind, media_url, scale"));
+  }
 
   if (error) return json({ error: error.message }, 500);
 
@@ -225,6 +263,8 @@ export async function GET() {
         note: w.note,
         kind: w.kind,
         scale: w.scale ?? 1,
+        dx: w.dx ?? 0,
+        dy: w.dy ?? 0,
       })),
   }));
 

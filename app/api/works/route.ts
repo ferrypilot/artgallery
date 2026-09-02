@@ -250,14 +250,22 @@ export async function PATCH(request: Request) {
   if (!title) return json({ error: "제목을 적어주세요" }, 400);
   const note = String(body.note ?? "").trim().slice(0, 200) || null;
 
-  /* 크기는 화면이 0.6~1.6 으로 자르지만 서버가 화면을 믿을 이유는 없습니다.
+  /* 크기는 화면이 0.6~2.0 으로 자르지만 서버가 화면을 믿을 이유는 없습니다.
      보내지 않으면 건드리지 않습니다 — 제목만 고칠 때 크기가 1 로
      되돌아가면 안 됩니다. */
   const patch: Record<string, unknown> = { title, note };
   if (body.scale !== undefined) {
     const scale = Number(body.scale);
     if (!Number.isFinite(scale)) return json({ error: "크기가 올바르지 않습니다" }, 400);
-    patch.scale = Math.round(Math.max(0.6, Math.min(1.6, scale)) * 100) / 100;
+    patch.scale = Math.round(Math.max(0.6, Math.min(2.0, scale)) * 100) / 100;
+  }
+  /* 자리 안에서 옮긴 값. 크기와 같은 규칙입니다 — 보내지 않으면 그대로
+     둡니다. DB 의 check 와 같은 폭으로 자릅니다. */
+  for (const [k, lim] of [["dx", 0.9], ["dy", 0.5]] as [string, number][]) {
+    if (body[k] === undefined) continue;
+    const v = Number(body[k]);
+    if (!Number.isFinite(v)) return json({ error: "자리가 올바르지 않습니다" }, 400);
+    patch[k] = Math.round(Math.max(-lim, Math.min(lim, v)) * 1000) / 1000;
   }
 
   const supabase = await supabaseServer();
@@ -270,7 +278,7 @@ export async function PATCH(request: Request) {
     .update(patch)
     .eq("gallery_id", gallery.id)
     .eq("slot", slot)
-    .select("slot, title, note, scale");
+    .select("slot, title, note, scale, dx, dy");
 
   if (error) return json({ error: error.message }, 500);
   // RLS 가 막으면 오류가 아니라 0행 수정으로 옵니다. 조용한 실패를 막습니다.

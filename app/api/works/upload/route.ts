@@ -99,7 +99,7 @@ export async function PUT(request: Request) {
   if (!title) return json({ error: "제목을 적어주세요" }, 400);
   const note = String(body.note ?? "").trim().slice(0, 200) || null;
   const s = Number(body.scale);
-  const scale = Number.isFinite(s) ? Math.round(Math.max(0.6, Math.min(1.6, s)) * 100) / 100 : 1;
+  const scale = Number.isFinite(s) ? Math.round(Math.max(0.6, Math.min(2.0, s)) * 100) / 100 : 1;
 
   // 그 자리에 걸려 있던 것은 내립니다. unique (gallery_id, slot) 이라
   // 비우지 않으면 새로 걸리지 않습니다.

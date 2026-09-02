@@ -449,6 +449,13 @@ writeFileSync(join(OUT, "exhibition.html"), html, "utf8");
 copyFileSync(join(ROOT, "public", "theme.css"), join(OUT, "theme.css"));
 // 로비 바탕 그림. 빠뜨리면 오프라인 전시의 로비만 허옇게 뜹니다.
 copyFileSync(join(ROOT, "public", "school-bg.jpg"), join(OUT, "school-bg.jpg"));
+/* 전시실 창밖에 걸리는 사진들. 없으면 화면이 손으로 그린 풍경으로
+   떨어지므로 백업이 실패할 일은 아닙니다 — 있으면 함께 담습니다. */
+for (const f of ["paris-bg.jpg", "rome-bg.jpg", "florence-bg.jpg", "vienna-bg.jpg"]) {
+  const from = join(ROOT, "public", f);
+  if (existsSync(from)) copyFileSync(from, join(OUT, f));
+  else console.log(`  (건너뜀) public/${f} 이 없어 창밖은 손그림으로 나옵니다`);
+}
 
 /* ---------- 마무리 ---------- */
 console.log("");
