@@ -60,7 +60,7 @@ export async function GET() {
 
   const { data, error } = await svc
     .from("profiles")
-    .select("id, email, display_name, approved, is_admin, created_at")
+    .select("id, email, display_name, avatar_type, approved, is_admin, created_at")
     .order("created_at", { ascending: false });
 
   if (error) return json({ error: error.message }, 500);
@@ -74,6 +74,9 @@ export async function GET() {
       id: p.id,
       email: p.email ?? "",
       name: p.display_name ?? "",
+      // "neutral" 은 고른 것이 아니라 안 고른 것입니다(예전 기본값).
+      avatarType: p.avatar_type === "male" || p.avatar_type === "female"
+        ? p.avatar_type : null,
       approved: p.approved === true || p.is_admin === true,
       isAdmin: p.is_admin === true,
       joinedAt: p.created_at,
@@ -128,18 +131,45 @@ export async function POST(request: Request) {
   return json({ created, failed });
 }
 
-/** 사용 / 중지 */
+/** 사용 / 중지 · 이름 · 캐릭터
+ *
+ *  approved 를 보내면 사용/중지, name·avatarType 을 보내면 그것만 고칩니다.
+ *  보내지 않은 칸은 건드리지 않습니다 — 이름만 고칠 때 사용 중이던 계정이
+ *  중지되면 안 됩니다. */
 export async function PATCH(request: Request) {
   const guard = await admin();
   if ("res" in guard) return guard.res;
 
   const body = await request.json().catch(() => null);
   const id = String(body?.id ?? "");
-  const approved = body?.approved === true;
   if (!id) return json({ error: "대상이 없습니다" }, 400);
-  if (id === guard.v.id && !approved) {
-    return json({ error: "본인 계정은 중지할 수 없습니다" }, 400);
+
+  const patch: Record<string, unknown> = {};
+
+  if (body?.approved !== undefined) {
+    const approved = body.approved === true;
+    if (id === guard.v.id && !approved) {
+      return json({ error: "본인 계정은 중지할 수 없습니다" }, 400);
+    }
+    patch.approved = approved;
   }
+
+  if (body?.name !== undefined) {
+    const name = String(body.name).trim().slice(0, 20);
+    // display_name 은 not null 입니다. 빈 이름은 넣지 않고 되돌려 보냅니다.
+    if (!name) return json({ error: "이름을 적어주세요" }, 400);
+    patch.display_name = name;
+  }
+
+  if (body?.avatarType !== undefined) {
+    const t = String(body.avatarType);
+    if (t !== "male" && t !== "female") {
+      return json({ error: "성별은 남 또는 여입니다" }, 400);
+    }
+    patch.avatar_type = t;
+  }
+
+  if (!Object.keys(patch).length) return json({ error: "고칠 것이 없습니다" }, 400);
   // 선생님은 관리자를 건드리지 못합니다. 관리자를 중지해 놓고 예산을
   // 아무도 못 바꾸게 만드는 길을 막습니다.
   if (!guard.v.isAdmin && await isAdminRow(id)) {
@@ -156,11 +186,19 @@ export async function PATCH(request: Request) {
   if (!svc) return json({ error: NEED_KEY }, 503);
 
   const { data, error } = await svc
-    .from("profiles").update({ approved }).eq("id", id).select("id, is_admin");
+    .from("profiles").update(patch).eq("id", id)
+    .select("id, display_name, avatar_type, approved");
 
   if (error) return json({ error: error.message }, 500);
   if (!data || !data.length) return json({ error: "그런 계정이 없습니다" }, 404);
-  return json({ ok: true, id, approved });
+  const row = data[0] as Record<string, unknown>;
+  return json({
+    ok: true, id,
+    approved: row.approved === true,
+    name: row.display_name ?? "",
+    avatarType: row.avatar_type === "male" || row.avatar_type === "female"
+      ? row.avatar_type : null,
+  });
 }
 
 /** 비밀번호 초기화 */

@@ -796,6 +796,8 @@
         <button class="opt" data-pfbody="female">여</button>
       </div>
       <p class="fl err" id="pfBodyErr" style="display:none">캐릭터를 골라주세요</p>
+      <p class="note" id="pfFromAcc" style="display:none">선생님이 계정에 적어둔
+        이름과 캐릭터입니다. 여기서 바꾸면 이번 관람에만 적용됩니다.</p>
       <div class="acts">
         <button class="ghost" id="pfCancel">닫기</button>
         <button class="go" style="margin:0" id="pfGo">저장하고 계속</button>
@@ -1218,7 +1220,7 @@ GALLERIES[2].guestbook.push({name:"김서연",msg:"밝은 방이라 느낌이 �
    여기서 버튼을 숨기는 것은 권한 없는 사람에게 버튼을 보여준 뒤
    에러를 띄우지 않기 위해서일 뿐입니다. */
 let SERVER=false;                        // /api 가 살아 있는가 (loadSession 이 정합니다)
-const session={email:null,name:"",body:null,isAdmin:false};
+const session={email:null,name:"",body:null,isAdmin:false,fromAccount:false};
 const signedIn=()=>!!session.email;
 // 서버가 붙어 있으면 profiles.is_admin 이 정답입니다. ADMIN_EMAILS 는
 // 서버 없는 갈래 1 에서 exhibition.json 이 정해주는 값입니다.
@@ -3675,6 +3677,7 @@ function selectIn(a,v){
 const pfName=document.getElementById("pfName");
 function openProfile(){
   pfName.value=session.name; selectIn("pfbody",session.body);
+  document.getElementById("pfFromAcc").style.display=session.fromAccount?"":"none";
   openModal("pfm"); setTimeout(()=>pfName.focus(),60);
 }
 document.querySelectorAll("[data-pfbody]").forEach(b=>
@@ -3809,7 +3812,19 @@ async function loadSession(){
     SERVER=true;
     session.email=(d.email||"").toLowerCase();
     session.isAdmin=!!d.isAdmin;
-    if(!session.name) session.name=session.email.split("@")[0];
+    /* 이름과 캐릭터는 계정에 적힌 것을 씁니다. 선생님이 관리자 설정에서
+       적어두면 학생은 전시장에 들어갈 때 아무것도 묻지 않고 바로 들어가고,
+       머리 위 이름표와 방명록에 제 이름이 나옵니다.
+       적혀 있지 않으면 예전처럼 메일 주소 앞부분을 쓰고 프로필 창에서
+       물어봅니다. */
+    session.fromAccount=!!(d.name||d.avatarType);
+    if(d.name) session.name=d.name;
+    else if(!session.name) session.name=session.email.split("@")[0];
+    if(d.avatarType&&!session.body){
+      session.body=d.avatarType;
+      buildAvatar(session.body); selectIn("body",session.body);
+    }
+    if(session.name) drawNameTag(session.name);
   }catch(e){ /* 정적 호스팅 — 관람 전용 */ }
 }
 

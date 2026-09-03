@@ -33,6 +33,9 @@ export async function GET() {
 
   return json({
     email: v.email,
+    // 전시장이 이 둘을 받아 관람자 이름·캐릭터를 미리 채웁니다.
+    name: v.name,
+    avatarType: v.avatarType,
     quota: v.quota,
     used: v.used,
     resolutions: v.resolutions,

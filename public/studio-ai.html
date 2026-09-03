@@ -269,6 +269,21 @@
     border:1px solid #d3d6dc;background:#fff;color:#16181d;cursor:pointer}
   .stu .acts button:hover{border-color:#16181d;background:#f6f7f8}
   .stu .acts button[disabled]{opacity:.5;cursor:default}
+  /* 이름과 성별. 메일 주소 바로 아래에 한 줄로 붙습니다 — 누구인지가
+     주소보다 이름으로 읽혀야 명단을 훑을 수 있습니다. */
+  .stu .id{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .stu .id input{width:132px;padding:6px 9px;font-family:inherit;font-size:12.5px;
+    border:1px solid #d3d6dc;background:#fff;color:#16181d}
+  .stu .id input:focus{outline:none;border-color:#16181d}
+  .stu .id .sex{display:flex;gap:0}
+  .stu .id .sex button{padding:6px 12px;font-size:11.5px;font-family:inherit;
+    border:1px solid #d3d6dc;background:#fff;color:#737a85;cursor:pointer}
+  .stu .id .sex button+button{border-left:none}
+  .stu .id .sex button.on{background:#16181d;border-color:#16181d;color:#fff}
+  .stu .id .save{padding:6px 11px;font-size:11.5px;font-family:inherit;
+    border:1px solid #16181d;background:#16181d;color:#fff;cursor:pointer}
+  .stu .id .save[disabled]{opacity:.45;cursor:default}
+  .stu .id .none{font-size:11.5px;color:#a5761f}
   .stu .msg{font-size:11.5px;line-height:1.7;margin-top:8px;word-break:break-all}
   .stu .msg:empty{display:none}
   .stu .msg.err{color:#a03a28}
@@ -1231,8 +1246,24 @@ function renderStudents(list){
   list.forEach(s=>{
     const row=document.createElement("div"); row.className="stu"+(s.approved?"":" wait");
     const state=s.isAdmin?"관리자":(s.approved?"사용 중":"중지됨");
+    /* 이름과 성별. 선생님이 여기서 적어두면 학생이 전시장에 들어갈 때
+       다시 묻지 않습니다. 고칠 수 있어야 하므로 늘 입력칸입니다 —
+       "고치기" 를 한 번 눌러야 열리면 서른 명을 손볼 때 손이 두 배입니다. */
+    const sex=(k,t)=>'<button data-sex="'+s.id+'" data-v="'+k+'"'+
+      (s.avatarType===k?' class="on"':'')+'>'+t+'</button>';
     row.innerHTML=
       '<div class="who"><b>'+esc(s.email)+'</b><span>'+state+'</span></div>'+
+      (CAN_MANAGE
+        ? '<div class="id">'+
+            '<input type="text" maxlength="20" placeholder="이름" '+
+              'data-name="'+s.id+'" value="'+esc(s.name||"")+'">'+
+            '<div class="sex">'+sex("male","남")+sex("female","여")+'</div>'+
+            '<button class="save" data-id="'+s.id+'" disabled>저장</button>'+
+            (s.avatarType?"":'<span class="none">성별 미지정</span>')+
+          '</div>'
+        : '<div class="id"><b>'+esc(s.name||"(이름 없음)")+'</b>'+
+            '<span class="none">'+(s.avatarType==="male"?"남":
+              s.avatarType==="female"?"여":"성별 미지정")+'</span></div>')+
       '<div class="acts">'+
         (s.isAdmin?"":'<button data-appr="'+s.id+'">'+(s.approved?"사용 중지":"사용 재개")+'</button>')+
         ((CAN_MANAGE&&!s.isAdmin)?'<button data-pw="'+s.id+'">비밀번호 초기화</button>':"")+
@@ -1240,6 +1271,52 @@ function renderStudents(list){
       '<div class="msg"></div>';
     box.appendChild(row);
   });
+
+  /* 고친 것이 있을 때만 저장 단추가 열립니다 — 늘 열려 있으면 안 고치고
+     누른 것인지 고치고 누른 것인지 화면이 말해주지 않습니다. */
+  const draft={};                       // id → {name, avatarType}
+  const pick=id=>draft[id]||(draft[id]={});
+  const refreshSave=id=>{
+    const s=list.find(x=>x.id===id), d=draft[id]||{};
+    const changed=(d.name!==undefined&&d.name!==(s.name||""))||
+                  (d.avatarType!==undefined&&d.avatarType!==s.avatarType);
+    const btn=box.querySelector('.save[data-id="'+id+'"]');
+    if(btn) btn.disabled=!changed;
+  };
+  box.querySelectorAll("[data-name]").forEach(inp=>
+    inp.addEventListener("input",()=>{
+      pick(inp.dataset.name).name=inp.value.trim();
+      refreshSave(inp.dataset.name);
+    }));
+  box.querySelectorAll("[data-sex]").forEach(b=>
+    b.addEventListener("click",()=>{
+      const id=b.dataset.sex;
+      pick(id).avatarType=b.dataset.v;
+      b.closest(".sex").querySelectorAll("button")
+       .forEach(x=>x.classList.toggle("on",x===b));
+      // "성별 미지정" 은 그릴 때 붙은 것이라, 고르면 바로 거둡니다.
+      const none=b.closest(".id").querySelector(".none");
+      if(none) none.remove();
+      refreshSave(id);
+    }));
+  box.querySelectorAll(".save").forEach(b=>b.addEventListener("click",async()=>{
+    const id=b.dataset.id, d=draft[id]||{};
+    const body={id};
+    if(d.name!==undefined) body.name=d.name;
+    if(d.avatarType!==undefined) body.avatarType=d.avatarType;
+    b.disabled=true; const label=b.textContent; b.textContent="저장 중…";
+    try{
+      const r=await fetch("/api/students",{
+        method:"PATCH", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(body),
+      });
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(j.error||("HTTP "+r.status));
+      b.textContent=label; loadStudents();
+    }catch(e){
+      b.disabled=false; b.textContent=label; msgIn(b,"err",e.message);
+    }
+  }));
 
   box.querySelectorAll("[data-appr]").forEach(b=>b.addEventListener("click",async()=>{
     const s=list.find(x=>x.id===b.dataset.appr);

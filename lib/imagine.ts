@@ -45,6 +45,13 @@ export const HARD_MAX_DURATION = 15;
 export type Viewer = {
   id: string;
   email: string;
+  /** 전시장에 걸리는 이름. 선생님이 관리자 설정에서 적어줍니다.
+   *  비어 있으면 화면이 메일 주소 앞부분으로 대신합니다. */
+  name: string;
+  /** 아바타 몸. 선생님이 정해두면 학생이 다시 고르지 않아도 됩니다.
+   *  아직 안 정했으면 null 입니다 — 예전 기본값 "neutral" 은 고른 것이
+   *  아니라 안 고른 것이므로 여기서 null 로 바꿉니다. */
+  avatarType: "male" | "female" | null;
   isAdmin: boolean;
   /**
    * 학생 계정만 관리하는 선생님. 관리자는 항상 true — 상위 집합입니다.
@@ -102,10 +109,13 @@ export async function loadViewer(): Promise<Viewer | null> {
 
   const isAdmin = profile.data?.is_admin === true;
   const role = (user.app_metadata as { role?: string } | null)?.role;
+  const body = profile.data?.avatar_type;
 
   return {
     id: user.id,
     email,
+    name: String(profile.data?.display_name ?? "").trim(),
+    avatarType: body === "male" || body === "female" ? body : null,
     isAdmin,
     isTeacher: isAdmin || role === "teacher",
     approved: isAdmin || profile.data?.approved === true,
