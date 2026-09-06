@@ -15,7 +15,7 @@
    ※ 전시를 오프라인으로 옮길 때 이 파일도 함께 가져가세요 — OFFLINE.md
    ════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&display=swap');
 
 :root{
   /* ── 글꼴 ──────────────────────────────────────────────
@@ -26,6 +26,13 @@
   --font: 'Nanum Gothic','맑은 고딕','Malgun Gothic',
           system-ui,-apple-system,'Segoe UI',sans-serif;
   --font-mono: 'IBM Plex Mono',ui-monospace,'D2Coding',monospace;
+  /* 제목의 "Art Gallery" 한 마디에만 씁니다. 코모란트 가라몬드 이탤릭 —
+     획 굵기 차이가 크고 기울기가 완만해서 미술관 간판의 그 글씨로
+     읽힙니다. 한글은 나눔고딕 그대로 두고 이 한 마디만 갈아 끼웁니다.
+     인터넷이 없으면 이 글꼴을 못 받아오지만, 아래 대체 글꼴도 모두
+     이탤릭이 있는 세리프라 기울어진 제목으로 그대로 나옵니다. */
+  --font-gal: 'Cormorant Garamond','Times New Roman',Georgia,
+              'Noto Serif KR',serif;
 
   /* ── 색 ────────────────────────────────────────────────
      밝은 화면은 종이색 바탕에 먹색 글자입니다. 회색(#f4f4f5)은
@@ -83,6 +90,11 @@
 .t-body{ font-size:13.5px; line-height:1.8; color:var(--muted); }
 .t-help{ font-size:13px;  line-height:1.8; color:var(--faint); }
 .t-mono{ font-family:var(--font-mono); letter-spacing:.02em; }
+/* 제목 안의 "Art Gallery". 한글 옆에서 크기가 같으면 작아 보입니다 —
+   세리프는 소문자 높이가 낮기 때문입니다. 그래서 1.12배로 키우고
+   자간을 조금 벌립니다. */
+.gal{ font-family:var(--font-gal); font-style:italic; font-weight:600;
+      font-size:1.12em; letter-spacing:.005em; }
 
 /* ════ 버튼 ════
    세 종류뿐입니다.

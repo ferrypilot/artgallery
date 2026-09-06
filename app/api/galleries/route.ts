@@ -201,10 +201,13 @@ function isColor(s: unknown) {
   return typeof s === "string" && /^#[0-9a-fA-F]{6}$/.test(s);
 }
 
-/* 방명록은 오래된 것부터 늘어놓습니다 — 벽에 걸린 판이 뒤에서 다섯 개를
-   잘라 쓰기 때문입니다. 한 전시장에 50개까지만 실어 보냅니다. 그 위로는
-   화면에 닿지도 않는데 목록만 무거워집니다. */
-const GUESTBOOK_MAX = 50;
+/* 방명록은 오래된 것부터 늘어놓습니다 — 벽에 걸린 판도 창의 목록도 뒤에서
+   부터 읽기 때문입니다.
+
+   예전에는 50개까지만 실었습니다. 그때는 판이 다섯 개만 걸었으니 나머지는
+   어차피 화면에 닿지 않았는데, 이제 판은 담기는 대로 다 걸고 창은 전부
+   보여줍니다. 한 학기를 받아낼 만큼 올려둡니다. */
+const GUESTBOOK_MAX = 200;
 function recentGuestbook(rows: any) {
   if (!Array.isArray(rows)) return [];
   return rows
@@ -212,7 +215,8 @@ function recentGuestbook(rows: any) {
     .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
     .slice(-GUESTBOOK_MAX)
     // id 를 함께 보냅니다. 주인과 선생님이 한 줄만 골라 지우려면 필요합니다.
-    .map((e) => ({ id: e.id, name: e.visitor_name, msg: e.message }));
+    .map((e) => ({ id: e.id, name: e.visitor_name, msg: e.message,
+                   link: e.link ?? null }));
 }
 
 export async function GET() {
@@ -227,20 +231,25 @@ export async function GET() {
 
   /* 공개 전시장만 보이는 것은 RLS 가 정합니다. 여기서 거르지 않습니다.
 
-     dx·dy 는 나중에 더한 칸입니다. schema.sql 을 아직 돌리지 않은
-     데이터베이스에서는 이 칸이 없어 조회가 통째로 실패하고, 그러면
-     로비가 500 으로 뜹니다 — 배포가 마이그레이션보다 먼저 나가면
-     전시장 전체가 안 열리는 셈입니다. 한 번 겪은 일이라 두 번 묻습니다:
-     새 칸이 없으면 그것만 빼고 다시 읽고, 그 값은 0 으로 봅니다. */
-  const base = "handle, title, owner_name, theme, layout, owner_id, " +
-               "guestbook(id, visitor_name, message, created_at), ";
-  const pick = (cols: string) =>
-    supabase.from("galleries").select(base + "works(" + cols + ")").order("created_at");
+     works.dx·dy 와 guestbook.link 는 나중에 더한 칸입니다. schema.sql 을
+     아직 돌리지 않은 데이터베이스에서는 그 칸이 없어 조회가 통째로
+     실패하고, 그러면 로비가 500 으로 뜹니다 — 배포가 마이그레이션보다
+     먼저 나가면 전시장 전체가 안 열리는 셈입니다. 두 번 겪은 일이라
+     한 번 더 묻습니다: 새 칸이 없으면 그것들을 빼고 다시 읽고,
+     빠진 값은 기본값으로 봅니다. */
+  const head = "handle, title, owner_name, theme, layout, owner_id, ";
+  const wkFull = "works(slot, title, note, kind, media_url, scale, dx, dy)";
+  const wkLite = "works(slot, title, note, kind, media_url, scale)";
+  const gbFull = "guestbook(id, visitor_name, message, link, created_at)";
+  const gbLite = "guestbook(id, visitor_name, message, created_at)";
+  const pick = (wk: string, gb: string) =>
+    supabase.from("galleries").select(head + wk + ", " + gb).order("created_at");
 
-  let { data, error } = await pick("slot, title, note, kind, media_url, scale, dx, dy");
-  if (error && /dx|dy/.test(error.message)) {
-    console.warn("works.dx/dy 가 없습니다 — supabase/schema.sql 을 실행하세요");
-    ({ data, error } = await pick("slot, title, note, kind, media_url, scale"));
+  let { data, error } = await pick(wkFull, gbFull);
+  const missing = (m: string) => ["dx", "dy", "link"].some((c) => m.includes(c));
+  if (error && missing(error.message)) {
+    console.warn("새 칸이 없습니다 — supabase/schema.sql 을 실행하세요:", error.message);
+    ({ data, error } = await pick(wkLite, gbLite));
   }
 
   if (error) return json({ error: error.message }, 500);

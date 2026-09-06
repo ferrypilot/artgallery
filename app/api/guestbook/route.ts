@@ -34,6 +34,27 @@ export async function POST(request: Request) {
   const message = String(body.message ?? "").trim().slice(0, MAX_MSG);
   if (!message) return json({ error: "한 줄 적어주세요" }, 400);
 
+  /* 곁들이는 주소. 없어도 됩니다. http·https 만 받습니다 — javascript:
+     같은 것을 그대로 두면 누른 사람 화면에서 코드가 돕니다. */
+  let link: string | null = null;
+  const rawLink = String(body.link ?? "").trim();
+  if (rawLink) {
+    let u: URL | null = null;
+    try { u = new URL(/^https?:\/\//i.test(rawLink) ? rawLink : "https://" + rawLink); }
+    catch { u = null; }
+    const bad =
+      !u ||
+      (u.protocol !== "http:" && u.protocol !== "https:") ||
+      // 점이 없으면 주소가 아닙니다. https:// 를 앞에 붙이면 아무 글자나
+      // 호스트 이름이 되어 버리므로 이 한 줄이 필요합니다.
+      !u.hostname.includes(".") ||
+      /\s/.test(rawLink);
+    if (bad || !u) {
+      return json({ error: "주소가 올바르지 않습니다. 예: https://example.com/..." }, 400);
+    }
+    link = u.toString().slice(0, 300);
+  }
+
   // 아바타 종류는 남/여뿐입니다. 모르는 값이면 컬럼 기본값과 같은 것을 씁니다.
   const raw = String(body.body ?? "");
   const avatar = raw === "male" || raw === "female" ? raw : "neutral";
@@ -46,14 +67,21 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("guestbook")
-    .insert({ gallery_id: gallery.id, visitor_name: name, avatar_type: avatar, message })
-    .select("visitor_name, message")
+    .insert({ gallery_id: gallery.id, visitor_name: name, avatar_type: avatar, message, link })
+    .select("id, visitor_name, message, link")
     .single();
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) {
+    // link 칸이 아직 없는 데이터베이스입니다. 무엇을 해야 할지 그대로 알려줍니다.
+    if (/link/.test(error.message)) {
+      return json({ error: "주소를 남기려면 supabase/schema.sql 을 다시 실행하세요" }, 500);
+    }
+    return json({ error: error.message }, 500);
+  }
 
   // 화면이 쓰는 모양으로 돌려줍니다 — exhibition.json 과 같은 {name, msg} 입니다.
-  return json({ entry: { name: data.visitor_name, msg: data.message } });
+  return json({ entry: { id: data.id, name: data.visitor_name,
+                         msg: data.message, link: data.link ?? null } });
 }
 
 /**

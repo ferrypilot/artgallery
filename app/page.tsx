@@ -41,7 +41,9 @@ export default function Home() {
       <div className="bg-photo" aria-hidden="true" />
       <main className="page">
       <div className="t-eyebrow copy">Copyright © 2026 Kang SongWeol</div>
-      <h1 className="t-h1" style={{ margin: "10px 0 0" }}>서울온라인학교의 Art Gallery</h1>
+      <h1 className="t-h1" style={{ margin: "10px 0 0" }}>
+        강송월의 <span className="gal">Art Gallery</span>
+      </h1>
 
       <div className={"notice" + (health?.ok === false ? " warn" : "")}
            style={{ marginTop: 24 }}>

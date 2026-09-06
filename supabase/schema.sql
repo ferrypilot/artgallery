@@ -70,7 +70,7 @@ create table if not exists works (
   slot       int  not null check (slot between 0 and 19),
   title      text not null,
   note       text,
-  kind       text not null check (kind in ('image','video')),
+  kind       text not null check (kind in ('image','video','youtube')),
   media_url  text not null,
   poster_url text,
   created_at timestamptz default now(),
@@ -86,6 +86,14 @@ alter table works add column if not exists scale real not null default 1
 -- 걸린 자리 안에서 상하좌우로 조금 옮긴 값(미터). 자리(slot)는 그대로
 -- 두고 그 자리 안에서만 움직입니다 — 벽마다 자리가 4m 간격이라 이만큼은
 -- 옆 작품과 부딪히지 않습니다. 0 이 자리 한가운데입니다.
+-- 유튜브 링크도 걸 수 있습니다. 영상은 유튜브에 그대로 있고 media_url 에는
+-- 주소만 적습니다 — 벽에는 썸네일이 걸리고, 누르면 그 자리에 플레이어가
+-- 열립니다. create table 은 이미 있는 표를 건드리지 않으므로 제약을
+-- 다시 겁니다.
+alter table works drop constraint if exists works_kind_check;
+alter table works add  constraint works_kind_check
+  check (kind in ('image','video','youtube'));
+
 alter table works add column if not exists dx real not null default 0
   check (dx between -0.9 and 0.9);
 alter table works add column if not exists dy real not null default 0
@@ -115,8 +123,18 @@ create table if not exists guestbook (
   visitor_name text not null,
   avatar_type  text not null default 'neutral',
   message      text not null check (char_length(message) <= 80),
+  -- 곁들이는 주소. 프롤로그에 참고한 곳을 달거나, 관람객이 자기 전시장을
+  -- 남길 때 씁니다. 없어도 됩니다.
+  link         text check (link is null or char_length(link) <= 300),
   created_at   timestamptz default now()
 );
+
+-- 주소 칸은 나중에 더했습니다. 이미 있는 표는 create table 이 건드리지
+-- 않으므로 이 줄이 따로 필요합니다.
+alter table guestbook add column if not exists link text;
+alter table guestbook drop constraint if exists guestbook_link_check;
+alter table guestbook add  constraint guestbook_link_check
+  check (link is null or char_length(link) <= 300);
 
 create table if not exists generations (
   id         uuid primary key default gen_random_uuid(),
