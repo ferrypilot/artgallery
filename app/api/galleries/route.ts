@@ -10,6 +10,9 @@ import { json, loadViewer } from "@/lib/imagine";
 import { ROOMS, isRoomName, type RoomName } from "@/lib/rooms";
 
 const HANDLE = /^[a-z0-9-]{2,20}$/;
+// 전시 제목과 학생 이름의 길이. 만들 때와 고칠 때가 같아야 합니다.
+const MAX_TITLE = 100;
+const MAX_NAME = 100;
 
 /**
  * 전시장 만들기.  POST { handle, title, name, theme }
@@ -35,10 +38,13 @@ export async function POST(request: Request) {
     return json({ error: "주소는 영문 소문자·숫자·하이픈 2~20자입니다" }, 400);
   }
 
-  const title = String(body.title ?? "").trim().slice(0, 60);
+  /* 이름과 제목은 100 자까지. 예전에는 20 자(제목)·12 자(이름)에서 잘렸는데,
+     「3학년 2반 김서연의 여름 그림 전시」 같은 제목이 그대로 잘려 나갔습니다.
+     칸은 galleries.title·owner_name 둘 다 text 라 길이 제한이 없습니다. */
+  const title = String(body.title ?? "").trim().slice(0, MAX_TITLE);
   if (!title) return json({ error: "전시 제목을 적어주세요" }, 400);
 
-  const name = String(body.name ?? "").trim().slice(0, 40) || v.email.split("@")[0];
+  const name = String(body.name ?? "").trim().slice(0, MAX_NAME) || v.email.split("@")[0];
 
   // 색은 화면이 보내는 {wall, floor} 만 받습니다. 아무 jsonb 나 그대로
   // 넣으면 전시장 코드가 읽지 못하는 값이 들어올 수 있습니다.
@@ -69,7 +75,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * 전시장 꾸미기 저장.  PATCH { handle, theme: {wall, floor}, room? }
+ * 전시장 꾸미기 저장.  PATCH { handle, theme?: {wall, floor}, room?, title?, name? }
  *
  * 지금까지 벽·바닥 색은 화면에서만 바뀌고 새로고침하면 되돌아갔습니다.
  * 전시장을 꾸미는 일은 학생이 자기 전시를 갖는 느낌의 절반쯤 되는데,
@@ -89,9 +95,26 @@ export async function PATCH(request: Request) {
   const handle = String(body.handle ?? "").trim().toLowerCase();
   if (!HANDLE.test(handle)) return json({ error: "주소가 올바르지 않습니다" }, 400);
 
+  /* 색은 보낼 때만 고칩니다. 예전에는 늘 있어야 했는데, 그러면 이름만
+     고치러 온 화면도 색을 함께 실어 보내야 했습니다 — 고칠 뜻이 없는
+     것까지 덮어쓰게 됩니다. */
   const t = body.theme ?? {};
-  if (!isColor(t.wall) || !isColor(t.floor)) {
+  const wantTheme = body.theme !== undefined;
+  if (wantTheme && (!isColor(t.wall) || !isColor(t.floor))) {
     return json({ error: "색은 #rrggbb 여섯 자리로 보내주세요" }, 400);
+  }
+
+  /* 전시 제목과 학생 이름. 만들 때 한 번 적고 끝이었는데, 오타 하나를
+     고치려고 전시장을 새로 만들 수는 없습니다. 길이는 만들 때와 같습니다. */
+  let title: string | null = null;
+  if (body.title !== undefined) {
+    title = String(body.title).trim().slice(0, MAX_TITLE);
+    if (!title) return json({ error: "전시 제목을 적어주세요" }, 400);
+  }
+  let ownerName: string | null = null;
+  if (body.name !== undefined) {
+    ownerName = String(body.name).trim().slice(0, MAX_NAME);
+    if (!ownerName) return json({ error: "학생 이름을 적어주세요" }, 400);
   }
   /* 바닥 마감. 보내지 않으면 그대로 둡니다 — 예전 화면에서 색만 저장해도
      골라둔 마감이 사라지면 안 됩니다. 이름은 exhibition.html 의
@@ -149,24 +172,31 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const theme: Record<string, unknown> = {
-    ...(g.theme as object), wall: t.wall, floor: t.floor,
-  };
-  if (room) theme.room = room;
-  if (floorPattern) theme.floorPattern = floorPattern;
-  if (lounge) theme.lounge = lounge;
+  const patch: Record<string, unknown> = {};
+  if (wantTheme || room || floorPattern || lounge) {
+    const theme: Record<string, unknown> = { ...(g.theme as object) };
+    if (wantTheme) { theme.wall = t.wall; theme.floor = t.floor; }
+    if (room) theme.room = room;
+    if (floorPattern) theme.floorPattern = floorPattern;
+    if (lounge) theme.lounge = lounge;
+    patch.theme = theme;
+  }
+  if (title) patch.title = title;
+  if (ownerName) patch.owner_name = ownerName;
+  if (!Object.keys(patch).length) return json({ error: "바꿀 것이 없습니다" }, 400);
 
   const { data, error } = await supabase
     .from("galleries")
-    .update({ theme })
+    .update(patch)
     .eq("handle", handle)
-    .select("handle, theme");
+    .select("handle, title, owner_name, theme");
 
   if (error) return json({ error: error.message }, 500);
   if (!data || !data.length) {
     return json({ error: "고칠 권한이 없거나 없는 전시장입니다" }, 403);
   }
-  return json({ ok: true, handle, theme: data[0].theme });
+  return json({ ok: true, handle, title: data[0].title,
+                name: data[0].owner_name, theme: data[0].theme });
 }
 
 /**

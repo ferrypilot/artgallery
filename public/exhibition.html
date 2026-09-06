@@ -187,8 +187,11 @@
      맞지만 한글은 낱자가 흩어져 읽는 대신 더듬게 됩니다. 크기를 올리고
      자간을 0 으로 되돌립니다 — 아래 나눔고딕 블록이 자간을 .02em 으로
      한 번 더 잡아줍니다. */
+  /* 이름과 제목이 길면 화면을 가로질러 오른쪽 단추까지 닿습니다.
+     한 줄로 자르고 화면 절반을 넘지 않게 합니다. */
   #mark{position:absolute;top:22px;left:24px;z-index:10;font-size:12px;letter-spacing:0;
-    color:#7d7a74;pointer-events:none}
+    color:#7d7a74;pointer-events:none;max-width:46vw;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #hint{position:absolute;bottom:22px;right:24px;z-index:10;font-size:11.5px;letter-spacing:0;
     color:#7d7a74;text-align:right;line-height:2;pointer-events:none}
   /* 위 오른쪽 두 단추. 하는 일이 아주 다른데 생김새가 같으면 손이
@@ -285,6 +288,13 @@
   /* 저장이 실패했을 때. 조용히 넘어가면 학생은 저장된 줄 압니다. */
   .grp p.small.warn{color:#c08a80}
   #root.light .grp p.small.warn{color:#a03a28}
+  /* 이름과 제목을 고치는 칸. 설정 패널에 글자 칸이 생기는 것은 여기가
+     처음이라 모양을 함께 정합니다. 패널은 밝은 화면에서도 어둡습니다. */
+  .grp .fl2{font-size:11.5px;color:#8f8b83;letter-spacing:0;margin:0 0 6px}
+  .grp input[type=text]{width:100%;padding:10px 11px;margin-bottom:13px;
+    background:#0d0d11;border:1px solid #2c2c36;color:#e4e0d8;
+    font-family:inherit;font-size:12.5px;letter-spacing:0}
+  .grp input[type=text]:focus{outline:none;border-color:#6f6b64}
   .divider{height:1px;background:#1c1c23;margin:0 0 24px}
   .panelBtn{width:100%;padding:12px;background:transparent;color:#dcd8cf;border:1px solid #34343e;
     font-size:12.5px;font-weight:700;letter-spacing:0;transition:.2s}
@@ -315,7 +325,8 @@
   .doorLabel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     text-align:center;color:#e8e6e1;transition:opacity .4s;white-space:nowrap}
   #door.open .doorLabel{opacity:0}
-  .doorLabel .dt{font-size:clamp(22px,4vw,34px);font-weight:300;letter-spacing:.08em}
+  .doorLabel .dt{font-size:clamp(22px,4vw,34px);font-weight:300;letter-spacing:.08em;
+    max-width:80vw;margin:0 auto;line-height:1.35}
   .doorLabel .dn{font-size:10.5px;letter-spacing:.28em;color:#8a8780;margin-top:15px}
 
   /* ============ 로비 — 밝은 톤 ============
@@ -538,6 +549,9 @@
   #lobby .card .ctRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
   /* 제목이 길어도 칩을 밀어내지 않습니다 */
   #lobby .card .ct{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 이름 줄도 마찬가지입니다. 100 자까지 적을 수 있게 되면서, 긴 이름이
+     카드 높이를 저 혼자 늘려 줄이 어긋나는 일이 생깁니다. */
+  #lobby .card .cn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 내 전시장 — 검은 딱지는 너무 셉니다. 카드 안에서 한 톤 낮춥니다. */
   #lobby .mine{position:static;flex:none;background:#f2eee6;border:1px solid #e2dbcf;
     color:#5f5646;border-radius:999px;font-size:11px;letter-spacing:.01em;padding:4px 10px}
@@ -672,6 +686,18 @@
       </div>
     </div>
     <div class="divider"></div>
+    <!-- 이름과 제목. 주인과 관리자만, 서버가 있을 때만 보입니다.
+         지금까지는 전시장을 만들 때 적은 그대로 학기 내내 갔습니다.
+         오타 하나를 고치려고 전시장을 새로 만들 수는 없습니다. -->
+    <div class="grp" id="titleGrp" style="display:none">
+      <h3>전시 이름</h3>
+      <p class="fl2">전시 제목</p>
+      <input type="text" id="galTitle" maxlength="100" placeholder="예: 내가 그린 여름" />
+      <p class="fl2">학생 이름</p>
+      <input type="text" id="galOwner" maxlength="100" placeholder="예: 김서연" />
+      <button class="panelBtn" id="titleSave">이름 · 제목 저장</button>
+      <p class="small" id="titleMsg">전시실 위, 로비 카드, 작품 이름표에 함께 쓰입니다.</p>
+    </div>
     <!-- 전시관. 주인과 관리자만, 서버가 있을 때만 보입니다. -->
     <div class="grp" id="roomGrp" style="display:none">
       <h3>전시관</h3>
@@ -844,9 +870,9 @@
       <h2 class="serif">전시장 만들기</h2>
       <p class="note" id="ngOwner"></p>
       <div class="fl">학생 이름</div>
-      <input type="text" id="ngName" maxlength="12" placeholder="예: 김서연" />
+      <input type="text" id="ngName" maxlength="100" placeholder="예: 김서연" />
       <div class="fl">전시 제목</div>
-      <input type="text" id="ngTitle" maxlength="20" placeholder="예: 느린 아침" />
+      <input type="text" id="ngTitle" maxlength="100" placeholder="예: 느린 아침" />
       <div class="fl">주소 <span class="err" id="ngErr"></span></div>
       <input type="text" class="mono" id="ngHandle" maxlength="20" placeholder="seoyeon" />
       <!-- 방을 먼저 고르고 분위기를 정합니다. 어느 방인지가 먼저고
@@ -3601,6 +3627,12 @@ function refreshRoomPermissions(){
   document.getElementById("themeSaveGrp").style.display=(SERVER&&manage)?"":"none";
   document.getElementById("coverGrp").style.display=(SERVER&&manage)?"":"none";
   document.getElementById("roomGrp").style.display=(SERVER&&manage)?"":"none";
+  document.getElementById("titleGrp").style.display=(SERVER&&manage)?"":"none";
+  /* 칸에 지금 값을 넣어둡니다. 고치는 중에 다시 그려도 적던 것이 날아가지
+     않도록, 포커스가 그 칸에 있으면 건드리지 않습니다. */
+  const ti=document.getElementById("galTitle"), oi=document.getElementById("galOwner");
+  if(document.activeElement!==ti) ti.value=current.title||"";
+  if(document.activeElement!==oi) oi.value=current.name||"";
   document.getElementById("furnGrp").style.display=(SERVER&&manage)?"":"none";
   showCover(); showRoomPick(); showFurniture();
   document.getElementById("viewerMsg").textContent=signedIn()
@@ -3784,6 +3816,11 @@ function posterFor(g){
   }
   return roomPoster(g.theme,g.works.length);
 }
+/* 화면에 그대로 끼워 넣는 글자는 한 번 거릅니다. 이름과 제목은 학생이
+   적는 것이고, 로비에는 남의 전시장 카드가 함께 놓입니다 — 한 사람이 적은
+   글자가 다른 사람 화면에서 태그로 살아나면 안 됩니다. */
+const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,
+  c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function renderGrid(){
   const grid=document.getElementById("grid"); grid.innerHTML="";
   const chip=document.getElementById("idChip"),auth=document.getElementById("btnAuth");
@@ -3823,9 +3860,9 @@ function renderGrid(){
       (manage&&SERVER?'<button class="cov" title="대표 이미지 바꾸기">대표 이미지</button>':"")+
       '<div class="thumbWrap"><img class="thumb" src="'+posterFor(g)+'" alt="">'+
       (g.works.length?"":'<span class="emptyTag">빈 전시장</span>')+'</div>'+
-      '<div class="meta"><div class="ctRow"><div class="ct">'+g.title+'</div>'+
+      '<div class="meta"><div class="ctRow"><div class="ct">'+esc(g.title)+'</div>'+
       (mine?'<span class="mine">내 전시장</span>':"")+'</div>'+
-      '<div class="cn">'+g.name+' · /g/'+g.handle+'</div>'+
+      '<div class="cn">'+esc(g.name)+' · /g/'+esc(g.handle)+'</div>'+
       '<div class="cs"><span>작품 '+g.works.length+'/'+roomOf(g).slots.length+'</span>'+
       '<span>방명록 '+g.guestbook.length+'</span></div></div>';
     const open=()=>{
@@ -4243,7 +4280,7 @@ function acceptFile(f){
   if(isVideo){stage.classList.remove("on");stageV.style.display="block";
     stageV.src=url; stageV.play().catch(()=>{});}
   else {stageV.style.display="none"; stage.src=url; stage.classList.add("on");}
-  fileMeta.innerHTML='<span>'+f.name.slice(0,28)+'</span><span>'+
+  fileMeta.innerHTML='<span>'+esc(f.name.slice(0,28))+'</span><span>'+
     (isVideo?"영상":"이미지")+' · '+(f.size/1048576).toFixed(1)+'MB</span>';
   if(!wkTitle.value) wkTitle.value=f.name.replace(/\.[^.]+$/,"").slice(0,20);
 }
@@ -5465,6 +5502,49 @@ themeSaveBtn.addEventListener("click",async()=>{
     themeSaveMsg.className="small warn"; themeSaveMsg.textContent=e.message;
   }
   themeSaveBtn.disabled=false; themeSaveBtn.textContent="전시 설정 저장";
+});
+/* 전시 제목과 학생 이름을 고칩니다.
+
+   색과 같은 자리(PATCH /api/galleries)로 보내지만 색은 함께 보내지 않습니다 —
+   이름만 고치러 온 사람이 모르는 사이에 화면의 색까지 저장해 버리면 안 됩니다.
+   권한은 서버가 아니라 RLS 가 정하고, 막히면 403 으로 옵니다. */
+const titleSaveBtn=document.getElementById("titleSave");
+const titleMsg=document.getElementById("titleMsg");
+titleSaveBtn.addEventListener("click",async()=>{
+  if(!current) return;
+  const title=document.getElementById("galTitle").value.trim();
+  const name=document.getElementById("galOwner").value.trim();
+  titleMsg.className="small";
+  if(!title||!name){
+    titleMsg.className="small warn";
+    titleMsg.textContent="전시 제목과 학생 이름을 모두 적어주세요.";
+    return;
+  }
+  if(title===current.title&&name===current.name){
+    titleMsg.textContent="바뀐 것이 없습니다.";
+    return;
+  }
+  titleSaveBtn.disabled=true; titleSaveBtn.textContent="저장하는 중…";
+  titleMsg.textContent="";
+  try{
+    const r=await fetch("/api/galleries",{
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({handle:current.handle,title,name}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+    current.title=d.title; current.name=d.name;
+    /* 이름이 붙어 있는 곳을 모두 다시 그립니다 — 전시실 위 표시, 로비
+       카드, 작품 이름표(다음 판에 다시 씌우려고 reportedId 를 비웁니다). */
+    document.getElementById("mark").textContent=
+      current.name+" · "+current.title+(canManage(current)?"  ·  편집 가능":"");
+    reportedId=null; renderGrid(); drawGuestbook();
+    titleMsg.textContent="저장했습니다.";
+    flash("이름을 바꿨습니다 — "+current.name+" · "+current.title);
+  }catch(e){
+    titleMsg.className="small warn"; titleMsg.textContent=e.message;
+  }
+  titleSaveBtn.disabled=false; titleSaveBtn.textContent="이름 · 제목 저장";
 });
 document.querySelectorAll("[data-frame]").forEach(b=>b.addEventListener("click",()=>{
   framesOn=b.dataset.frame==="on"; frames.forEach(f=>f.visible=framesOn);
