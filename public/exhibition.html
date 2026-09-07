@@ -3982,8 +3982,13 @@ function renderGrid(){
       '<div class="cs"><span>작품 '+g.works.length+'/'+roomOf(g).slots.length+'</span>'+
       '<span>방명록 '+g.guestbook.length+'</span></div></div>';
     const open=()=>{
-      // 포인터 잠금은 클릭 제스처와 같은 프레임에서 요청해야 허용됩니다
-      if(renderer.domElement.requestPointerLock){
+      /* 포인터 잠금은 클릭 제스처와 같은 프레임에서 요청해야 허용됩니다.
+
+         다만 이름을 아직 안 적은 사람에게는 잠그지 않습니다. 잠금 요청은
+         비동기라, 곧바로 이름 창을 열고 openModal 이 잠금을 풀어도 그때는
+         아직 잠기기 전이라 아무 일도 없고, 창이 뜬 뒤에 잠깁니다. 그러면
+         커서가 사라져서 ESC 를 눌러야만 이름을 적을 수 있었습니다. */
+      if(session.name&&renderer.domElement.requestPointerLock){
         try{renderer.domElement.requestPointerLock();}catch(e){}
       }
       enterThroughDoor(g);
@@ -5124,6 +5129,11 @@ function partCrossed(x0,z0,x1,z1){
   return null;
 }
 document.addEventListener("pointerlockchange",updateHint);
+/* 창이 떠 있는데 잠기면 곧바로 풉니다. 잠금 요청과 창 열기가 겹치는 자리가
+   또 생기더라도, 커서 없이 글자를 적어야 하는 상황은 여기서 끝납니다. */
+document.addEventListener("pointerlockchange",()=>{
+  if(document.pointerLockElement&&modalOpen()) document.exitPointerLock();
+});
 cvs.addEventListener("touchstart",e=>{lastTouch=e.touches[0];},{passive:true});
 cvs.addEventListener("touchmove",e=>{
   if(!lastTouch||!running) return;
