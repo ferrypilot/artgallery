@@ -75,7 +75,8 @@ export async function POST(request: Request) {
 }
 
 /**
- * 전시장 꾸미기 저장.  PATCH { handle, theme?: {wall, floor}, room?, title?, name? }
+ * 전시장 꾸미기 저장.
+ *   PATCH { handle, theme?: {wall, floor}, room?, title?, name?, plan? }
  *
  * 지금까지 벽·바닥 색은 화면에서만 바뀌고 새로고침하면 되돌아갔습니다.
  * 전시장을 꾸미는 일은 학생이 자기 전시를 갖는 느낌의 절반쯤 되는데,
@@ -138,6 +139,34 @@ export async function PATCH(request: Request) {
     lounge = String(t.lounge);
   }
 
+  /* 전시 기획서 {title, url}. 전시장을 만든 사람이 방명록 아래 칸에서 올립니다.
+     null 을 보내면 내립니다. 칸을 새로 만들지 않고 theme 에 얹습니다 —
+     cover·room 과 같은 자리입니다.
+
+     주소는 http·https 만 받습니다. 화면에서도 같은 검사를 하지만, 화면을
+     거치지 않고 이 자리로 곧장 보낼 수 있으니 여기가 실제 차단선입니다. */
+  let plan: { title: string; url: string } | null | undefined;
+  if (body.plan !== undefined) {
+    if (body.plan === null) {
+      plan = null;
+    } else {
+      const pt = String(body.plan?.title ?? "").trim().slice(0, MAX_TITLE);
+      const pu = String(body.plan?.url ?? "").trim().slice(0, 300);
+      if (!pt || !pu) {
+        return json({ error: "기획서 제목과 문서 주소를 모두 보내주세요" }, 400);
+      }
+      let u: URL | null = null;
+      try { u = new URL(/^https?:\/\//i.test(pu) ? pu : "https://" + pu); }
+      catch { u = null; }
+      const bad = !u || (u.protocol !== "http:" && u.protocol !== "https:")
+        || !u.hostname.includes(".") || /\s/.test(pu);
+      if (bad || !u) {
+        return json({ error: "주소가 올바르지 않습니다. 예: https://docs.google.com/..." }, 400);
+      }
+      plan = { title: pt, url: u.toString().slice(0, 300) };
+    }
+  }
+
   // 전시관은 보내지 않으면 그대로 둡니다. 색만 저장하는 쪽이 훨씬 잦습니다.
   let room: RoomName | null = null;
   if (body.room !== undefined) {
@@ -173,12 +202,14 @@ export async function PATCH(request: Request) {
   }
 
   const patch: Record<string, unknown> = {};
-  if (wantTheme || room || floorPattern || lounge) {
+  if (wantTheme || room || floorPattern || lounge || plan !== undefined) {
     const theme: Record<string, unknown> = { ...(g.theme as object) };
     if (wantTheme) { theme.wall = t.wall; theme.floor = t.floor; }
     if (room) theme.room = room;
     if (floorPattern) theme.floorPattern = floorPattern;
     if (lounge) theme.lounge = lounge;
+    if (plan === null) delete theme.plan;
+    else if (plan) theme.plan = plan;
     patch.theme = theme;
   }
   if (title) patch.title = title;

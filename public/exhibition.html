@@ -141,6 +141,8 @@
   .go[disabled]:hover{background:#26262e;border-color:#26262e}
   .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:24px}
   .acts.three{grid-template-columns:1fr 1fr 1fr}
+  /* 읽기만 하는 사람에게는 단추가 하나뿐입니다 */
+  .acts.one{grid-template-columns:1fr}
   .ghost{padding:12px;background:transparent;color:#a8a49c;border:1px solid #2c2c36;
     font-size:12.5px;letter-spacing:.04em}
   .ghost:hover{border-color:#4a4a54;color:#e8e6e1}
@@ -267,6 +269,19 @@
      스크롤을 굴려야 있는 줄도 몰랐습니다. 화면 높이에 맞춰 늘립니다. */
   #gbList{margin-top:14px;max-height:min(54vh,460px);overflow-y:auto;border:1px solid #26262e}
   #gbm .box{width:min(520px,94vw)}
+  /* 지금 걸려 있는 기획서. 한눈에 띄도록 테두리와 바탕을 한 겹 줍니다 —
+     이 전시가 무엇을 하려는지 적힌 문서입니다. */
+  #planBox{margin-top:18px;padding:18px 18px 16px;border:1px solid #3a3a46;
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012))}
+  #planBox .planHd{font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#c3b892}
+  #planBox #planLink{display:block;margin-top:10px;font-size:15px;line-height:1.5;
+    color:#e8e2d2;text-decoration:none;border-bottom:1px solid rgba(232,226,210,.35);
+    padding-bottom:3px;word-break:break-word}
+  #planBox #planLink:hover{color:#fff;border-bottom-color:#fff}
+  #planBox .planNone{margin-top:10px;font-size:12.5px;color:#8a8780}
+  #planBox .planTip{margin-top:9px;font-size:11.5px;color:#7f7c76;line-height:1.7}
+  #plm .fl{margin-top:18px}
+  #plm .planTip{margin-top:10px;font-size:11.5px;color:#7f7c76;line-height:1.7}
   .gbRow{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;
     border-bottom:1px solid #1c1c23}
   .gbRow:last-child{border-bottom:none}
@@ -546,14 +561,20 @@
     background:rgba(255,255,255,.88);border:1px solid rgba(255,255,255,.6);
     border-radius:999px;padding:6px 13px;backdrop-filter:blur(3px);
     box-shadow:0 2px 8px rgba(20,16,10,.12)}
-  #lobby .card .ctRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  /* 제목이 길어도 칩을 밀어내지 않습니다 */
-  #lobby .card .ct{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 제목이 두 줄이 되면 칩은 첫 줄 옆에 있어야 합니다 — 가운데 맞춤이면
+     두 줄 한복판으로 내려가 제목과 따로 노는 것처럼 보입니다. */
+  #lobby .card .ctRow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  /* 제목은 두 줄까지 보여줍니다. 한 줄에서 자르면 「진로연계 가상전시관 및
+     광고영상」 처럼 뒷말이 통째로 사라져 무슨 전시인지 알 수 없었습니다.
+     두 줄을 넘어가면 그때 말줄임표로 접습니다. 칩은 여전히 밀리지 않습니다. */
+  #lobby .card .ct{min-width:0;display:-webkit-box;-webkit-box-orient:vertical;
+    -webkit-line-clamp:2;line-clamp:2;overflow:hidden;line-height:1.35;
+    word-break:keep-all;overflow-wrap:anywhere}
   /* 이름 줄도 마찬가지입니다. 100 자까지 적을 수 있게 되면서, 긴 이름이
      카드 높이를 저 혼자 늘려 줄이 어긋나는 일이 생깁니다. */
   #lobby .card .cn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* 내 전시장 — 검은 딱지는 너무 셉니다. 카드 안에서 한 톤 낮춥니다. */
-  #lobby .mine{position:static;flex:none;background:#f2eee6;border:1px solid #e2dbcf;
+  #lobby .mine{position:static;flex:none;margin-top:1px;background:#f2eee6;border:1px solid #e2dbcf;
     color:#5f5646;border-radius:999px;font-size:11px;letter-spacing:.01em;padding:4px 10px}
   #lobby .del{border-radius:8px}
   #lobby .cov{border-radius:8px}
@@ -697,6 +718,13 @@
       <input type="text" id="galOwner" maxlength="100" placeholder="예: 김서연" />
       <button class="panelBtn" id="titleSave">이름 · 제목 저장</button>
       <p class="small" id="titleMsg">전시실 위, 로비 카드, 작품 이름표에 함께 쓰입니다.</p>
+    </div>
+    <!-- 전시 기획서. 올리는 사람은 전시장을 만든 사람뿐이라 여기 둡니다.
+         읽는 것은 벽에 걸린 판에서 누구나 합니다. -->
+    <div class="grp" id="planGrp" style="display:none">
+      <h3>전시 기획서</h3>
+      <button class="panelBtn" id="planOpen">기획서 올리기</button>
+      <p class="small" id="planState">방명록 판 아래에 제목이 걸리고, 눌러서 문서를 엽니다.</p>
     </div>
     <!-- 전시관. 주인과 관리자만, 서버가 있을 때만 보입니다. -->
     <div class="grp" id="roomGrp" style="display:none">
@@ -1003,10 +1031,42 @@
     </div>
   </div>
 
+  <!-- 전시 기획서.
+
+       방명록과 창을 나눴습니다. 방명록은 다녀간 사람이 쓰고, 기획서는
+       전시장을 만든 사람이 올립니다 — 쓰는 사람이 다른 두 가지를 한 창에
+       두면, 관람객은 자기가 쓸 수 없는 칸을 보고 주인은 인사말 밑에서
+       자기 문서를 찾아야 합니다. -->
+  <div class="modal" id="plm">
+    <div class="box">
+      <h2 class="serif">전시 기획서</h2>
+      <div class="note" id="planSub"></div>
+      <div id="planBox">
+        <div class="planHd">올라온 기획서</div>
+        <a id="planLink" target="_blank" rel="noopener noreferrer" style="display:none"></a>
+        <p class="planNone" id="planNone">아직 올라온 기획서가 없습니다.</p>
+      </div>
+      <div id="planEdit" style="display:none">
+        <div class="fl">기획서 제목</div>
+        <input type="text" id="planTitle" maxlength="100" placeholder="예: 여름 그림 전시 기획서" />
+        <div class="fl">문서 링크 주소</div>
+        <input type="text" id="planUrl" class="mono" maxlength="300"
+               placeholder="https://docs.google.com/..." />
+        <p class="warn" id="planErr" style="display:none"></p>
+        <p class="planTip">둘 다 비우고 올리면 내려갑니다. 문서는 링크가 있는 사람이면
+          볼 수 있게 공유해 두세요.</p>
+      </div>
+      <div class="acts" id="planActs">
+        <button class="ghost" id="planCancel">닫기</button>
+        <button class="go" style="margin:0" id="planSave">기획서 올리기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 방명록 -->
   <div class="modal" id="gbm">
     <div class="box">
-      <h2 class="serif">프롤로그 &amp; 방명록</h2>
+      <h2 class="serif">방명록</h2>
       <div class="note" id="gbSub"></div>
       <div id="gbListWrap" style="display:none">
         <div class="fl">남은 글 <span class="val" id="gbCount"></span></div>
@@ -1014,9 +1074,6 @@
       </div>
       <div class="fl" style="margin-top:16px">한 줄 남기기</div>
       <textarea id="gbText" rows="3" maxlength="80" placeholder="작품을 보고 든 생각을 짧게"></textarea>
-      <div class="fl">주소 <span class="val">없어도 됩니다</span></div>
-      <input type="text" id="gbLink" class="mono" maxlength="300"
-             placeholder="https://... (참고한 곳이나 내 전시장)" />
       <p class="warn" id="gbErr" style="display:none"></p>
       <div class="acts">
         <button class="ghost" id="gbCancel">닫기</button>
@@ -1041,6 +1098,9 @@
    ============================================================ */
 
 const FULL_RADIUS=2.6, MAX_PLAYING=3;
+/* 작품을 걸거나 재생하려면 이만큼 안에 서야 합니다. 사람과 작품 사이의
+   거리입니다 — 10m 앞에 서면 넉넉히 닿습니다. */
+const REACH=12;
 
 /* ---------- 전시관 ----------
    방 하나가 코드 여러 곳에 흩어져 있으면 방을 하나 더 만들 수 없습니다.
@@ -2126,6 +2186,15 @@ function gbLinkLabel(u){
   const t=String(u).replace(/^https?:\/\//i,"").replace(/\/+$/,"");
   return t.length>46?t.slice(0,45)+"…":t;
 }
+/* 이 전시장에 올라온 기획서. theme 에 얹어 둡니다 — 칸을 새로 만들지 않고
+   전시장마다 하나씩 붙일 수 있는 자리는 여기가 유일합니다(cover·room 과 같은
+   자리). 제목과 주소가 둘 다 성해야 걸립니다. */
+function planOf(g){
+  const p=g&&g.theme&&g.theme.plan;
+  if(!p) return null;
+  const url=gbSafeLink(p.url), title=String(p.title||"").trim();
+  return url&&title?{title,url}:null;
+}
 function gbWrap(x,text,maxw){
   const out=[]; let line="";
   for(const ch of text){
@@ -2155,22 +2224,57 @@ function drawGuestbook(){
   x.fillStyle=light?"rgba(255,255,255,0.34)":"rgba(255,255,255,0.028)"; x.fillRect(0,0,c.width,c.height);
   x.strokeStyle=faint; x.lineWidth=3; x.strokeRect(1.5,1.5,c.width-3,c.height-3);
   x.textAlign="left";
-  x.fillStyle=dim; x.font='700 30px '+UIFONT; x.fillText("프롤로그 & 방명록",44,76);
-  x.fillStyle=faint; x.fillRect(44,98,188,3);
+  x.fillStyle=dim; x.font='700 30px '+UIFONT; x.fillText("방명록",44,76);
+  x.fillStyle=faint; x.fillRect(44,98,96,3);
+  gbLinkRects=[];
   const gb=current?current.guestbook:[];
+  /* 전시 기획서는 판 맨 아래 한 띠를 통째로 씁니다. 남긴 인사들 사이에
+     끼워 넣으면 무엇이 기획서인지 알아볼 수 없습니다. */
+  const plan=planOf(current);
+  /* 띠를 크게 잡고 따뜻한 색을 씁니다. 방명록 글씨와 같은 회색으로 적어
+     두었더니 인사말 한 줄로 보였습니다 — 관람객이 전시를 보기 전에 먼저
+     읽어야 하는 것이라 판에서 가장 눈에 띄어야 합니다. */
+  const acc=light?"#4a2600":"#e8b768";                    // 눈에 띄는 호박색
+  const accHot=light?"#170b00":"#fff2d6";                 // 겨눴을 때
+  const accBg=light?"rgba(122,68,4,.20)":"rgba(232,183,104,.13)";
+  const BAND=plan?150:0;
+  const drawBand=()=>{
+    if(!plan) return;
+    const by=c.height-BAND, bh=BAND-16, bx=30, bw=c.width-60;
+    x.fillStyle=accBg; x.fillRect(bx,by,bw,bh);
+    x.fillStyle=acc;   x.fillRect(bx,by,7,bh);            // 왼쪽 세로 띠
+    const L2=bx+26, W2=bw-52;
+    x.fillStyle=acc; x.font='700 25px '+UIFONT;
+    x.fillText("전시 기획서",L2,by+44);
+    let fs=42, lb="↗ "+plan.title;
+    x.font='700 '+fs+'px '+UIFONT;
+    while(fs>25&&x.measureText(lb).width>W2){ fs-=1; x.font='700 '+fs+'px '+UIFONT; }
+    if(x.measureText(lb).width>W2){
+      let t=plan.title;
+      while(t.length>4&&x.measureText("↗ "+t+"…").width>W2) t=t.slice(0,-1);
+      lb="↗ "+t+"…";
+    }
+    const i=gbLinkRects.length, on=i===gbHot;
+    x.fillStyle=on?accHot:acc;
+    const ly=by+44+fs+18;
+    x.fillText(lb,L2,ly);
+    const tw=x.measureText(lb).width;
+    x.fillRect(L2,ly+10,tw,on?4:3);
+    gbLinkRects.push({x:L2,y:ly-fs,w:tw,h:fs*1.6,url:plan.url});
+  };
   if(!gb.length){
     x.fillStyle=dim; x.font='400 34px '+UIFONT; x.fillText("아직 비어 있습니다",44,210);
     x.font='400 26px '+UIFONT; x.fillText("판을 누르거나 G 를 눌러 첫 글을 남겨보세요",44,266);
-    gbTex.needsUpdate=true; return;
+    drawBand(); gbTex.needsUpdate=true; return;
   }
   x.textAlign="right"; x.fillStyle=faint; x.font='400 21px '+UIFONT;
   x.fillText(gb.length+"개",c.width-44,76); x.textAlign="left";
 
-  const L=44,R=c.width-44,W=R-L,TOP=134,BOT=c.height-30,GUT=36;
+  const L=44,R=c.width-44,W=R-L,TOP=134,BOT=c.height-30-BAND,GUT=36;
   const items=gb.slice().reverse();          // 최근 것이 위로
   /* 한 벌 짜보기. 글자 크기와 칸 수를 주면 글마다 몇 줄인지, 높이가
      얼마인지 나옵니다. */
-  const plan=(sc,cols)=>{
+  const layout=(sc,cols)=>{
     const cw=(W-GUT*(cols-1))/cols;
     const mf=34*sc,nf=21*sc,lh=mf*1.34,nh=nf*1.75,gap=17*sc;
     x.font='400 '+mf.toFixed(1)+'px '+UIFONT;
@@ -2198,13 +2302,12 @@ function drawGuestbook(){
   for(const sc of SC){
     let done=false;
     for(const cols of [1,2]){
-      const q=plan(sc,cols),r=place(q,BOT);
+      const q=layout(sc,cols),r=place(q,BOT);
       if(!r.rest){ p=q; lay=r; done=true; break; }
     }
     if(done) break;
   }
-  if(!lay){ p=plan(SC[SC.length-1],2); lay=place(p,BOT-34); }
-  gbLinkRects=[];
+  if(!lay){ p=layout(SC[SC.length-1],2); lay=place(p,BOT-34); }
   lay.out.forEach(({bk,col,y})=>{
     const cl=L+col*(p.cw+GUT);
     x.fillStyle=ink; x.font='400 '+p.mf.toFixed(1)+'px '+UIFONT;
@@ -2229,6 +2332,7 @@ function drawGuestbook(){
     x.fillStyle=faint; x.font='700 20px '+UIFONT;
     x.fillText("… 외 "+lay.rest+"개 · 판을 눌러 모두 보기",L,BOT-4);
   }
+  drawBand();
   gbTex.needsUpdate=true;
 }
 const emptyCanvas=document.createElement("canvas"); emptyCanvas.width=320; emptyCanvas.height=180;
@@ -3609,8 +3713,8 @@ function updateHint(){
   const locked=document.pointerLockElement===renderer.domElement, manage=canManage(current);
   const edit=manage?"E 편집 · [ ] 크기 · ":"";
   document.getElementById("hint").textContent=locked
-    ? "W A S D · 바닥 클릭 이동 · 작품 클릭 재생 · "+edit+"V 시점 · G 프롤로그&방명록 · ESC 커서"
-    : "드래그로 둘러보기 · 바닥 클릭 이동 · W A S D · 작품 클릭 재생 · "+edit+"V 시점 · G 프롤로그&방명록";
+    ? "W A S D · 바닥 클릭 이동 · 작품 클릭 재생 · "+edit+"V 시점 · G 방명록 · ESC 커서"
+    : "드래그로 둘러보기 · 바닥 클릭 이동 · W A S D · 작품 클릭 재생 · "+edit+"V 시점 · G 방명록";
 }
 function refreshRoomPermissions(){
   if(!current) return;
@@ -3628,6 +3732,8 @@ function refreshRoomPermissions(){
   document.getElementById("coverGrp").style.display=(SERVER&&manage)?"":"none";
   document.getElementById("roomGrp").style.display=(SERVER&&manage)?"":"none";
   document.getElementById("titleGrp").style.display=(SERVER&&manage)?"":"none";
+  document.getElementById("planGrp").style.display=(SERVER&&manage)?"":"none";
+  showPlanBtn();
   /* 칸에 지금 값을 넣어둡니다. 고치는 중에 다시 그려도 적던 것이 날아가지
      않도록, 포커스가 그 칸에 있으면 건드리지 않습니다. */
   const ti=document.getElementById("galTitle"), oi=document.getElementById("galOwner");
@@ -3641,6 +3747,16 @@ function refreshRoomPermissions(){
   document.getElementById("mark").textContent=
     current.name+" · "+current.title+(manage?"  ·  편집 가능":"");
   updateHint();
+}
+/* 단추 글자는 지금 걸려 있는지에 따라 다릅니다 — 올리러 가는 길과
+   고치러 가는 길은 같은 자리지만 하는 일이 다릅니다. */
+function showPlanBtn(){
+  const plan=planOf(current), btn=document.getElementById("planOpen");
+  if(!btn) return;
+  btn.textContent=plan?"기획서 고치기":"기획서 올리기";
+  document.getElementById("planState").textContent=plan
+    ? "걸린 기획서 — "+plan.title
+    : "방명록 판 아래에 제목이 걸리고, 눌러서 문서를 엽니다.";
 }
 function enterGallery(handle){
   const g=GALLERIES.find(x=>x.handle===handle);
@@ -4588,7 +4704,7 @@ function openGuestbook(){
   if(!current) return;
   document.getElementById("gbSub").textContent=
     current.name+"님의 전시장 · "+session.name+"으로 남깁니다";
-  gbText.value=""; gbLink.value=""; gbErr.style.display="none";
+  gbText.value=""; gbErr.style.display="none";
   drawGuestbookList();
   openModal("gbm"); setTimeout(()=>gbText.focus(),60);
 }
@@ -4672,7 +4788,86 @@ async function removeGuestbook(id,btn){
   }
 }
 
-const gbLink=document.getElementById("gbLink");
+/* 전시 기획서 칸.
+
+   읽는 것은 누구나입니다 — 이 전시가 무엇을 하려는 것인지가 관람의 절반이고,
+   그것을 적은 문서는 전시장을 만든 사람만 올릴 수 있습니다. 저장은 색과 같은
+   자리(PATCH /api/galleries)로 가고, 막는 것은 RLS 입니다. */
+const planLink=document.getElementById("planLink");
+const planNone=document.getElementById("planNone");
+const planEdit=document.getElementById("planEdit");
+const planTitle=document.getElementById("planTitle");
+const planUrl=document.getElementById("planUrl");
+const planErr=document.getElementById("planErr");
+const planSaveBtn=document.getElementById("planSave");
+function openPlan(){
+  if(!current) return;
+  const manage=SERVER&&canManage(current);
+  document.getElementById("planSub").textContent=manage
+    ? current.name+"님의 전시장 · 이 전시가 무엇을 하려는지 적은 문서를 겁니다"
+    : current.name+"님의 전시장";
+  drawPlanBox();
+  openModal("plm");
+  if(manage) setTimeout(()=>planTitle.focus(),60);
+}
+function drawPlanBox(){
+  const plan=planOf(current);
+  const manage=SERVER&&canManage(current);
+  planLink.style.display=plan?"":"none";
+  planNone.style.display=plan?"none":"";
+  if(plan){ planLink.textContent="↗ "+plan.title; planLink.href=plan.url; }
+  planNone.textContent=manage
+    ? "아직 올린 기획서가 없습니다. 아래에 제목과 문서 주소를 적어 올려보세요."
+    : "아직 올라온 기획서가 없습니다.";
+  planEdit.style.display=manage?"":"none";
+  // 올릴 수 없는 사람에게는 올리는 단추도 없습니다. 읽는 창이 됩니다.
+  planSaveBtn.style.display=manage?"":"none";
+  document.getElementById("planActs").classList.toggle("one",!manage);
+  planErr.style.display="none";
+  const raw=(current&&current.theme&&current.theme.plan)||{};
+  if(document.activeElement!==planTitle) planTitle.value=raw.title||"";
+  if(document.activeElement!==planUrl) planUrl.value=raw.url||"";
+}
+planSaveBtn.addEventListener("click",async()=>{
+  if(!current) return;
+  planErr.style.display="none";
+  const title=planTitle.value.trim();
+  let url=planUrl.value.trim();
+  const fail=m=>{ planErr.textContent=m; planErr.style.display=""; };
+  // 둘 다 비우면 내립니다. 하나만 있으면 걸 수 없습니다.
+  if(!title&&!url){
+    if(!(current.theme&&current.theme.plan)){ fail("제목과 문서 주소를 적어주세요."); return; }
+  } else if(!title||!url){
+    fail("기획서 제목과 문서 주소를 모두 적어주세요."); return;
+  } else {
+    if(!/^https?:\/\//i.test(url)) url="https://"+url;
+    let ok=false;
+    try{ const u=new URL(url);
+      ok=(u.protocol==="http:"||u.protocol==="https:")&&
+         u.hostname.indexOf(".")>0&&!/\s/.test(url);
+    }catch(e){ ok=false; }
+    if(!ok){ fail("주소가 올바르지 않습니다. 예: https://docs.google.com/..."); return; }
+  }
+  const plan=title&&url?{title,url}:null;
+  planSaveBtn.disabled=true; planSaveBtn.textContent="올리는 중…";
+  try{
+    const r=await fetch("/api/galleries",{
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({handle:current.handle,plan}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
+    current.theme=d.theme||current.theme;
+    drawPlanBox(); drawGuestbook(); showPlanBtn();
+    closeModal("plm");
+    flash(plan?"전시 기획서를 올렸습니다":"전시 기획서를 내렸습니다");
+  }catch(e){ fail(e.message); }
+  planSaveBtn.disabled=false; planSaveBtn.textContent="기획서 올리기";
+});
+document.getElementById("planCancel").addEventListener("click",()=>closeModal("plm"));
+/* 설정 패널의 단추에서 엽니다. 방명록(G)과 달리 여는 사람이 정해져 있어서
+   벽이나 단축키가 아니라 주인에게만 보이는 자리에 둡니다. */
+document.getElementById("planOpen").addEventListener("click",openPlan);
 const gbSaveBtn=document.getElementById("gbSave");
 gbSaveBtn.addEventListener("click",async()=>{
   const m=gbText.value.trim();
@@ -4680,27 +4875,11 @@ gbSaveBtn.addEventListener("click",async()=>{
   if(!current) return;
   gbErr.style.display="none";
 
-  /* 주소는 없어도 됩니다. 넣었다면 http·https 만 받습니다 — 서버도 같은
-     검사를 합니다. 여기서 막는 것은 안내이고, 실제 차단은 서버입니다. */
-  let link=gbLink.value.trim();
-  if(link){
-    if(!/^https?:\/\//i.test(link)) link="https://"+link;
-    let ok=false;
-    try{
-      const u=new URL(link);
-      // 점이 없으면 주소가 아닙니다 — https:// 를 붙이면 아무 글자나
-      // 호스트 이름이 되어 "그냥 글" 도 통과해 버립니다.
-      ok=(u.protocol==="http:"||u.protocol==="https:")&&
-         u.hostname.indexOf(".")>0&&!/\s/.test(link);
-    }catch(e){ ok=false; }
-    if(!ok){
-      gbErr.textContent="주소가 올바르지 않습니다. 예: https://example.com/...";
-      gbErr.style.display=""; gbLink.focus(); return;
-    }
-  }
-
+  /* 남기는 글에는 주소를 달지 않습니다. 관람객이 아무 주소나 벽에 붙일 수
+     있었는데, 정작 붙일 것은 전시장을 만든 사람의 기획서 하나였습니다.
+     그 자리는 아래 「전시 기획서」 칸으로 옮겼습니다. */
   if(!SERVER){
-    current.guestbook.push({name:session.name,msg:m,link:link||null});
+    current.guestbook.push({name:session.name,msg:m,link:null});
     drawGuestbook(); drawGuestbookList(); closeModal("gbm"); return;
   }
 
@@ -4709,11 +4888,11 @@ gbSaveBtn.addEventListener("click",async()=>{
     const r=await fetch("/api/guestbook",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({handle:current.handle,name:session.name,
-                           body:session.body,message:m,link:link||""}),
+                           body:session.body,message:m}),
     });
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||("서버 오류 "+r.status));
-    current.guestbook.push(d.entry||{name:session.name,msg:m,link:link||null});
+    current.guestbook.push(d.entry||{name:session.name,msg:m,link:null});
     drawGuestbook(); drawGuestbookList(); renderGrid();   // 로비 카드의 수도 함께
     closeModal("gbm"); flash("방명록에 남겼습니다");
   }catch(e){
@@ -5732,7 +5911,14 @@ function tick(){
     ray.setFromCamera(locked||!pointerInWindow?{x:0,y:0}:mouseNDC,camera);
     // 가구는 주인과 선생님에게만 잡힙니다. 관람객에게는 그냥 물건입니다.
     const targets=manage?pickables.concat(furnPicks):pickables;
-    const hit=ray.intersectObjects(targets,false).find(h=>h.distance<11);
+    /* 닿는 거리는 카메라가 아니라 사람에게서 잽니다.
+
+       예전에는 카메라에서 11m 였습니다. 3인칭 카메라는 사람 뒤 3.4m 에
+       서므로, 같은 자리에 서 있어도 1인칭이면 닿고 3인칭이면 안 닿았습니다 —
+       들어서면 3인칭이 기본이라 작품 앞 10m 에 서고도 걸 수가 없었습니다.
+       사람에게서 재면 시점과 상관없이 같습니다. */
+    const hit=ray.intersectObjects(targets,false)
+      .find(h=>h.point.distanceTo(eye)<REACH);
     if(hit&&hit.object.userData.door) newDoor=true;
     else if(hit&&hit.object.userData.board){
       newBoard=true;
@@ -5816,7 +6002,7 @@ function tick(){
         : "클릭 — "+gbLinkLabel(hoverGbLink)+" 열기";
       ctxHint.classList.add("on");
     } else if(hoverBoard){
-      ctxHint.textContent="클릭 — 프롤로그 & 방명록"; ctxHint.classList.add("on");
+      ctxHint.textContent="클릭 — 방명록"; ctxHint.classList.add("on");
     } else if(hoverSlot!=null){
       const edit=manage?" · E 바꾸기 · [ ] 크기 · Shift+방향키 자리":"";
       if(!hovered) ctxHint.textContent="클릭 — "+(hoverSlot+1)+"번 자리에 작품 걸기";
@@ -5831,7 +6017,7 @@ function tick(){
       else ctxHint.textContent=(hovered.playing?"클릭 — 정지":"클릭 — 재생")+edit;
       ctxHint.classList.add("on");
     } else if(nearBoard){
-      ctxHint.textContent="G — 프롤로그 & 방명록"; ctxHint.classList.add("on");
+      ctxHint.textContent="G — 방명록"; ctxHint.classList.add("on");
     } else ctxHint.classList.remove("on");
   }
   /* 물결. 매 프레임 다시 그릴 필요는 없습니다 — 창이 있는 방에서만,
