@@ -20,9 +20,11 @@
   #ytm .box.wide{width:min(1000px,94vw)}
   #ytFrame{position:relative;width:100%;aspect-ratio:16/9;background:#000;
     border:1px solid #26262e;margin-top:4px}
-  #ytFrame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-  #ytm .acts a.ghost{display:inline-flex;align-items:center;justify-content:center;
-    text-decoration:none}
+  /* 유튜브는 iframe, 올린 영상은 video, 그림은 img, 견본은 canvas 입니다.
+     넷 다 같은 자리를 씁니다 — 그림은 잘리지 않게 안에 맞춰 넣습니다. */
+  #ytFrame iframe,#ytFrame video,#ytFrame canvas{position:absolute;inset:0;
+    width:100%;height:100%;border:0}
+  #ytFrame img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
   button{font-family:inherit;cursor:pointer}
 
   #root.light #mark,#root.light #hint,#root.light #ctxHint{color:#5f5c56}
@@ -957,11 +959,10 @@
        플레이어는 다른 사이트의 iframe 이라 3D 벽면에 칠할 수 없습니다. -->
   <div class="modal" id="ytm">
     <div class="box wide">
-      <h2 class="serif" id="ytHead">유튜브</h2>
+      <h2 class="serif" id="ytHead">작품</h2>
       <div id="ytFrame"></div>
       <p class="note" id="ytNote"></p>
-      <div class="acts">
-        <a class="ghost" id="ytOpen" target="_blank" rel="noopener">유튜브에서 열기</a>
+      <div class="acts one">
         <button class="go" style="margin:0" id="ytClose">닫고 전시장으로</button>
       </div>
     </div>
@@ -3713,8 +3714,8 @@ function updateHint(){
   const locked=document.pointerLockElement===renderer.domElement, manage=canManage(current);
   const edit=manage?"E 편집 · [ ] 크기 · ":"";
   document.getElementById("hint").textContent=locked
-    ? "W A S D · 바닥 클릭 이동 · 작품 클릭 재생 · "+edit+"V 시점 · G 방명록 · ESC 커서"
-    : "드래그로 둘러보기 · 바닥 클릭 이동 · W A S D · 작품 클릭 재생 · "+edit+"V 시점 · G 방명록";
+    ? "W A S D · 바닥 클릭 이동 · 작품 클릭 크게 보기 · "+edit+"V 시점 · G 방명록 · ESC 커서"
+    : "드래그로 둘러보기 · 바닥 클릭 이동 · W A S D · 작품 클릭 크게 보기 · "+edit+"V 시점 · G 방명록";
 }
 function refreshRoomPermissions(){
   if(!current) return;
@@ -3787,7 +3788,7 @@ function enterGallery(handle){
   running=true; audioReady=true; crossEl.classList.add("on");
   if(!playTipShown){
     playTipShown=true;
-    setTimeout(()=>flash("작품을 바라보고 클릭하면 재생됩니다",4200),1400);
+    setTimeout(()=>flash("작품을 바라보고 클릭하면 크게 열립니다",4200),1400);
   } else if(canManage(g)&&!sizeTipShown){
     sizeTipShown=true;
     setTimeout(()=>flash("E 키로 작품 바꾸기 · [ ] 키로 크기 · Shift+방향키로 자리 옮기기",5200),1400);
@@ -4967,49 +4968,67 @@ cvs.addEventListener("mousemove",e=>{
   else if(dragging){dragDist+=Math.abs(e.movementX||0)+Math.abs(e.movementY||0);
     look(e.movementX||0,e.movementY||0);}
 });
-/* ---------- 유튜브 보기 ----------
-   iframe 은 열 때 만들고 닫을 때 지웁니다. 남겨두면 창을 닫아도 소리가
-   계속 나고, 방을 도는 동안 유튜브가 뒤에서 계속 돌아갑니다. */
-function openYouTube(p){
-  const id=youtubeId(p.work.src);
-  if(!id){flash("유튜브 주소를 읽지 못했습니다");return;}
-  document.getElementById("ytHead").textContent=p.work.title||"유튜브";
-  document.getElementById("ytNote").textContent=
-    (p.work.note&&p.work.note!=="설명 없음")?p.work.note:"";
-  document.getElementById("ytOpen").href="https://www.youtube.com/watch?v="+id;
+/* ---------- 작품 보기 ----------
+
+   벽에 걸린 것을 누르면 그 자리에서 크게 엽니다. 예전에는 유튜브만 창으로
+   열고 올린 영상은 벽면에서 재생했는데, 벽에 걸린 그림은 비스듬히 보이고
+   작아서 무엇을 만들었는지 알아보기 어려웠습니다. 이제 넷 다 같은 창으로
+   엽니다 — 유튜브는 iframe, 올린 영상은 video, 그림은 img, 견본은 canvas.
+
+   내용물은 열 때 만들고 닫을 때 지웁니다. 남겨두면 창을 닫아도 소리가
+   계속 나고, 방을 도는 동안 뒤에서 계속 돌아갑니다. */
+let viewRaf=null;
+function openWorkView(p){
+  const w=p.work;
   const box=document.getElementById("ytFrame");
+  document.getElementById("ytHead").textContent=w.title||"작품";
+  document.getElementById("ytNote").textContent=
+    (w.note&&w.note!=="설명 없음")?w.note:"";
+  if(viewRaf){cancelAnimationFrame(viewRaf);viewRaf=null;}
   box.innerHTML="";
-  const f=document.createElement("iframe");
-  f.src="https://www.youtube-nocookie.com/embed/"+id+"?autoplay=1&rel=0&modestbranding=1";
-  f.allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen";
-  f.setAttribute("allowfullscreen","");
-  f.referrerPolicy="strict-origin-when-cross-origin";
-  box.appendChild(f);
+  if(w.kind==="youtube"){
+    const id=youtubeId(w.src);
+    if(!id){flash("유튜브 주소를 읽지 못했습니다");return;}
+    const f=document.createElement("iframe");
+    f.src="https://www.youtube-nocookie.com/embed/"+id+"?autoplay=1&rel=0&modestbranding=1";
+    f.allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen";
+    f.setAttribute("allowfullscreen","");
+    f.referrerPolicy="strict-origin-when-cross-origin";
+    box.appendChild(f);
+  } else if(w.kind==="video"){
+    const v=document.createElement("video");
+    v.src=w.src; v.controls=true; v.autoplay=true; v.loop=true;
+    v.playsInline=true; v.setAttribute("playsinline","");
+    v.crossOrigin="anonymous";
+    box.appendChild(v);
+    v.play().catch(()=>{});
+  } else if(w.kind==="image"){
+    const img=document.createElement("img");
+    img.src=w.src; img.alt=w.title||"";
+    box.appendChild(img);
+  } else {
+    /* 견본 작품은 그때그때 그리는 그림이라 파일이 없습니다. 벽에 칠하던
+       것과 같은 붓으로 창 안에도 그립니다. */
+    const cv=document.createElement("canvas"); cv.width=960; cv.height=540;
+    box.appendChild(cv);
+    const cx=cv.getContext("2d"); const t0=performance.now();
+    const tick=()=>{
+      drawFrame(cx,cv.width,cv.height,(performance.now()-t0)/1000,w.hue,w.motion);
+      viewRaf=requestAnimationFrame(tick);
+    };
+    tick();
+  }
   // 방에서 나던 소리는 잠시 내립니다 — 둘이 겹치면 아무것도 안 들립니다.
   panels.forEach(x=>{if(x.playing){x.playing=false; if(x.video)x.video.pause();}});
   openModal("ytm");
 }
 function closeYouTube(){
+  if(viewRaf){cancelAnimationFrame(viewRaf);viewRaf=null;}
   document.getElementById("ytFrame").innerHTML="";   // 소리를 끊습니다
   closeModal("ytm");
 }
 document.getElementById("ytClose").addEventListener("click",closeYouTube);
 
-/* 클릭 = 재생/정지. 편집은 E 키와 빈 자리 클릭으로 분리했습니다. */
-function togglePlay(p){
-  p.playing=!p.playing;
-  p.last=clock.elapsedTime;
-  if(p.video){
-    if(p.playing){p.video.preload="auto";p.video.play().catch(()=>{});}
-    else p.video.pause();
-  }
-  if(p.playing){
-    // 동시 재생 상한 — 가장 먼 것부터 내립니다
-    const on=panels.filter(x=>x.playing).sort((a,b)=>b.gain-a.gain);
-    on.slice(MAX_PLAYING).forEach(x=>{x.playing=false; if(x.video)x.video.pause();});
-  }
-  flash(p.playing?"재생":"정지");
-}
 let clickTimer=null;
 cvs.addEventListener("dblclick",()=>{
   if(!running||modalOpen()||dragDist>6) return;
@@ -5051,7 +5070,7 @@ cvs.addEventListener("click",e=>{
        그 밖의 주소는 새 창입니다. 남의 집을 우리 화면 안에 끼워 넣는 것은
        대개 상대가 막아두어(X-Frame-Options) 빈 칸만 뜹니다. */
     if(youtubeId(u)){
-      openYouTube({work:{src:u,title:"방명록에 남긴 영상",note:""}});
+      openWorkView({work:{kind:"youtube",src:u,title:"방명록에 남긴 영상",note:""}});
       return;
     }
     if(document.pointerLockElement===cvs) document.exitPointerLock();
@@ -5062,8 +5081,7 @@ cvs.addEventListener("click",e=>{
   if(hoverBoard){openGuestbook();return;}
   if(hoverSlot!=null){
     const p=panels.find(x=>x.work.slot===hoverSlot);
-    if(p&&p.work.kind==="youtube"){openYouTube(p);return;}
-    if(p&&p.work.kind!=="image"){togglePlay(p);return;}
+    if(p){openWorkView(p);return;}          // 걸려 있으면 종류를 가리지 않고 창으로
     if(canManage(current)) openWorkModal(hoverSlot);
     return;
   }
@@ -5991,7 +6009,7 @@ function tick(){
   const hovered=hoverSlot==null?null:panels.find(p=>p.work.slot===hoverSlot);
   const key=carrying?"carry":(placing?"place:"+placing:(hoverFurn!=null?"furn:"+(removing?"del":"take")
     :(hoverDoor?"door":(hoverGbLink?"lk:"+hoverGbLink:(hoverBoard?"board":(hoverSlot!=null
-    ? "s"+hoverSlot+(hovered?(hovered.playing?":on":":off"):":empty")+(manage?":m":"")
+    ? "s"+hoverSlot+(hovered?":on":":empty")+(manage?":m":"")
     : (nearBoard?"gb":"")))))));
   if(key!==hintKey){
     hintKey=key;
@@ -6016,15 +6034,12 @@ function tick(){
     } else if(hoverSlot!=null){
       const edit=manage?" · E 바꾸기 · [ ] 크기 · Shift+방향키 자리":"";
       if(!hovered) ctxHint.textContent="클릭 — "+(hoverSlot+1)+"번 자리에 작품 걸기";
-      else if(hovered.work.kind==="youtube")
-        ctxHint.textContent=manage
-          ?(hoverSlot+1)+"번 자리 · 클릭 — 유튜브 보기 · E 바꾸기 · [ ] 크기 · Shift+방향키 자리"
-          :"클릭 — 유튜브 보기";
-      else if(hovered.work.kind==="image")
-        ctxHint.textContent=manage
-          ?(hoverSlot+1)+"번 자리 · E 바꾸기 · [ ] 크기 · Shift+방향키 자리"
-          :hovered.work.title;
-      else ctxHint.textContent=(hovered.playing?"클릭 — 정지":"클릭 — 재생")+edit;
+      /* 걸려 있는 것은 종류를 가리지 않고 창으로 크게 엽니다. 예전에는
+         유튜브만 "보기" 이고 나머지는 "재생"·"정지" 라 같은 클릭인데 안내가
+         셋이었습니다. */
+      else ctxHint.textContent=manage
+        ?(hoverSlot+1)+"번 자리 · 클릭 — 크게 보기"+edit
+        :"클릭 — 크게 보기 · "+hovered.work.title;
       ctxHint.classList.add("on");
     } else if(nearBoard){
       ctxHint.textContent="G — 방명록"; ctxHint.classList.add("on");
