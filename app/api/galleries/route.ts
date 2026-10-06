@@ -58,6 +58,11 @@ export async function POST(request: Request) {
      낫습니다. 보내지 않거나 모르는 이름이면 기본 전시실입니다. */
   if (isRoomName(body.room)) theme.room = body.room;
 
+  /* 수업 전시장인지. 로비가 둘로 나뉘어 있어서(수업 / 그 밖), 만든 자리에
+     그대로 남아야 합니다 — 수업 화면에서 만들었는데 평소 로비에 가 있으면
+     학생은 전시장이 안 만들어진 줄 압니다. */
+  if (body.inClass === true) theme.class = true;
+
   const supabase = await supabaseServer();
 
   const { data, error } = await supabase
@@ -167,6 +172,10 @@ export async function PATCH(request: Request) {
     }
   }
 
+  /* 수업 쪽으로 옮기거나 빼는 것. 보내지 않으면 그대로 둡니다. */
+  let inClass: boolean | null = null;
+  if (body.inClass !== undefined) inClass = body.inClass === true;
+
   // 전시관은 보내지 않으면 그대로 둡니다. 색만 저장하는 쪽이 훨씬 잦습니다.
   let room: RoomName | null = null;
   if (body.room !== undefined) {
@@ -202,7 +211,7 @@ export async function PATCH(request: Request) {
   }
 
   const patch: Record<string, unknown> = {};
-  if (wantTheme || room || floorPattern || lounge || plan !== undefined) {
+  if (wantTheme || room || floorPattern || lounge || plan !== undefined || inClass !== null) {
     const theme: Record<string, unknown> = { ...(g.theme as object) };
     if (wantTheme) { theme.wall = t.wall; theme.floor = t.floor; }
     if (room) theme.room = room;
@@ -210,6 +219,8 @@ export async function PATCH(request: Request) {
     if (lounge) theme.lounge = lounge;
     if (plan === null) delete theme.plan;
     else if (plan) theme.plan = plan;
+    if (inClass === true) theme.class = true;
+    else if (inClass === false) delete theme.class;
     patch.theme = theme;
   }
   if (title) patch.title = title;

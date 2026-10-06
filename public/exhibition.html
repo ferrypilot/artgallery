@@ -82,13 +82,6 @@
   .card:hover .cov{opacity:1}
   .cov:hover{border-color:#6a6a74;color:#e8e6e1}
   .cov:focus-visible{opacity:1;outline:1px solid #8a8780}
-  .card.new{border-style:dashed;border-color:#2c2c36;background:transparent;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    min-height:230px;gap:12px;color:#6e6b65;text-align:center;padding:20px}
-  .card.new:hover{border-color:#8a8780;color:#e8e6e1}
-  .card.new .plus{font-size:26px;font-weight:300;line-height:1}
-  .card.new .cap{font-size:11px;letter-spacing:.2em}
-  .card.new .sub{font-size:9.5px;letter-spacing:.08em;color:#4e4c48;line-height:1.7}
 
   /* ============ 모달 ============ */
   .modal{position:absolute;inset:0;z-index:60;background:rgba(6,6,8,.93);backdrop-filter:blur(8px);
@@ -368,9 +361,6 @@
   .mine{background:rgba(255,255,255,.93);border-color:#c9c9cf;color:#3a3a40}
   .del{background:rgba(255,255,255,.93);border-color:#dcdce0;color:#8e8e95}
   .del:hover{border-color:#c9958c;color:#a8524a}
-  .card.new{border-color:#cfcfd5;color:#8e8e95;background:transparent}
-  .card.new:hover{border-color:#8e8e95;color:#141417;box-shadow:none}
-  .card.new .sub{color:#adadb4}
 
   /* 로비에서 연 모달도 같은 톤으로 — 밝은 화면에서 검은 창이 튀지 않게 */
   #root.lobbyMode .modal{background:rgba(244,244,245,.88)}
@@ -444,11 +434,6 @@
   #lobby .cov{height:30px;padding:0 11px;right:46px;font-size:11.5px;letter-spacing:.01em;
     background:#fff;border-color:#d3d6dc;color:#4c515b}
   #lobby .cov:hover{border-color:#16181d;color:#16181d;background:#fff}
-  #lobby .card.new{border-color:#c3c8d0;color:#4c515b}
-  #lobby .card.new:hover{border-color:#16181d;color:#16181d}
-  #lobby .card.new .plus{font-size:28px}
-  #lobby .card.new .cap{font-size:12.5px;letter-spacing:.06em}
-  #lobby .card.new .sub{font-size:11.5px;letter-spacing:0;color:#737a85}
 
   /* 로비에서 연 창 */
   #root.lobbyMode .box h2{color:#16181d}
@@ -533,6 +518,17 @@
     box-shadow:0 3px 10px rgba(60,48,32,.09)}
   #lobby .topBtn:hover svg{opacity:.9}
   #lobby .topBtn.primary{border-radius:var(--r);box-shadow:0 2px 8px rgba(22,24,29,.18)}
+  /* 로비를 오가는 단추.
+
+     전시장과 전시장 수업은 머리말에서 유일하게 "어느 쪽을 보고 있는가" 를
+     바꾸는 단추입니다. 나머지 흰 단추들 사이에 섞여 있으면 눈에 들어오지
+     않아서, 여기만 색을 씁니다(--accent, 처음 눌러야 하는 곳의 색). */
+  #lobby .topBtn.cls{background:var(--accent);border-color:var(--accent);color:#fff;
+    font-weight:700;box-shadow:0 2px 8px rgba(61,110,168,.30)}
+  #lobby .topBtn.cls:hover{background:#2f5c8f;border-color:#2f5c8f;color:#fff;
+    box-shadow:0 4px 12px rgba(61,110,168,.34)}
+  #lobby .topBtn.cls svg{opacity:.95}
+  #lobby .topBtn.cls:hover svg{opacity:1}
   #lobby .idChip{border-radius:var(--r);border-color:var(--line);background:var(--card)}
   #lobby .idChip.admin{border-color:#e8d5ad;background:#fdf7ea}
   /* 주소가 길면 카드 줄이 통째로 밀립니다. 칩 안에서 잘라냅니다. */
@@ -580,16 +576,6 @@
     color:#5f5646;border-radius:999px;font-size:11px;letter-spacing:.01em;padding:4px 10px}
   #lobby .del{border-radius:8px}
   #lobby .cov{border-radius:8px}
-
-  /* ── 만들기 카드 ───────────────────────────────────────
-     점선 빈칸이 아니라 다른 카드와 같은 흰 카드로 두되, 여기만 색을
-     씁니다. 로비에서 학생이 처음 눌러야 하는 곳이기 때문입니다. */
-  #lobby .card.new{border-style:solid;border-color:#e0e5ec;background:#fff;
-    color:#3d6ea8;border-radius:14px}
-  #lobby .card.new:hover{border-color:#3d6ea8;color:#2f5c8f;background:#fcfdff}
-  #lobby .card.new .plus{font-size:34px;font-weight:300;color:#3d6ea8;line-height:1}
-  #lobby .card.new .cap{color:#3d6ea8}
-  #lobby .card.new .sub{color:#8b93a0}
 
   /* ════════════════════════════════════════════════════════
      로비 — 나눔고딕
@@ -660,9 +646,6 @@
   #lobby .mine{font-weight:700;font-size:11px}
   #lobby .cov{font-weight:700}
 
-  #lobby .card.new{min-height:0;gap:10px}
-  #lobby .card.new .cap{font-weight:700;font-size:13px;letter-spacing:0}
-  #lobby .card.new .sub{font-size:12px;letter-spacing:0;color:#9a9184}
   #lobby .emptyTag{font-weight:700;font-size:11.5px}
 
   /* 로비에서 여는 창 — 같은 폰트로 맞춥니다 */
@@ -838,9 +821,10 @@
            바꾸면 아이콘까지 지워지기 때문입니다. -->
       <div class="whoWrap">
         <a class="topBtn ic" id="btnHome" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.5 20v-6h5v6"/></svg><span class="t">홈</span></a>
-        <a class="topBtn primary ic" id="btnStudio" href="studio-ai.html"
+        <a class="topBtn ic cls" id="btnClass" href="exhibition.html?class=1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="1.5"/><path d="M8 20h8M12 16.5V20"/></svg><span class="t">전시장 수업</span></a>
+        <button class="topBtn ic" id="btnNewTop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="t">전시장 만들기</span></button>
+        <a class="topBtn ic" id="btnStudio" href="studio-ai.html"
            target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 2-5.6 2-1.9 5.5L10.1 13l-5.6-2 5.6-2z"/><path d="M18.5 4v3M20 5.5h-3"/></svg><span class="t">이미지를 영상으로</span></a>
-        <button class="topBtn ic" id="btnNewTop" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="t">전시장 만들기</span></button>
         <span class="idChip guest ic" id="idChip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.3-3.7 4.1-5.6 7.5-5.6s6.2 1.9 7.5 5.6"/></svg><span class="t">둘러보는 중</span></span>
         <button class="topBtn ic" id="btnProfile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"/></svg><span class="t">관람자 설정</span></button>
         <button class="topBtn ic" id="btnAuth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5h4a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-4"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h9"/></svg><span class="t">로그인</span></button>
@@ -852,6 +836,8 @@
       <li><b>2.</b> <span class="e">👆</span> 작품 앞 클릭 시 영상 재생</li>
       <li><b>3.</b> <span class="e">🛠</span> 전시장 생성 및 관리 시 로그인</li>
     </ol>
+    <!-- 수업용으로 추려 열었을 때만 보입니다. -->
+    <p class="lobbyNote" id="onlyNote" style="display:none"></p>
     <div class="grid" id="grid"></div>
   </div>
 
@@ -1362,6 +1348,30 @@ const signedIn=()=>!!session.email;
 const isAdmin=()=>signedIn()&&(SERVER?session.isAdmin:ADMIN_EMAILS.includes(session.email));
 // 서버 목록에는 남의 이메일이 없습니다. 서버가 "내 것인지"(mine)를 표시하고,
 // 서버 없는 갈래 1 에서는 exhibition.json 의 ownerEmail 로 판정합니다.
+/* 수업 전시장.
+
+   로비가 두 쪽으로 나뉩니다. exhibition.html?class=1 은 수업 전시장만,
+   그냥 exhibition.html 은 그 밖의 전시장을 겁니다. 수업 전시와 상시 전시가
+   한 판에 섞이면 수업 시간에 "어느 것이 우리 것인지" 부터 설명해야 합니다.
+
+   어느 쪽인지는 명단을 코드에 적지 않고 전시장이 스스로 들고 있습니다
+   (theme.class). 명단을 적어두면 수업 화면에서 새로 만든 전시장이 그 명단에
+   없어서 평소 로비로 가버립니다 - 학생 눈에는 만들기가 고장난 것입니다.
+   만든 자리가 곧 그 전시장이 사는 자리입니다.
+
+   전시장을 감추는 것이 아니라 로비 목록만 가립니다. 주소를 아는 사람은
+   #/g/주소 로 그대로 들어가고, 자기 전시장은 어느 쪽 로비에서도 보입니다 -
+   학생이 자기 것을 못 찾으면 고칠 수도 없습니다.
+
+   ?only=주소,주소 로 그때그때 다른 묶음을 만들 수도 있습니다. */
+const inClass=g=>!!(g&&g.theme&&g.theme.class);
+const CLASS_VIEW=new URLSearchParams(location.search).get("class")==="1";
+const ONLY=(()=>{
+  const v=new URLSearchParams(location.search).get("only")||"";
+  const list=v.split(",").map(x=>x.trim().toLowerCase())
+               .filter(x=>/^[a-z0-9-]{2,20}$/.test(x));
+  return list.length?list:null;
+})();
 const canManage=g=>!!g&&signedIn()&&
   (isAdmin()||(SERVER ? !!g.mine : g.ownerEmail===session.email));
 
@@ -3948,24 +3958,39 @@ function renderGrid(){
     signedIn()?(isAdmin()?"관리자 · ":"")+session.email:"둘러보는 중";
   auth.querySelector(".t").textContent=signedIn()?"로그아웃":"로그인";
 
-  // 서버가 붙어 있으면 POST /api/galleries 로 실제로 저장됩니다.
-  const nb=document.createElement("div");
-  nb.className="card new"; nb.tabIndex=0;
-  nb.innerHTML='<div class="plus">+</div><div class="cap">전시장 만들기</div>'+
-    (signedIn()?"":'<div class="sub">로그인이 필요합니다</div>');
-  const newFn=()=>{ if(!signedIn()){pendingAfterLogin="new";openLogin("new");return;} openNewGallery(); };
-  nb.addEventListener("click",newFn);
-  nb.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")newFn();});
-  grid.appendChild(nb);
+  /* 수업 쪽이면 그 명단만, 평소 로비면 그 명단을 뺀 나머지를 겁니다.
+     다만 내 전시장은 어느 쪽에서든 보입니다 — 못 찾으면 고칠 수도 없습니다. */
+  const mineOf=g=>signedIn()&&(SERVER?!!g.mine:g.ownerEmail===session.email);
+  const LIST=ONLY
+    ? GALLERIES.filter(g=>ONLY.includes(g.handle))
+    : CLASS_VIEW
+    ? GALLERIES.filter(inClass)
+    : GALLERIES.filter(g=>!inClass(g)||mineOf(g));
+  const note=document.getElementById("onlyNote");
+  if(CLASS_VIEW||ONLY){
+    note.style.display="";
+    note.innerHTML=(CLASS_VIEW?"전시장 수업 · ":"고른 전시장 · ")+LIST.length+"곳을 걸었습니다 &nbsp;·&nbsp; "+
+      '<a href="exhibition.html">전체 전시장 보기</a>';
+  } else note.style.display="none";
 
-  // 머리말의 같은 버튼. 전시장이 많아지면 만들기 카드가 화면 아래로
-  // 밀려나서, 위에도 하나 둡니다. 손님에게는 감춥니다 — 아래 카드가
-  // 이미 "로그인이 필요합니다" 라고 말하고 있습니다.
+  /* 위 단추는 지금 어느 쪽에 있느냐에 따라 건너가는 곳이 달라집니다. */
+  const bc=document.getElementById("btnClass");
+  if(CLASS_VIEW||ONLY){ bc.href="exhibition.html"; bc.querySelector(".t").textContent="전시장"; }
+  else    { bc.href="exhibition.html?class=1"; bc.querySelector(".t").textContent="전시장 수업"; }
+
+  /* 전시장 만들기는 머리말 단추 하나뿐입니다.
+
+     예전에는 목록 맨 앞에도 점선 카드가 있었습니다. 같은 일을 하는 입구가
+     한 화면에 둘이면 "이 둘이 다른 것인가" 를 먼저 생각하게 되고, 전시를
+     보러 온 화면에서 가장 먼저 눈에 드는 것이 빈 카드였습니다.
+     손님에게도 단추를 보입니다 — 누르면 로그인을 거쳐 만들기로 갑니다.
+     카드가 대신 말해주던 "로그인이 필요합니다" 가 사라졌기 때문입니다. */
+  const newFn=()=>{ if(!signedIn()){pendingAfterLogin="new";openLogin("new");return;} openNewGallery(); };
   const nt=document.getElementById("btnNewTop");
-  nt.style.display=signedIn()?"":"none";
+  nt.style.display="";
   nt.onclick=newFn;
 
-  GALLERIES.forEach(g=>{
+  LIST.forEach(g=>{
     const manage=canManage(g);
     const mine=signedIn()&&(SERVER?!!g.mine:g.ownerEmail===session.email);
     const d=document.createElement("div");
@@ -4199,6 +4224,7 @@ Object.keys(ROOMS).forEach(key=>{
 function openNewGallery(){
   if(!signedIn()){pendingAfterLogin="new";openLogin("new");return;}
   document.getElementById("ngOwner").textContent=
+    (CLASS_VIEW?"전시장 수업 안에 만들어집니다. ":"")+
     "소유자는 "+session.email+" 이 됩니다. 이 계정으로만 편집하고 삭제할 수 있습니다.";
   ngName.value=session.name||""; ngTitle.value=""; ngErr.textContent="";
   ngHandle.value=(session.email.split("@")[0]||"room").replace(/[^a-z0-9-]/g,"")||"room";
@@ -4231,7 +4257,7 @@ document.getElementById("ngGo").addEventListener("click",async()=>{
     try{
       const r=await fetch("/api/galleries",{
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({handle:h,title,name,room:ngRoom,
+        body:JSON.stringify({handle:h,title,name,room:ngRoom,inClass:CLASS_VIEW,
           theme:{wall:theme.wall,floor:theme.floor}}),
       });
       if(!r.ok){
@@ -4249,6 +4275,8 @@ document.getElementById("ngGo").addEventListener("click",async()=>{
   // 고른 전시실도 함께 적습니다. 안 적으면 서버에는 남았는데 지금 화면만
   // 기본 방으로 들어가서, 새로고침하면 방이 바뀌는 것처럼 보입니다.
   if(ngRoom!==DEFAULT_ROOM) theme.room=ngRoom;
+  // 만든 자리에 그대로 남습니다 - 수업 화면에서 만들었으면 수업 쪽입니다.
+  if(CLASS_VIEW) theme.class=true;
   GALLERIES.push({handle:h,name,title,mine:true,ownerEmail:session.email,
     theme,layout:[],works:[],guestbook:[]});
   closeModal("ngm"); location.hash="#/g/"+h;
