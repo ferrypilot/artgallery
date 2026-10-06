@@ -836,8 +836,6 @@
       <li><b>2.</b> <span class="e">👆</span> 작품 앞 클릭 시 영상 재생</li>
       <li><b>3.</b> <span class="e">🛠</span> 전시장 생성 및 관리 시 로그인</li>
     </ol>
-    <!-- 수업용으로 추려 열었을 때만 보입니다. -->
-    <p class="lobbyNote" id="onlyNote" style="display:none"></p>
     <div class="grid" id="grid"></div>
   </div>
 
@@ -3966,13 +3964,6 @@ function renderGrid(){
     : CLASS_VIEW
     ? GALLERIES.filter(inClass)
     : GALLERIES.filter(g=>!inClass(g)||mineOf(g));
-  const note=document.getElementById("onlyNote");
-  if(CLASS_VIEW||ONLY){
-    note.style.display="";
-    note.innerHTML=(CLASS_VIEW?"전시장 수업 · ":"고른 전시장 · ")+LIST.length+"곳을 걸었습니다 &nbsp;·&nbsp; "+
-      '<a href="exhibition.html">전체 전시장 보기</a>';
-  } else note.style.display="none";
-
   /* 위 단추는 지금 어느 쪽에 있느냐에 따라 건너가는 곳이 달라집니다. */
   const bc=document.getElementById("btnClass");
   if(CLASS_VIEW||ONLY){ bc.href="exhibition.html"; bc.querySelector(".t").textContent="전시장"; }
